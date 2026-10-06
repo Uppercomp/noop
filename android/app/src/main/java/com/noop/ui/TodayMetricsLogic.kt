@@ -47,6 +47,10 @@ data class TodayFooterState(
     val appleWorkouts: Int? = null,
     val hcDays: Int? = null,
     val hcWorkouts: Int? = null,
+    // Android ships a Mi Band importer (Data Sources) but the footer had nowhere to record it, so the
+    // collapsed "Synced from:" line could never name it. Android-only source: iOS has the same row.
+    val xiaomiDays: Int? = null,
+    val xiaomiSleeps: Int? = null,
 )
 
 /** The Today "Last Workouts" contract: cross-source dedup, newest first, at most four. */

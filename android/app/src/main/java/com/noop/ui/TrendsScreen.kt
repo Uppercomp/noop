@@ -33,6 +33,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -218,17 +219,20 @@ fun TrendsScreen(vm: AppViewModel) {
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    // Resolved OUTSIDE the lambda: a SegmentedPillControl label is a `(T) -> String`,
+                    // which cannot be @Composable.
+                    val rangeLabels = TrendsRange.entries.map { stringResource(it.labelRes) }
                     SegmentedPillControl(
                         items = TrendsRange.entries.toList(),
                         selection = range,
-                        label = { it.label },
+                        label = { rangeLabels[it.ordinal] },
                         onSelect = { range = it },
                     )
                     Spacer(Modifier.weight(1f))
                     TrendsRangeCaption(range = range, fullSubtitle = rangeSubtitle)
                 }
                 Text(
-                    recovery.caption,
+                    recovery.caption.text(),
                     style = NoopType.footnote,
                     color = if (recovery.widened) Palette.statusWarning else Palette.textTertiary,
                 )
@@ -399,7 +403,7 @@ private fun WeeklyDigestNav(
                 NoopCard { WeeklyDigestContent(digest = digest, compact = true) }
             }
             NoopButton(
-                text = "Share recap",
+                text = uiString(R.string.l10n_trends_screen_share_recap_c1268ca7),
                 leadingIcon = Icons.Filled.IosShare,
                 kind = NoopButtonKind.Secondary,
                 onClick = {
@@ -553,13 +557,22 @@ private fun PipScoreRow(
 // MARK: - Range control model (ported from TrendsView.Range)
 
 /** W(7) / M(30) / 3M(90) / 6M(180) / 1Y(365) / ALL. */
-private enum class TrendsRange(val days: Int?, val label: String, val longName: String) {
-    Week(7, "W", "week"),
-    Month(30, "M", "month"),
-    Quarter(90, "3M", "3 months"),
-    Half(180, "6M", "6 months"),
-    Year(365, "1Y", "year"),
-    All(null, "ALL", "all history");
+/**
+ * @StringRes for both strings: an enum constructor runs at class-load, before an Application exists, and
+ * both are locale-dependent — the pill abbreviations ("1Y" is de "1J" / zh "1年", "ALL" is "ALLE") and the
+ * long names the caption interpolates ("3 months" is de "3 Monate").
+ */
+private enum class TrendsRange(
+    val days: Int?,
+    @StringRes val labelRes: Int,
+    @StringRes val longNameRes: Int,
+) {
+    Week(7, R.string.l10n_lift_w_e2415cb7, R.string.l10n_apple_health_screen_week_c0ee32d8),
+    Month(30, R.string.l10n_apple_health_screen_m_c63ae6dd, R.string.l10n_apple_health_screen_month_021710fa),
+    Quarter(90, R.string.l10n_apple_health_screen_s_3m_6dce1630, R.string.l10n_apple_health_screen_s_3_months_b9e4e6ff),
+    Half(180, R.string.l10n_apple_health_screen_s_6m_b78ebb44, R.string.l10n_apple_health_screen_s_6_months_cd75b86f),
+    Year(365, R.string.l10n_apple_health_screen_s_1y_28234cf2, R.string.l10n_apple_health_screen_year_4ff0b153),
+    All(null, R.string.l10n_apple_health_screen_all_6b42874e, R.string.trends_all_history);
 
     /** This range plus every LARGER range, ascending , the auto-expand search order. */
     val widening: List<TrendsRange>
@@ -598,7 +611,7 @@ private data class ResolvedMetric(
     val dates: List<String>,
     val effective: TrendsRange,
     val widened: Boolean,
-    val caption: String,
+    val caption: DisplayText,
 )
 
 /**
@@ -659,14 +672,26 @@ private fun windowPoints(
     return sliced.mapNotNull { d -> value(d)?.let { d.day to it } }
 }
 
-/** Caption text, mirroring TrendsView.caption(count:eff:). */
-private fun caption(count: Int, eff: TrendsRange, selected: TrendsRange): String {
-    val unit = if (count == 1) "reading" else "readings"
-    return if (eff != selected) {
-        "$count $unit · sparse , widened to ${eff.longName}"
-    } else {
-        "$count $unit · ${selected.longName}"
+/**
+ * Caption text, mirroring `TrendsView.caption(count:eff:)`.
+ *
+ * Four WHOLE-sentence variants per count and per widened-ness, exactly as iOS ships them, rather than a
+ * stitched `"$count reading(s) · …"`: English's two plural categories must not be baked into the layout, and
+ * the sentence's punctuation belongs to the translation (iOS has `sparse, widened to`, not `sparse , widened
+ * to`). A [DisplayText] because this is called from the pure [resolveMetric], which a JVM test drives.
+ */
+private fun caption(count: Int, eff: TrendsRange, selected: TrendsRange): DisplayText {
+    val widened = eff != selected
+    val nameRes = if (widened) eff.longNameRes else selected.longNameRes
+    val id = when {
+        count == 1 && widened -> R.string.l10n_trends_screen_s_1_reading_sparse_widened_to_c686d83b
+        count == 1 -> R.string.l10n_trends_screen_s_1_reading_f666b026
+        widened -> R.string.l10n_trends_screen_lld_readings_sparse_widened_to_a404132d
+        else -> R.string.l10n_trends_screen_lld_readings_b7cee48b
     }
+    val args = if (count == 1) listOf(DisplayText.Resource(nameRes))
+    else listOf(count, DisplayText.Resource(nameRes))
+    return DisplayText.Resource(id, args)
 }
 
 // MARK: - ChartCard , the uniform fixed-height trend card
@@ -708,9 +733,16 @@ private fun ChartCard(
     // treatment differ.
     val body: @Composable () -> Unit = {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            // Header.
-            Row(verticalAlignment = Alignment.Top) {
-                Column(modifier = Modifier.weight(1f)) {
+            // Header. iOS `ChartCard`: `HStack(alignment: .firstTextBaseline)` over a
+            // `VStack(alignment: .leading, spacing: 2)` — the same pairing SectionHeader uses, and this
+            // card had drifted the same way: tops-aligned, and NO gap between the overline and its
+            // subtitle. So a chart card's two header lines sat flush, and the trailing readout was out by
+            // the size difference between an 11pt overline and the 17pt number beside it.
+            Row {
+                Column(
+                    modifier = Modifier.weight(1f).alignByBaseline(),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
                     Overline(title)
                     if (subtitle != null) {
                         Text(subtitle, style = NoopType.footnote, color = Palette.textTertiary)
@@ -720,10 +752,14 @@ private fun ChartCard(
                     // The one liquid accent on this screen: a small Charge vessel filled to the window
                     // average, the value counting up over it (white, tabular, soft shadow, hit-transparent).
                     // Same value + charge tint as the plain readout it replaces — the chart stays crisp.
+                    // No `alignByBaseline` here: it is a vessel, not text, and has no baseline to share.
                     HeadlineVessel(value = headlineValue, tint = Palette.recoveryColor(headlineValue))
                 } else if (trailing != null) {
                     // Neutral 15pt readout (matches iOS TrendsView) , not the 22sp tinted figure.
-                    Text(trailing, style = NoopType.bodyNumber, color = Palette.textPrimary)
+                    Text(
+                        trailing, style = NoopType.bodyNumber, color = Palette.textPrimary,
+                        modifier = Modifier.alignByBaseline(),
+                    )
                 }
             }
 
@@ -1096,7 +1132,7 @@ private fun RecoveryHistoryCard(days: List<DailyMetric>, range: TrendsRange) {
 
     NoopCard {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            SectionHeader(title, overline = stringResource(R.string.trends_calendar), trailing = "${recovery.size} days")
+            SectionHeader(title, overline = stringResource(R.string.trends_calendar), trailing = uiString(R.string.l10n_trends_screen_lld_days_42cae06f, recovery.size))
             if (recovery.size >= 2) {
                 BarChart(
                     values = recovery,

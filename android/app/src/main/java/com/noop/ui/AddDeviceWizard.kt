@@ -121,12 +121,12 @@ private enum class DeviceType {
         get() = when (this) {
             Whoop5MG -> "WHOOP 5.0 / MG"
             Whoop4 -> "WHOOP 4.0"
-            HrStrap -> "Heart-rate strap"
-            GymEquipment -> "Gym equipment"
+            HrStrap -> uiString(R.string.l10n_add_device_wizard_heart_rate_strap_0359fd6d)
+            GymEquipment -> uiString(R.string.l10n_add_device_wizard_gym_equipment_3da4ea18)
             Amazfit -> "Amazfit / Zepp"
             MiBand -> "Xiaomi Mi Band"
-            Garmin -> "Garmin watch"
-            Oura -> "Oura ring"
+            Garmin -> uiString(R.string.l10n_add_device_wizard_garmin_watch_a866104a)
+            Oura -> uiString(R.string.l10n_add_device_wizard_oura_ring_e3431536)
         }
 }
 
@@ -251,22 +251,22 @@ fun AddDeviceWizard(
     }
 
     val confirmAdvertisedName = run {
-        pickedWhoop?.let { return@run it.name?.takeIf { n -> n.isNotBlank() } ?: (type?.title ?: "Device") }
+        pickedWhoop?.let { return@run it.name?.takeIf { n -> n.isNotBlank() } ?: (type?.title ?: uiString(R.string.l10n_add_device_wizard_device_a5a74a6d)) }
         pickedStrap?.let { return@run it.name }
         pickedMachine?.let { return@run it.name }
         pickedHuami?.let { return@run it.name }
-        type?.title ?: "Device"
+        type?.title ?: uiString(R.string.l10n_add_device_wizard_device_a5a74a6d)
     }
     val confirmName = nameDraft.trim().ifEmpty { confirmAdvertisedName }
     val confirmBrand = when {
         type?.isWhoop == true -> "WHOOP"
-        type == DeviceType.GymEquipment -> "Gym equipment"
+        type == DeviceType.GymEquipment -> uiString(R.string.l10n_add_device_wizard_gym_equipment_3da4ea18)
         // Experimental non-Oura types (Amazfit / Mi Band / Garmin) take their stored brand string from the
         // catalog via the type->brand bridge. Oura confirms with its detected generation label elsewhere.
         type == DeviceType.Amazfit || type == DeviceType.MiBand || type == DeviceType.Garmin ->
             type!!.experimentalBrand!!.displayBrand
         pickedStrap != null -> brandGuess(pickedStrap!!.name)
-        else -> "Heart-rate strap"
+        else -> uiString(R.string.l10n_add_device_wizard_heart_rate_strap_0359fd6d)
     }
     val confirmRssi = pickedWhoop?.rssi ?: pickedStrap?.rssi ?: pickedMachine?.rssi ?: pickedHuami?.rssi ?: -70
 
@@ -399,7 +399,7 @@ fun AddDeviceWizard(
             id = deviceId,
             brand = oura.displayBrand,
             model = ouraGen.displayName,
-            nickname = nameDraft.trim().takeIf { it.isNotEmpty() && it != "Oura ring" },
+            nickname = nameDraft.trim().takeIf { it.isNotEmpty() && it != uiString(R.string.l10n_add_device_wizard_oura_ring_e3431536) },
             peripheralId = ring.address,
             sourceKind = oura.sourceKind.name,
             // Gen-filtered: the OuraMetric rawValues are byte-identical to the app-side Metric rawValues
@@ -488,7 +488,7 @@ fun AddDeviceWizard(
                         // Confirm the generation from the picked ring's best-effort detection, defaulting to
                         // gen3 (the verified-corpus generation) when the name carries no generation marker.
                         ouraGen = ring.detectedGen ?: OuraRingGen.GEN3
-                        nameDraft = "Oura ring"
+                        nameDraft = uiString(R.string.l10n_add_device_wizard_oura_ring_e3431536)
                         ouraScanner.stopScan()
                         ouraStep = OuraStep.Confirm
                     },
@@ -661,34 +661,34 @@ fun AddDeviceWizard(
 }
 
 private fun headerTitle(step: WizardStep, type: DeviceType?): String = when (step) {
-    WizardStep.Type -> "Add a device"
-    WizardStep.Prep -> type?.title ?: "Add a device"
-    WizardStep.Pick -> "Pick your device"
-    WizardStep.Confirm -> "Name & confirm"
+    WizardStep.Type -> uiString(R.string.l10n_devices_screen_add_a_device_f90866b8)
+    WizardStep.Prep -> type?.title ?: uiString(R.string.l10n_devices_screen_add_a_device_f90866b8)
+    WizardStep.Pick -> uiString(R.string.l10n_add_device_wizard_pick_your_device_cd380adf)
+    WizardStep.Confirm -> uiString(R.string.l10n_add_device_wizard_name_confirm_3e30a43c)
 }
 
 private fun headerSubtitle(step: WizardStep): String? = when (step) {
-    WizardStep.Type -> "What are you adding?"
-    WizardStep.Prep -> "Get it ready, then scan."
-    WizardStep.Pick -> "Tap the one that's yours."
+    WizardStep.Type -> uiString(R.string.l10n_add_device_wizard_what_are_you_adding_07f0810a)
+    WizardStep.Prep -> uiString(R.string.l10n_add_device_wizard_get_it_ready_then_scan_00d8c525)
+    WizardStep.Pick -> uiString(R.string.l10n_add_device_wizard_tap_the_one_that_s_yours_e111eaa8)
     WizardStep.Confirm -> null
 }
 
 // MARK: - Oura header titles (the adopt sub-flow's own steps)
 
 private fun ouraHeaderTitle(step: OuraStep, advanced: Boolean): String = when (step) {
-    OuraStep.Gate -> if (advanced) "Advanced: use your own key" else "Oura ring"
-    OuraStep.Prep -> "Get your ring ready"
-    OuraStep.Pick -> "Pick the ring"
-    OuraStep.Confirm -> "Your ring"
-    OuraStep.Adopting -> "Taking over your ring"
-    OuraStep.Failed -> "Could not take over"
+    OuraStep.Gate -> if (advanced) uiString(R.string.l10n_add_device_wizard_advanced_use_your_own_key_89d5e624) else uiString(R.string.l10n_add_device_wizard_oura_ring_e3431536)
+    OuraStep.Prep -> uiString(R.string.l10n_add_device_wizard_get_your_ring_ready_f2c26588)
+    OuraStep.Pick -> uiString(R.string.l10n_add_device_wizard_pick_the_ring_5b68ac08)
+    OuraStep.Confirm -> uiString(R.string.l10n_add_device_wizard_your_ring_32482f06)
+    OuraStep.Adopting -> uiString(R.string.l10n_add_device_wizard_taking_over_your_ring_b64a3852)
+    OuraStep.Failed -> uiString(R.string.l10n_add_device_wizard_could_not_take_over_1a14ce51)
 }
 
 private fun ouraHeaderSubtitle(step: OuraStep, advanced: Boolean): String? = when (step) {
-    OuraStep.Gate -> if (advanced) "Power users only." else "Take it over locally. Beta."
-    OuraStep.Prep -> "Reset it in the Oura app first."
-    OuraStep.Pick -> "Tap the one that's yours."
+    OuraStep.Gate -> if (advanced) uiString(R.string.l10n_add_device_wizard_power_users_only_ce0d45e8) else uiString(R.string.l10n_add_device_wizard_take_it_over_locally_beta_66b11ea2)
+    OuraStep.Prep -> uiString(R.string.l10n_add_device_wizard_reset_it_in_the_oura_app_first_802eb192)
+    OuraStep.Pick -> uiString(R.string.l10n_add_device_wizard_tap_the_one_that_s_yours_e111eaa8)
     OuraStep.Confirm -> null
     OuraStep.Adopting -> null
     OuraStep.Failed -> null
@@ -702,30 +702,30 @@ private fun TypeStep(onPick: (DeviceType) -> Unit) {
         TypeRow(Icons.Filled.Watch, DeviceType.Whoop5MG.title, "Newer WHOOP band with live data and history sync") {
             onPick(DeviceType.Whoop5MG)
         }
-        TypeRow(Icons.Filled.Watch, DeviceType.Whoop4.title, "NOOP's primary, fully-supported band") {
+        TypeRow(Icons.Filled.Watch, DeviceType.Whoop4.title, uiString(R.string.l10n_add_device_wizard_noop_s_primary_fully_supported_band_f640fd80)) {
             onPick(DeviceType.Whoop4)
         }
-        TypeRow(Icons.Filled.FavoriteBorder, DeviceType.HrStrap.title, "Polar, Wahoo, Coospo, Garmin HRM, Amazfit Helio broadcast") {
+        TypeRow(Icons.Filled.FavoriteBorder, DeviceType.HrStrap.title, uiString(R.string.l10n_add_device_wizard_polar_wahoo_coospo_garmin_hrm_amazfit_he_2e6bb196)) {
             onPick(DeviceType.HrStrap)
         }
-        TypeRow(Icons.AutoMirrored.Filled.DirectionsRun, DeviceType.GymEquipment.title, "Treadmill, indoor bike, rower or cross-trainer (Bluetooth FTMS)") {
+        TypeRow(Icons.AutoMirrored.Filled.DirectionsRun, DeviceType.GymEquipment.title, uiString(R.string.l10n_add_device_wizard_treadmill_indoor_bike_rower_or_cross_tra_d1f48b71)) {
             onPick(DeviceType.GymEquipment)
         }
 
         // EXPERIMENTAL tier - clearly labelled, opt-in, best-effort. Each is honest about what it can
         // actually read; none fabricates data.
-        Overline("Experimental", modifier = Modifier.padding(top = 8.dp))
+        Overline(uiString(R.string.l10n_add_device_wizard_experimental_b718f8c3), modifier = Modifier.padding(top = 8.dp))
         ExperimentalTierNote()
-        TypeRow(Icons.Filled.Circle, DeviceType.Oura.title, "Take over your ring locally. Beta. This replaces the Oura app.") {
+        TypeRow(Icons.Filled.Circle, DeviceType.Oura.title, uiString(R.string.l10n_add_device_wizard_take_over_your_ring_locally_beta_this_re_c0f2ad7a)) {
             onPick(DeviceType.Oura)
         }
-        TypeRow(Icons.Filled.GraphicEq, DeviceType.Amazfit.title, "Incl. Helio. Live heart rate where the band exposes it. Help us test.") {
+        TypeRow(Icons.Filled.GraphicEq, DeviceType.Amazfit.title, uiString(R.string.l10n_add_device_wizard_incl_helio_live_heart_rate_where_the_ban_7bcba9cd)) {
             onPick(DeviceType.Amazfit)
         }
-        TypeRow(Icons.Filled.GraphicEq, DeviceType.MiBand.title, "Live heart rate on bands that don't need pairing. Help us test.") {
+        TypeRow(Icons.Filled.GraphicEq, DeviceType.MiBand.title, uiString(R.string.l10n_add_device_wizard_live_heart_rate_on_bands_that_don_t_need_03301df3)) {
             onPick(DeviceType.MiBand)
         }
-        TypeRow(Icons.Filled.Watch, DeviceType.Garmin.title, "Uses the watch's Broadcast Heart Rate. We'll show you how.") {
+        TypeRow(Icons.Filled.Watch, DeviceType.Garmin.title, uiString(R.string.l10n_add_device_wizard_uses_the_watch_s_broadcast_heart_rate_we_aae67c24)) {
             onPick(DeviceType.Garmin)
         }
 
@@ -917,34 +917,34 @@ private fun PrepStep(type: DeviceType, onScan: () -> Unit) {
 /** Type-specific "get it ready" guidance - the point of the branching wizard. US English copy. */
 private fun prepInstructions(type: DeviceType): List<String> = when (type) {
     DeviceType.Whoop4 -> listOf(
-        "Put your WHOOP 4.0 on your wrist and make sure it's awake.",
-        "Make sure it's NOT connected to the official WHOOP app right now.",
-        "NOOP will look for it nearby.",
+        uiString(R.string.l10n_add_device_wizard_put_your_whoop_4_0_on_your_wrist_and_mak_256c8bfe),
+        uiString(R.string.l10n_add_device_wizard_make_sure_it_s_not_connected_to_the_offi_6d879a21),
+        uiString(R.string.l10n_add_device_wizard_noop_will_look_for_it_nearby_af928de2),
     )
     DeviceType.Whoop5MG -> listOf(
         "WHOOP 5.0 / MG bonds to one device at a time, so unpair it from the official WHOOP app first.",
-        "Put the band into pairing mode, on your wrist and awake.",
-        "NOOP will look for it nearby.",
+        uiString(R.string.l10n_add_device_wizard_put_the_band_into_pairing_mode_on_your_w_6f85e766),
+        uiString(R.string.l10n_add_device_wizard_noop_will_look_for_it_nearby_af928de2),
     )
     DeviceType.HrStrap -> listOf(
-        "Wake your strap. Put it on, or dampen the contacts.",
-        "Make sure it isn't connected to another app (a bike computer, the brand's own app…).",
-        "NOOP will look for it nearby.",
+        uiString(R.string.l10n_add_device_wizard_wake_your_strap_put_it_on_or_dampen_the_7218863f),
+        uiString(R.string.l10n_add_device_wizard_make_sure_it_isn_t_connected_to_another_ee6c60b9),
+        uiString(R.string.l10n_add_device_wizard_noop_will_look_for_it_nearby_af928de2),
     )
     DeviceType.GymEquipment -> listOf(
-        "Wake the machine. Start pedalling, walking or rowing so it powers on its Bluetooth.",
-        "Make sure it isn't already connected to another app (Zwift, the gym's app, a bike computer…).",
-        "NOOP looks for machines that broadcast the standard Bluetooth Fitness Machine service.",
+        uiString(R.string.l10n_add_device_wizard_wake_the_machine_start_pedalling_walking_3c413960),
+        uiString(R.string.l10n_add_device_wizard_make_sure_it_isn_t_already_connected_to_a4b765e4),
+        uiString(R.string.l10n_add_device_wizard_noop_looks_for_machines_that_broadcast_t_8ef6cb42),
     )
     DeviceType.Amazfit -> listOf(
-        "Wake your Amazfit / Zepp band and make sure it isn't connected to the Zepp app right now.",
-        "NOOP reads live heart rate when the band exposes it. Some bands need a pairing we can't do yet. If so, we'll say so honestly.",
-        "Experimental: this is best-effort. If live doesn't work, you can export from Zepp and import the file.",
+        uiString(R.string.l10n_add_device_wizard_wake_your_amazfit_zepp_band_and_make_sur_21493824),
+        uiString(R.string.l10n_add_device_wizard_noop_reads_live_heart_rate_when_the_band_5d51f3cc),
+        uiString(R.string.l10n_add_device_wizard_experimental_this_is_best_effort_if_live_ee8870b9),
     )
     DeviceType.MiBand -> listOf(
-        "Wake your Mi Band and make sure it isn't connected to the Mi Fitness / Zepp Life app right now.",
-        "NOOP reads live heart rate on bands that don't require pairing. Newer bands need an auth handshake we can't do yet.",
-        "Experimental: if your band needs pairing, we'll tell you honestly rather than show a fake reading.",
+        uiString(R.string.l10n_add_device_wizard_wake_your_mi_band_and_make_sure_it_isn_t_e8b624f5),
+        uiString(R.string.l10n_add_device_wizard_noop_reads_live_heart_rate_on_bands_that_41ac94ea),
+        uiString(R.string.l10n_add_device_wizard_experimental_if_your_band_needs_pairing_59f6881d),
     )
     DeviceType.Garmin -> com.noop.ble.GarminBroadcast.broadcastHint
     // Oura runs the factory-reset-and-adopt prep inside OuraFlow (ouraPrepInstructions), so this generic
@@ -957,9 +957,9 @@ private fun prepInstructions(type: DeviceType): List<String> = when (type) {
 private val ouraPrepInstructions: List<String> = listOf(
     "Open the official Oura app and remove this ring (Oura calls it \"factory reset\" or \"unpair and " +
         "reset\"). This wipes the ring's owner so NOOP can take it over.",
-    "Keep the ring on the charger or on your finger so it stays awake.",
-    "Make sure the Oura app is fully closed. A ring answers one owner at a time.",
-    "When the ring is reset and waking, tap Scan below.",
+    uiString(R.string.l10n_add_device_wizard_keep_the_ring_on_the_charger_or_on_your_13ae1685),
+    uiString(R.string.l10n_add_device_wizard_make_sure_the_oura_app_is_fully_closed_a_681cbb72),
+    uiString(R.string.l10n_add_device_wizard_when_the_ring_is_reset_and_waking_tap_sc_c5c4c267),
 )
 
 // MARK: - Step 3 - pick from the live scan
@@ -1015,7 +1015,7 @@ private fun FtmsPickStep(
         discovered.sortedByDescending { it.rssi }.forEach { machine ->
             DiscoveredRow(
                 name = machine.name,
-                subtitle = "Gym equipment",
+                subtitle = uiString(R.string.l10n_add_device_wizard_gym_equipment_3da4ea18),
                 rssi = machine.rssi,
                 onTap = { onSelect(machine) },
             )
@@ -1035,7 +1035,7 @@ private fun HuamiPickStep(
         discovered.sortedByDescending { it.rssi }.forEach { dev ->
             DiscoveredRow(
                 name = dev.name,
-                subtitle = "Experimental",
+                subtitle = uiString(R.string.l10n_add_device_wizard_experimental_b718f8c3),
                 rssi = dev.rssi,
                 onTap = { onSelect(dev) },
             )
@@ -1097,7 +1097,7 @@ private fun OuraGateStep(
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         // Beta banner (amber heads-up pattern).
         OuraAmberPanel(
-            "Beta. Read this first.",
+            uiString(R.string.l10n_add_device_wizard_beta_read_this_first_b4ffcf75),
             "Local Oura support is new and we cannot test every ring here. It may not connect on your " +
                 "ring, and it can change between updates. NOOP never makes up a number. If something does " +
                 "not work, it will tell you plainly.",
@@ -1112,23 +1112,23 @@ private fun OuraGateStep(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Overline("What you get")
+            Overline(uiString(R.string.l10n_add_device_wizard_what_you_get_8ac7aa17))
             OuraBulletList(
                 listOf(
-                    "Your ring talks to NOOP only, fully offline, no Oura account.",
-                    "Live heart rate, and HRV when the ring can measure it.",
+                    uiString(R.string.l10n_add_device_wizard_your_ring_talks_to_noop_only_fully_offli_d4d11add),
+                    uiString(R.string.l10n_add_device_wizard_live_heart_rate_and_hrv_when_the_ring_ca_a84c4001),
                     "Overnight sleep staging, resting heart rate, skin-temperature trend, motion and " +
                         "battery, read straight off the ring.",
-                    "NOOP's own Charge, Effort and Rest, computed on your device from published methods.",
+                    uiString(R.string.l10n_add_device_wizard_noop_s_own_charge_effort_and_rest_comput_bec79530),
                 ),
             )
-            Overline("What you lose")
+            Overline(uiString(R.string.l10n_add_device_wizard_what_you_lose_85873621))
             OuraBulletList(
                 listOf(
                     "The Oura app and your Oura account stop working with this ring. This is the point. " +
                         "You are replacing Oura.",
-                    "Oura's own Readiness and Sleep scores. NOOP does not copy them. It computes its own.",
-                    "Anything that needs Oura's cloud (web dashboard, Oura's coaching, shared circles).",
+                    uiString(R.string.l10n_add_device_wizard_oura_s_own_readiness_and_sleep_scores_no_e2c29c85),
+                    uiString(R.string.l10n_add_device_wizard_anything_that_needs_oura_s_cloud_web_das_2c09e42c),
                     "Likely your Oura warranty and support, because the ring is no longer paired to Oura. " +
                         "Treat this as permanent.",
                 ),
@@ -1208,7 +1208,7 @@ private fun OuraAdvancedKeyStep(
                 "extract keys for you and cannot help you find one. If you do not know what this means, go " +
                 "back and use the standard setup or file import.",
         )
-        Overline("Ring key (32 hex characters)")
+        Overline(uiString(R.string.l10n_add_device_wizard_ring_key_32_hex_characters_9cd9abc4))
         OutlinedTextField(
             value = keyDraft,
             onValueChange = { onKeyDraft(it) },
@@ -1272,7 +1272,7 @@ private fun OuraPrepStep(advanced: Boolean, onScan: () -> Unit) {
         // does not reset the ring, so it skips the "force-quit Oura" framing).
         if (!advanced) {
             OuraAmberPanel(
-                "A ring talks to one owner at a time.",
+                uiString(R.string.l10n_add_device_wizard_a_ring_talks_to_one_owner_at_a_time_f8d98063),
                 "If the Oura app is still running it will hold the ring and adoption will fail. Force-quit " +
                     "Oura, then scan.",
             )
@@ -1303,7 +1303,7 @@ private fun OuraPickStep(
     Column(verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             StatePill(
-                if (scanning) "Searching…" else "Idle",
+                if (scanning) uiString(R.string.l10n_add_device_wizard_searching_1a6a5ba8) else uiString(R.string.push_state_idle),
                 tone = if (scanning) StrandTone.Accent else StrandTone.Neutral,
                 pulsing = scanning,
             )
@@ -1371,7 +1371,7 @@ private fun OuraConfirmStep(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Icon(Icons.Filled.Circle, contentDescription = null, tint = Palette.accent, modifier = Modifier.size(24.dp))
                 Text(gen.displayName, style = NoopType.headline, color = Palette.textPrimary, modifier = Modifier.weight(1f))
-                StatePill("Beta", tone = StrandTone.Warning, showsDot = false)
+                StatePill(uiString(R.string.l10n_add_device_wizard_beta_f03b60f7), tone = StrandTone.Warning, showsDot = false)
             }
             // Per-gen capability checklist: tick for supported, dash for not-available, * for an estimate.
             ouraCapabilityRows(gen).forEach { (mark, label) ->
@@ -1387,7 +1387,7 @@ private fun OuraConfirmStep(
             )
         }
 
-        Overline("Name")
+        Overline(uiString(R.string.l10n_devices_screen_name_709a2322))
         OutlinedTextField(
             value = name,
             onValueChange = onName,
@@ -1551,15 +1551,15 @@ private fun ouraCapabilityRows(gen: OuraRingGen): List<Pair<String, String>> {
     val live = if (gen == OuraRingGen.GEN5) "*" else "✓"   // newer rings: live HR is best-effort
     val firm = if (gen == OuraRingGen.GEN5) "*" else "✓"   // resting HR / sleep / battery
     return listOf(
-        live to "Live heart rate",
-        "*" to "HRV (rMSSD)",
-        firm to "Resting heart rate",
-        firm to "Sleep staging",
-        "*" to "Skin-temperature trend",
-        "*" to "Steps / motion",
-        firm to "Battery",
-        "-" to "Blood oxygen (SpO2 %)",
-        "-" to "Oura Readiness / Sleep score",
+        live to uiString(R.string.l10n_add_device_wizard_live_heart_rate_13593958),
+        "*" to uiString(R.string.l10n_add_device_wizard_hrv_rmssd_3688097d),
+        firm to uiString(R.string.trends_resting_hr_full),
+        firm to uiString(R.string.l10n_add_device_wizard_sleep_staging_1156bd96),
+        "*" to uiString(R.string.l10n_add_device_wizard_skin_temperature_trend_f497873a),
+        "*" to uiString(R.string.l10n_add_device_wizard_steps_motion_1ea7622c),
+        firm to uiString(R.string.l10n_devices_screen_battery_4a9be042),
+        "-" to uiString(R.string.l10n_add_device_wizard_blood_oxygen_spo2_b06b29e3),
+        "-" to uiString(R.string.l10n_add_device_wizard_oura_readiness_sleep_score_1224b05b),
     )
 }
 
@@ -1588,7 +1588,7 @@ private fun PickList(
     Column(verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             StatePill(
-                if (searching) "Searching…" else "Idle",
+                if (searching) uiString(R.string.l10n_add_device_wizard_searching_1a6a5ba8) else uiString(R.string.push_state_idle),
                 tone = if (searching) StrandTone.Accent else StrandTone.Neutral,
                 pulsing = searching,
             )
@@ -1675,7 +1675,7 @@ private fun ConfirmStep(
             }
         }
 
-        Overline("Name")
+        Overline(uiString(R.string.l10n_devices_screen_name_709a2322))
         OutlinedTextField(
             value = name,
             onValueChange = onName,

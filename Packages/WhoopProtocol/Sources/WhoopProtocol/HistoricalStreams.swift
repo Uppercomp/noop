@@ -295,7 +295,8 @@ public func extractHistoricalStreams(_ parsed: [ParsedFrame],
                 ppgRecords.append((ts: ts, samples: samples))
                 out.ppgWaveform.append(PpgWaveformSample(ts: ts, samples: samples,
                                                          burstIndex: p["burst_index"]?.intValue,
-                                                         baseCode: p["ppg_base_code"]?.intValue))
+                                                         baseCode: p["ppg_base_code"]?.intValue,
+                                                         rawFrame: p["ppg_raw_frame"]?.intArrayValue.map { $0.map { UInt8(truncatingIfNeeded: $0) } }))
             }
             if let bpm = p["heart_rate"]?.intValue, bpm != 0 {  // skip startup hr=0
                 out.hr.append(HRSample(ts: ts, bpm: bpm))
@@ -409,7 +410,12 @@ public func extractHistoricalStreams(_ parsed: [ParsedFrame],
                     // the enum.
                     unknownF32Bits: p[V18AuxSlot.unknownF32At113.decoderKey]?.doubleValue.map {
                         Int(Float($0).bitPattern)
-                    })
+                    },
+                    recordFlags: slot(.recordFlags),
+                    timestampSubseconds: slot(.timestampSubseconds),
+                    auxWord61: slot(.auxWord61),
+                    auxByte64: slot(.auxByte64),
+                    activityClassRaw: slot(.activityClassRaw))
                 // A record that decoded none of the slots banks no row at all — absence stays absence.
                 if !aux.isEmpty { out.v18Aux.append(aux) }
             }

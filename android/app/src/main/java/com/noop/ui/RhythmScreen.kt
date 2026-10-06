@@ -257,7 +257,7 @@ private fun RhythmVisualization(
     // reproducing the eager column's inter-card spacing exactly. The Poincaré PlotCard is the heavy one.
     LazyScreenScaffold(
         title = uiString(R.string.l10n_rhythm_screen_rhythm_c715bb28),
-        subtitle = "An experimental picture of your beat-to-beat timing",
+        subtitle = uiString(R.string.l10n_rhythm_screen_an_experimental_picture_of_your_beat_to_4a22be2a),
         trailing = if (onClose != null) {
             {
                 IconButton(onClick = onClose) {
@@ -268,7 +268,7 @@ private fun RhythmVisualization(
             null
         },
     ) {
-        item { SourceBadge("Experimental", tint = Palette.restColor) }
+        item { SourceBadge(uiString(R.string.l10n_add_device_wizard_experimental_b718f8c3), tint = Palette.restColor) }
 
         if (allPoints.isEmpty()) {
             item { RhythmEmptyStateNote(emptyReason) }
@@ -299,15 +299,15 @@ private fun RhythmEmptyStateNote(reason: RhythmEmptyState) {
     when (reason) {
         RhythmEmptyState.DEVICE_BANKS_BEATS -> DataPendingNote(
             title = uiString(R.string.l10n_rhythm_screen_this_device_can_t_support_a_bb41aada),
-            body = "Rhythm needs beat-to-beat timing measured one beat at a time. Your device stores its heartbeats in batches, so the exact spacing between them isn't recoverable. Nothing is wrong with your night.",
+            body = uiString(R.string.l10n_rhythm_screen_rhythm_needs_beat_to_beat_timing_measure_28bb775e),
         )
         RhythmEmptyState.DEVICE_NO_MOTION -> DataPendingNote(
             title = uiString(R.string.l10n_rhythm_screen_this_device_can_t_support_a_bb41aada),
-            body = "Rhythm reads only during still, resting windows, and this device doesn't record the stillness signal it needs to find them. Nothing is wrong with your night.",
+            body = uiString(R.string.l10n_rhythm_screen_rhythm_reads_only_during_still_resting_w_81377dca),
         )
         RhythmEmptyState.NONE, RhythmEmptyState.GATHERING_DATA -> DataPendingNote(
             title = uiString(R.string.l10n_rhythm_screen_no_clear_reading_yet_92f40443),
-            body = "Rhythm only looks during quiet, still, resting windows, so it needs a calm night's worth of steady beats. Once there's a clean window, the scatter and its description show here.",
+            body = uiString(R.string.l10n_rhythm_screen_rhythm_only_looks_during_quiet_still_res_8fc6fdf6),
         )
     }
 }
@@ -323,7 +323,7 @@ private fun SummaryCard(
     NoopCard(padding = 18.dp, tint = Palette.restColor) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Overline("Last night", modifier = Modifier.weight(1f))
+                Overline(uiString(R.string.today_card_sleep_subtitle), modifier = Modifier.weight(1f))
                 ConfidencePill(headline = headline, readable = night?.readableWindows)
             }
             StatusChip(label)
@@ -370,14 +370,14 @@ private fun StatusChip(label: RhythmRegularity) {
 private fun ConfidencePill(headline: RhythmScreener.WindowResult?, readable: Int?) {
     when (headline?.confidence ?: RhythmConfidence.CALIBRATING) {
         RhythmConfidence.SOLID ->
-            StatePill("Solid", tone = StrandTone.Accent)
+            StatePill(uiString(R.string.scoring_guide_solid), tone = StrandTone.Accent)
         RhythmConfidence.BUILDING ->
             StatePill(
                 if ((readable ?: 0) <= 1) "Building · 1 window" else "Building",
                 tone = StrandTone.Warning,
             )
         RhythmConfidence.CALIBRATING ->
-            StatePill("Calibrating", tone = StrandTone.Neutral)
+            StatePill(uiString(R.string.l10n_today_screen_calibrating_37c2c9bd), tone = StrandTone.Neutral)
     }
 }
 
@@ -476,36 +476,36 @@ private fun StatsCard(headline: RhythmScreener.WindowResult?) {
         Row(horizontalArrangement = Arrangement.spacedBy(Metrics.gap)) {
             StatTile(
                 label = uiString(R.string.l10n_rhythm_screen_short_axis_66a0b7bf), value = fmt(headline?.sd1, "%.0f"),
-                caption = "SD1 · ms", accent = Palette.restBright,
+                caption = uiString(R.string.l10n_rhythm_screen_sd1_ms_ec25990a), accent = Palette.restBright,
                 modifier = Modifier.weight(1f),
             )
             StatTile(
                 label = uiString(R.string.l10n_rhythm_screen_long_axis_02300830), value = fmt(headline?.sd2, "%.0f"),
-                caption = "SD2 · ms", accent = Palette.restColor,
+                caption = uiString(R.string.l10n_rhythm_screen_sd2_ms_cd859646), accent = Palette.restColor,
                 modifier = Modifier.weight(1f),
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(Metrics.gap)) {
             StatTile(
                 label = uiString(R.string.l10n_rhythm_screen_cloud_shape_2a745ff0), value = fmt(headline?.sd1sd2, "%.2f"),
-                caption = "SD1:SD2 ratio", accent = Palette.metricCyan,
+                caption = uiString(R.string.l10n_rhythm_screen_sd1_sd2_ratio_236002cc), accent = Palette.metricCyan,
                 modifier = Modifier.weight(1f),
             )
             StatTile(
                 label = uiString(R.string.l10n_rhythm_screen_beat_to_beat_34a3a652), value = percent(headline?.normRmssd),
-                caption = "variation index", accent = Palette.metricPurple,
+                caption = uiString(R.string.l10n_rhythm_screen_variation_index_7900d836), accent = Palette.metricPurple,
                 modifier = Modifier.weight(1f),
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(Metrics.gap)) {
             StatTile(
                 label = uiString(R.string.l10n_rhythm_screen_extra_skipped_4a153489), value = percent(headline?.ectopicFraction),
-                caption = "of beats", accent = Palette.restColor,
+                caption = uiString(R.string.l10n_rhythm_screen_of_beats_f6a121dd), accent = Palette.restColor,
                 modifier = Modifier.weight(1f),
             )
             StatTile(
                 label = uiString(R.string.l10n_rhythm_screen_beats_read_15da45e3), value = headline?.nBeats?.toString() ?: "—",
-                caption = "clean intervals", accent = Palette.textSecondary,
+                caption = uiString(R.string.l10n_rhythm_screen_clean_intervals_3e604c4f), accent = Palette.textSecondary,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -518,7 +518,7 @@ private fun StatsCard(headline: RhythmScreener.WindowResult?) {
 private fun MethodologyCard() {
     NoopCard {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Overline("How this is measured")
+            Overline(uiString(R.string.l10n_hrv_snapshot_screen_how_this_is_measured_ca8c206c))
             Text(
                 uiString(R.string.l10n_rhythm_screen_during_quiet_still_resting_windows_noop_45488969),
                 style = NoopType.footnote, color = Palette.textTertiary,
@@ -557,7 +557,7 @@ private fun RhythmDisclaimerNote() {
 /** SHORT neutral status word inside the status chip (compact, so the chip reads like OpenStrap's; the
  *  sentence-length [headlineDetail] carries the description below). Twin of Swift `chipLabel`. */
 private fun chipLabel(label: RhythmRegularity): String = when (label) {
-    RhythmRegularity.STEADY -> "Steady"
+    RhythmRegularity.STEADY -> uiString(R.string.today_synthesis_steady)
     RhythmRegularity.OCCASIONAL_ECTOPY -> "Some variation"
     RhythmRegularity.VARIED -> "More varied"
     RhythmRegularity.UNREADABLE -> "No clear reading"
@@ -565,13 +565,13 @@ private fun chipLabel(label: RhythmRegularity): String = when (label) {
 
 private fun headlineDetail(label: RhythmRegularity): String = when (label) {
     RhythmRegularity.STEADY ->
-        "Across the quiet windows we could read, your beat-to-beat timing held a tight, even shape."
+        uiString(R.string.l10n_rhythm_screen_across_the_quiet_windows_we_could_read_y_7a2593c8)
     RhythmRegularity.OCCASIONAL_ECTOPY ->
-        "Mostly steady, with a few isolated extra or skipped beats. Very common and usually nothing."
+        uiString(R.string.l10n_rhythm_screen_mostly_steady_with_a_few_isolated_extra_7390d11f)
     RhythmRegularity.VARIED ->
-        "The scatter looked rounder and more spread out than a tight, steady beat. This has many ordinary causes and is not a diagnosis."
+        uiString(R.string.l10n_rhythm_screen_the_scatter_looked_rounder_and_more_spre_ef50fb3e)
     RhythmRegularity.UNREADABLE ->
-        "There wasn't a calm, still window clean enough to describe. Try again after a settled night."
+        uiString(R.string.l10n_rhythm_screen_there_wasn_t_a_calm_still_window_clean_e_de3dd28d)
 }
 
 // ── Formatting ────────────────────────────────────────────────────────────────────────────

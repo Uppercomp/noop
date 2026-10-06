@@ -29,6 +29,9 @@ object DemoSeeder {
 
     private const val WHOOP = "my-whoop"
     private const val APPLE = "apple-health"
+    // The Mi Fitness import's own source, so the demo build can show the Mi Band per-source page
+    // (the Android twin of `Strand/Screens/XiaomiBandView.swift`) instead of its empty state.
+    private const val XIAOMI = "xiaomi-band"
     // The NOOP-COMPUTED strap source ("<strap>-noop") the IntelligenceEngine persists its derived weekly
     // scores under (fitness_age / vo2max_est / vitality / body_age). The Health screen + Today "Your cards"
     // + Trends resolve these through the computed UNION (WhoopRepository.metricSeriesComputedUnion), which in
@@ -94,6 +97,7 @@ object DemoSeeder {
 
         val daily = ArrayList<DailyMetric>(DAYS)
         val sleeps = ArrayList<SleepSession>(DAYS)
+        val bandSleeps = ArrayList<SleepSession>(DAYS)
         val series = ArrayList<MetricSeriesRow>(DAYS * 2)
         val apple = ArrayList<AppleDaily>(DAYS)
         val workouts = ArrayList<WorkoutRow>()
@@ -161,6 +165,44 @@ object DemoSeeder {
                     deviceId = WHOOP, startTs = onset, endTs = onset + inBedSec,
                     efficiency = round1(efficiency), restingHr = rhr, avgHrv = round1(hrv),
                     stagesJSON = stagesJson(deep, rem, light, disturbances),
+                )
+            )
+
+            // --- Mi Band (a Mi Fitness import) ---
+            // Additive, deterministic synthetic data under the SAME source id the real importer writes
+            // (`XiaomiBandImporter.DEFAULT_DEVICE_ID`), covering every metricSeries key the per-source page
+            // reads, plus one per-epoch staged night below. Without it the demo build's Mi Band page shows
+            // its "nothing imported yet" state, which the demo has no way to fill.
+            val bandSteps = gauss(rng, 9400.0, 2300.0).coerceIn(1800.0, 20000.0)
+            series.add(MetricSeriesRow(XIAOMI, day, "steps", bandSteps.toInt().toDouble()))
+            series.add(MetricSeriesRow(XIAOMI, day, "distance_m", round1(bandSteps * 0.72)))
+            series.add(MetricSeriesRow(XIAOMI, day, "energy_kcal", round1(bandSteps * 0.041 + 120.0)))
+            series.add(MetricSeriesRow(XIAOMI, day, "intensity_min",
+                gauss(rng, 34.0, 14.0).coerceIn(0.0, 120.0).toInt().toDouble()))
+            series.add(MetricSeriesRow(XIAOMI, day, "rhr", rhr.toDouble()))
+            series.add(MetricSeriesRow(XIAOMI, day, "avg_hr",
+                gauss(rng, 74.0, 5.0).coerceIn(48.0, 120.0).toInt().toDouble()))
+            series.add(MetricSeriesRow(XIAOMI, day, "max_hr",
+                gauss(rng, 148.0, 12.0).coerceIn(90.0, 200.0).toInt().toDouble()))
+            series.add(MetricSeriesRow(XIAOMI, day, "spo2", round1(spo2)))
+            series.add(MetricSeriesRow(XIAOMI, day, "sleep_total_min", round1(totalSleep)))
+            series.add(MetricSeriesRow(XIAOMI, day, "sleep_deep_min", round1(deep)))
+            series.add(MetricSeriesRow(XIAOMI, day, "sleep_rem_min", round1(rem)))
+            series.add(MetricSeriesRow(XIAOMI, day, "sleep_light_min", round1(light)))
+            series.add(MetricSeriesRow(XIAOMI, day, "sleep_score",
+                gauss(rng, 78.0, 8.0).coerceIn(40.0, 100.0).toInt().toDouble()))
+            series.add(MetricSeriesRow(XIAOMI, day, "stress",
+                round1(gauss(rng, 32.0, 12.0).coerceIn(0.0, 100.0))))
+            series.add(MetricSeriesRow(XIAOMI, day, "vitality",
+                round1(gauss(rng, 66.0, 9.0).coerceIn(0.0, 100.0))))
+            // The band's own night, half an hour later than the strap's, carrying the per-epoch stage
+            // segments the Mi Band page decodes into its hypnogram.
+            val bandOnset = onset + 1_800L + rng.nextInt(-600, 600)
+            bandSleeps.add(
+                SleepSession(
+                    deviceId = XIAOMI, startTs = bandOnset, endTs = bandOnset + inBedSec,
+                    efficiency = round1(efficiency),
+                    stagesJSON = stagedSegmentsJson(bandOnset, deep, rem, light, disturbances.toDouble()),
                 )
             )
 
@@ -291,7 +333,7 @@ object DemoSeeder {
         }
 
         repo.upsertDailyMetrics(daily)
-        repo.upsertSleepSessions(sleeps)
+        repo.upsertSleepSessions(sleeps + bandSleeps)
         repo.upsertMetricSeries(series)
         repo.upsertAppleDaily(apple)
         if (workouts.isNotEmpty()) repo.upsertWorkouts(workouts)
@@ -328,6 +370,32 @@ object DemoSeeder {
         seg("light", light * 0.35); seg("deep", deep * 0.6); seg("light", light * 0.30)
         seg("rem", rem * 0.6); seg("deep", deep * 0.4); seg("light", light * 0.35)
         seg("rem", rem * 0.4); seg("awake", awakeMin.toDouble())
+        return arr.toString()
+    }
+
+    /**
+     * The same cycle as a PER-EPOCH `[{start,end,stage}]` array on wall-clock seconds — the shape a real
+     * Mi Fitness import stores (see `XiaomiBandImporter`), which is what the Mi Band page's hypnogram
+     * decodes. The strap's own night above uses the minutes shape, so the two paths are both exercised.
+     */
+    private fun stagedSegmentsJson(
+        onset: Long,
+        deep: Double,
+        rem: Double,
+        light: Double,
+        awakeMin: Double,
+    ): String {
+        val arr = JSONArray()
+        var cursor = onset
+        fun seg(stage: String, min: Double) {
+            if (min <= 0.0) return
+            val end = cursor + (min * 60.0).toLong()
+            arr.put(JSONObject().put("start", cursor).put("end", end).put("stage", stage))
+            cursor = end
+        }
+        seg("light", light * 0.35); seg("deep", deep * 0.6); seg("light", light * 0.30)
+        seg("rem", rem * 0.6); seg("deep", deep * 0.4); seg("light", light * 0.35)
+        seg("rem", rem * 0.4); seg("wake", awakeMin)
         return arr.toString()
     }
 }

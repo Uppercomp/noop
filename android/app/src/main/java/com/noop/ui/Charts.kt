@@ -1,5 +1,7 @@
 package com.noop.ui
 
+import com.noop.R
+
 import com.noop.analytics.StagePercentages
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -269,7 +271,7 @@ fun Sparkline(
     // ONE collapsed semantics node (see "Accessibility summaries"): the delegate reads a single trend
     // summary instead of walking the canvas. clearAndSetSemantics drops any child nodes (there are none
     // here) and contributes exactly this contentDescription. Changes no drawing.
-    val axSummary = seriesSummary(values, "Trend")
+    val axSummary = seriesSummary(values, uiString(R.string.trends_trend))
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -468,7 +470,7 @@ fun LineChart(
     // ONE collapsed semantics node for the whole chart (line + fill + selection marker subtree) so the
     // accessibility delegate reads a single trend summary rather than descending into the canvas. The
     // summary uses the same finite-filtered values the line draws. Changes no drawing or interaction.
-    val axSummary = seriesSummary(cleanValues, "Trend")
+    val axSummary = seriesSummary(cleanValues, uiString(R.string.trends_trend))
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -808,7 +810,7 @@ fun BarChart(
 
     // ONE collapsed semantics node so the a11y delegate reads a single bar-series summary instead of
     // walking every bar. Summarises the (zeroed-non-finite) source values the bars are scaled from.
-    val axSummary = seriesSummary(cleanValues, "Bars")
+    val axSummary = seriesSummary(cleanValues, uiString(R.string.settings_trend_bars))
     Box(
         modifier = modifier
             .fillMaxWidth()

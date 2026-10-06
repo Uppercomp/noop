@@ -1,5 +1,6 @@
 package com.noop.ui
 
+import com.noop.R
 import com.noop.data.DailyMetric
 import com.noop.data.SleepSession
 import org.junit.Assert.assertEquals
@@ -58,7 +59,7 @@ class SleepHeroLogicTest {
         val today = LocalDate.of(2026, 8, 13)
         assertEquals(0, calendarNightsAgo(nav, 0, utc, today))   // last night
         assertEquals(3, calendarNightsAgo(nav, 1, utc, today))   // 3 calendar nights ago, NOT index 1
-        assertEquals("3 nights ago", nightRelativeLabel(calendarNightsAgo(nav, 1, utc, today)))
+        assertEquals(DisplayText.Resource(R.string.l10n_sleep_hero_logic_lld_nights_ago_067e84fe, listOf(3)), nightRelativeLabel(calendarNightsAgo(nav, 1, utc, today)))
     }
 
     @Test
@@ -98,7 +99,7 @@ class SleepHeroLogicTest {
         val nav = listOf(nightOn(LocalDate.of(2026, 9, 5)))     // woke Saturday morning
         val monday = LocalDate.of(2026, 9, 7)
         assertEquals(2, calendarNightsAgo(nav, 0, utc, monday))
-        assertEquals("2 nights ago", nightRelativeLabel(calendarNightsAgo(nav, 0, utc, monday)))
+        assertEquals(DisplayText.Resource(R.string.l10n_sleep_hero_logic_lld_nights_ago_067e84fe, listOf(2)), nightRelativeLabel(calendarNightsAgo(nav, 0, utc, monday)))
     }
 
     /** A night that genuinely ended this morning still reads "Last night". */
@@ -107,7 +108,7 @@ class SleepHeroLogicTest {
         val utc = TimeZone.getTimeZone("UTC")
         val nav = listOf(nightOn(LocalDate.of(2026, 9, 7)))
         assertEquals(0, calendarNightsAgo(nav, 0, utc, LocalDate.of(2026, 9, 7)))
-        assertEquals("Last night", nightRelativeLabel(calendarNightsAgo(nav, 0, utc, LocalDate.of(2026, 9, 7))))
+        assertEquals(DisplayText.Resource(R.string.l10n_sleep_hero_logic_last_night_6eaba4dd), nightRelativeLabel(calendarNightsAgo(nav, 0, utc, LocalDate.of(2026, 9, 7))))
     }
 
     /**
@@ -144,7 +145,7 @@ class SleepHeroLogicTest {
         val nav = listOf(nightOn(LocalDate.of(2026, 9, 6)))          // woke 07:00 on the 6th
         // 02:00 on the 7th: logicalDayNow is still the 6th.
         assertEquals(0, calendarNightsAgo(nav, 0, utc, LocalDate.of(2026, 9, 6)))
-        assertEquals("Last night", nightRelativeLabel(calendarNightsAgo(nav, 0, utc, LocalDate.of(2026, 9, 6))))
+        assertEquals(DisplayText.Resource(R.string.l10n_sleep_hero_logic_last_night_6eaba4dd), nightRelativeLabel(calendarNightsAgo(nav, 0, utc, LocalDate.of(2026, 9, 6))))
     }
 
     /** A future-dated night must not produce a negative count; it falls back to the index. */
@@ -172,7 +173,7 @@ class SleepHeroLogicTest {
         // 03:00 on the 7th: the logical day has not rolled, so it is still the 6th.
         val logicalToday = LocalDate.of(2026, 9, 6)
         assertEquals(0, calendarNightsAgo(nav, 0, utc, logicalToday))
-        assertEquals("Last night", nightRelativeLabel(calendarNightsAgo(nav, 0, utc, logicalToday)))
+        assertEquals(DisplayText.Resource(R.string.l10n_sleep_hero_logic_last_night_6eaba4dd), nightRelativeLabel(calendarNightsAgo(nav, 0, utc, logicalToday)))
     }
 
     // MARK: - #2199 nav-header date
@@ -297,8 +298,16 @@ class SleepHeroLogicTest {
             "3 nights ago" to "Fri 11 Sep",
         )
         val seen = mutableMapOf<String, String>()
+        // The sentence each row must carry, as the resource the helper returns — one per offset, so a row
+        // printing its neighbour's label still fails. The English `label` above is only for the messages.
+        val labels = listOf(
+            DisplayText.Resource(R.string.l10n_sleep_hero_logic_last_night_6eaba4dd),
+            DisplayText.Resource(R.string.l10n_sleep_hero_logic_s_1_night_ago_f1d70098),
+            DisplayText.Resource(R.string.l10n_sleep_hero_logic_lld_nights_ago_067e84fe, listOf(2)),
+            DisplayText.Resource(R.string.l10n_sleep_hero_logic_lld_nights_ago_067e84fe, listOf(3)),
+        )
         expected.forEachIndexed { offset, (label, date) ->
-            assertEquals(label, nightRelativeLabel(calendarNightsAgo(nav, offset, utc, today)))
+            assertEquals(labels[offset], nightRelativeLabel(calendarNightsAgo(nav, offset, utc, today)))
             val clock = navHeaderClockLabel(null, nav, offset, is24h = true)
             assertNotNull("row \"$label\" had no date at all", clock)
             assertTrue("row \"$label\" printed $clock, expected it to start $date", clock!!.startsWith(date))
@@ -322,8 +331,13 @@ class SleepHeroLogicTest {
             "1 night ago" to "Sat 12 Sep",
             "2 nights ago" to "Fri 11 Sep",
         )
+        val labels = listOf(
+            DisplayText.Resource(R.string.l10n_sleep_hero_logic_last_night_6eaba4dd),
+            DisplayText.Resource(R.string.l10n_sleep_hero_logic_s_1_night_ago_f1d70098),
+            DisplayText.Resource(R.string.l10n_sleep_hero_logic_lld_nights_ago_067e84fe, listOf(2)),
+        )
         expected.forEachIndexed { offset, (label, date) ->
-            assertEquals(label, nightRelativeLabel(calendarNightsAgo(nav, offset, utc, today)))
+            assertEquals(labels[offset], nightRelativeLabel(calendarNightsAgo(nav, offset, utc, today)))
             val clock = navHeaderClockLabel(null, nav, offset, is24h = true)
             assertNotNull("row \"$label\" had no date at all", clock)
             assertTrue("row \"$label\" printed $clock, expected it to start $date", clock!!.startsWith(date))

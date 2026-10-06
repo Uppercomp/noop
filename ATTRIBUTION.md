@@ -95,10 +95,29 @@ own Charge/Rest, and **never** reads or displays Oura's encrypted readiness or s
 documented Oura file-import lane (`Packages/StrandImport/Sources/StrandImport/OuraExportParser.swift`)
 remains available as a fallback.
 
+## OpenStrap WHOOP 5 reference
+
+- **OpenStrap Edge / protocol / analytics** — the WHOOP 5 comparison uses Edge
+  `5b9b435f6b33f2c884f5da1657a461ded1989e07`, its pinned protocol
+  `ecb512b710fbfa5fffce999f939a64aa7c486ee0`, and analytics
+  `27b0ba486234900084ed791cfb95e71738645d98`.
+  The tagged R22 geometry and public timestamp-synthesized fixtures inform NOOP's independently
+  implemented Swift/Kotlin research decoder; the timing and R26 metadata maps remain raw
+  instrumentation. Copyright (c) 2026 OpenStrap; MIT notice: `licenses/OpenStrap-MIT.txt`.
+  See [WHOOP 5 port coverage](docs/WHOOP5_OPENSTRAP_PORT.md) for the exact field map and limits.
+
 ## Other
 - **GRDB.swift** (`groue/GRDB.swift`) — SQLite persistence (via Swift Package Manager).
 - **MarkdownUI** (`gonzalezreal/swift-markdown-ui`) — renders the AI Coach's Markdown
   replies (via Swift Package Manager).
+- **Nunito** (`googlefonts/nunito`) — the Android UI typeface, shipped as
+  `android/app/src/main/res/font/nunito_variable.ttf`. Apple resolves `StrandFont`'s
+  `design: .rounded` request to SF Pro Rounded, which Android has no equivalent of; Nunito is the
+  closest widely-available rounded face, so the two platforms read alike at the same weights. Only the
+  variable font is bundled — the four `nunito_regular/medium/semibold/bold.xml` families are
+  `fontVariationSettings` pins on it (`wght` 400/500/600/700) rather than four static files. Copyright
+  2014 The Nunito Project Authors; licensed under the SIL Open Font License 1.1
+  (full text: `licenses/Nunito-OFL.txt`).
 
 NOOP contains no WHOOP proprietary code, binaries, firmware, logos, or assets, and
 performs no DRM circumvention. It operates only with the user's own device and data.

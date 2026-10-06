@@ -312,7 +312,7 @@ private fun alignmentText(offsetHours: Double): String {
     val minutes = (offsetHours * 60 / 5).roundToInt() * 5
     if (kotlin.math.abs(minutes) < 30) return uiString(R.string.l10n_body_clock_dial_card_in_sync_with_your_body_clock_4b5181c8)
     val absMinutes = kotlin.math.abs(minutes)
-    val amount = if (absMinutes >= 60) String.format(java.util.Locale.getDefault(), "%.1f h", absMinutes / 60.0) else "$absMinutes min"
+    val amount = if (absMinutes >= 60) String.format(java.util.Locale.getDefault(), "%.1f h", absMinutes / 60.0) else uiString(R.string.l10n_body_clock_dial_card_lld_min_b6190882, absMinutes)
     return if (minutes > 0) uiString(R.string.l10n_body_clock_dial_card_1_s_later_than_your_body_50b7d966, amount) else uiString(R.string.l10n_body_clock_dial_card_1_s_earlier_than_your_body_68877f50, amount)
 }
 

@@ -377,6 +377,37 @@ hello-token or serial hex (the handshake lines log *that* a step happened, not i
 secret payload). The one mild identifier is the strap's advertised name (e.g.
 `WHOOP 5AG…`), which the user chooses to include when they tap Share.
 
+**The console mirror, and one known gap in the scrub.** A WHOOP 5.0/MG strap narrates its
+own firmware over the type-50 console channel, and the app mirrors each fragment into this
+log as `strap: <text>` (capped) because that text is the best protocol evidence a report
+can carry — it is where the strap names its sensor pipeline. Strap-authored text is
+scrubbed on the way in by `redactStrapLogPii` like every other line rather than trusted.
+
+One identifier survives that scrub today. The console prints the **battery pack's**
+Bluetooth address **without colons**:
+
+```
+NFC COMMS: BT addr : f1470c••••••
+```
+
+No existing rule matches it. `PII_MAC_RE` requires colon-separated MAC shape,
+`PII_WHOOP_SERIAL_RE` requires the literal `WHOOP `, the adopted-id rules require a
+`whoop-`/`oura-` prefix, `PII_DEVICE_NAME_RE` requires a possessive name, and
+`PII_HEX_DUMP_RE` requires 16+ hex characters — this is 12, and its bytes are not
+printable ASCII, so `redactHexDumpPii` finds no serial to lift either. The project already
+treats this address as worth masking (`maskPackAddrInDump` and
+`maskPackAddrInEventPayload` exist for it), but those run on the event and dump paths, not
+on mirrored console text, so this route bypasses both. It was observed in an **exported
+Test Centre bundle**, so it is not theoretical.
+
+Two things about the fix, so it is not done wrong. It belongs on **both** scrubbers in the
+same change — `redactStrapLogPii` and Swift's `LiveState.redactPii` are documented twins,
+and masking on one platform only would make the two logs disagree about what they hide.
+And it must be keyed on the console's own wording, or on a colon-anchored 12-hex run, never
+on "any 12 hex characters": the same console prints `lm_harm_perc = 0.000000661219`, which
+a blanket rule would mask, and the label and the value can also arrive in *different*
+console fragments, so a label-only rule misses the fragment that carries the value alone.
+
 **logcat is opt-in (debug mode), off by default.** By default the log is mirrored
 **only** to the in-app buffer — it is *not* written to Android's system log
 (`Log.d`/logcat). A user has no reason to emit the connection log to the device-wide

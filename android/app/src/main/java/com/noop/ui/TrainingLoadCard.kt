@@ -121,7 +121,15 @@ private fun TwoLineChart(points: List<TrainingLoadEngine.Point>, modifier: Modif
 
 @Composable
 private fun LegendDot(color: Color, label: String) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Metrics.space4)) {
+    // iOS `TrainingLoadCard.legendDot`: `HStack(spacing: NoopMetrics.space2)` — 8pt between the dot and
+    // its label.
+    //
+    // CAREFUL with the token names: the two platforms' spacing ramps are NOT parallel. iOS `NoopMetrics`
+    // names a 4-based INDEX (`space1` 4, `space2` 8, `space4` 16, `space6` 24), while Android's `Metrics`
+    // names the dp VALUE (`space2` 2, `space4` 4, `space8` 8, `space24` 24). So iOS `space2` is Android
+    // `space8`, NOT `space2` — translating an iOS token name straight across is off by 4x. Android had
+    // `space4` here (4dp, a quarter of iOS's gap); reading it as "the same name" would have made it 2dp.
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Metrics.space8)) {
         Spacer(Modifier.size(8.dp).clip(CircleShape).background(color))
         Text(label, style = NoopType.footnote, color = Palette.textTertiary)
     }

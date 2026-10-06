@@ -45,7 +45,9 @@ import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BluetoothSearching
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Functions
 import androidx.compose.material.icons.filled.History
@@ -55,6 +57,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.MonitorWeight
+import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.TrackChanges
@@ -92,9 +95,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.Shadow
@@ -183,6 +190,8 @@ import com.noop.data.SleepSession
 import com.noop.data.WhoopRepository
 import com.noop.data.WorkoutRow
 import com.noop.ingest.HealthConnectImporter
+import com.noop.ingest.XiaomiBandImporter
+import androidx.annotation.PluralsRes
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -198,6 +207,7 @@ import kotlin.math.roundToInt
 private fun DisplayText.localized(): String = when (this) {
     is DisplayText.Resource -> uiString(id, *args.toTypedArray())
     is DisplayText.Dynamic -> value
+    is DisplayText.Prefixed -> prefix + inner.localized()
 }
 
 @Composable
@@ -245,9 +255,9 @@ private var todayDidSnapToTodayThisLaunch = false
 
 // MARK: - Liquid hero tokens (the liquid Today restyle)
 //
-// The hero card the score rings float on, ported from the iOS LiquidTodayView. `heroFill` is a
-// translucent near-black (mock rgba(13,14,20,.80)) so it floats over the day-of-sky; the rings + white
-// count-up numbers read crisp on it. Radius 26 + a white@0.11 hairline give the frosted-glass edge.
+// The radius of the card the score rings float on: iOS's `NoopPanelSurface(cornerRadius: 26, ...)` in
+// `LiquidTodayView.heroCard`. The card is the ordinary shared surface — `frostedCardSurface` — NOT the
+// `heroFill` near-black, which this comment used to claim and which the section below explains at length.
 private val LIQUID_HERO_RADIUS: Dp = 26.dp
 
 // The Vitality ring purple (#9b7bff) — no exact Palette token in this theme, so a fixed brand literal
@@ -1291,6 +1301,9 @@ fun TodayScreen(
             appleWorkouts = appleWorkouts.size,
             hcDays = hcDaysCount,
             hcWorkouts = hcWorkouts.size,
+            // The same read the Data Sources Mi Band card makes, so the two count lines cannot disagree.
+            xiaomiDays = viewModel.repo.metricSeriesKeyCount(XiaomiBandImporter.DEFAULT_DEVICE_ID, "steps"),
+            xiaomiSleeps = viewModel.repo.sleepSessionsCount(XiaomiBandImporter.DEFAULT_DEVICE_ID, 0L, now),
         )
         // Cache the result + record the signature so a later re-mount with unchanged data restores the footer
         // and short-circuits the heavy reload above.
@@ -1427,6 +1440,9 @@ fun TodayScreen(
                 onQuickActions = onQuickActions,
                 onOpenSettings = onOpenSettings,
                 onOpenDevices = onOpenDevices,
+                // #2110: this control now rides the header cluster, matching iOS, so the wordmark row below
+                // is the wordmark alone.
+                onCustomize = { showLayoutEditor = true },
             )
             // WORDMARK (iOS LiquidWordmark parity): a subtle centred "N O O P" @ ~50% opacity, with a
             // tap easter egg. Still shares its row with the customization control, as #486 intended,
@@ -1439,34 +1455,36 @@ fun TodayScreen(
             // disappeared underneath it, worse per locale since the label runs 3 chars in zh to 13 in fr
             // against the 9 it was eyeballed at.
             //
-            // A ROW with equal fixed gutters instead of a Box: the leading Spacer mirrors the trailing
+            // A ROW with equal fixed gutters instead of a Box: the leading Slott mirrors the trailing
             // control exactly, so the wordmark stays optically centred while owning the space BETWEEN them.
             // Overlap is now unexpressible at any label width, in any locale, because the two occupy
             // different slots rather than the same one.
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // #2169: the balancing spacer becomes the control, but ONLY while there is something to
-                // connect. A permanently visible control has to explain itself; one that appears exactly
-                // when the strap is away says what it is for by being there, and cannot be read as a
-                // reload button on a screen that never reloads. Connected, it goes back to being a
-                // spacer, so the wordmark is centred by the same control-sized gutter either way and
-                // nothing moves as the strap comes and goes.
+            //
+            // #2110 follow-up: the trailing control (Customize) has moved into the header cluster, where
+            // iOS keeps it, so the mirroring gutter it needed is gone and the wordmark is centred on the
+            // ROW itself by `align(Center)` rather than by a balancing spacer. iOS's wordmark row is the
+            // wordmark alone; this now matches, while the scan affordance stays (below) because iOS has no
+            // equivalent of it on Today and it is the only in-progress signal while a scan is running.
+            Box(modifier = Modifier.fillMaxWidth()) {
+                // #2169: appears only while there is something to connect. A permanently visible control has
+                // to explain itself; one that appears exactly when the strap is away says what it is for by
+                // being there, and cannot be read as a reload button on a screen that never reloads.
                 //
-                // Scanning counts as needed: a scan running means not yet connected, and hiding the
-                // control mid-attempt would take away the only in-progress signal the header has.
-                // The SLOT is permanent and only the control inside it fades, rather than swapping the
-                // two. A 4.0 that is dropping and auto-reconnecting flips `connected` repeatedly, and an
-                // instant swap turns that into a blinking icon beside the wordmark; a fade reads as a
-                // pulse instead. Keeping the gutter itself always present also means the wordmark cannot
-                // shift even mid-transition, which an if/else between a control and a spacer allows.
+                // Scanning counts as needed: a scan running means not yet connected, and hiding the control
+                // mid-attempt would take away the only in-progress signal the header has. The SLOT is
+                // permanent and only the control inside it fades, rather than swapping the two. A 4.0 that
+                // is dropping and auto-reconnecting flips `connected` repeatedly, and an instant swap turns
+                // that into a blinking icon beside the wordmark; a fade reads as a pulse instead. Because
+                // the wordmark is centred on the ROW now, the control can come and go without moving it —
+                // which the old leading-gutter layout could not do without a mirror on the other side.
                 val scanAffordance by animateFloatAsState(
                     targetValue = if (liveSnap.connected) 0f else 1f,
                     animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing),
                 )
                 Box(
-                    modifier = Modifier.size(HeaderClusterControl),
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .size(HeaderClusterControl),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (scanAffordance > 0.01f) {
@@ -1475,10 +1493,9 @@ fun TodayScreen(
                         }
                     }
                 }
-                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.align(Alignment.Center)) {
                     LiquidWordmark()
                 }
-                CustomizeDisc(onClick = { showLayoutEditor = true })
             }
             // The reply to a tap that went nowhere. Wording comes from the BLE layer, the same text
             // Live and Onboarding show, so this adds no copy of its own.
@@ -1676,18 +1693,22 @@ fun TodayScreen(
                             modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            // The liquid hero CARD: a translucent near-black that floats over the day-of-sky
-                            // so the rings + white count-up numbers stay crisp. A rounded 26 corner + a
-                            // faint white hairline give it the frosted-glass edge of the iOS liquid heroCard
-                            // (heroFill = rgba(13,14,20,.80), stroke white@0.11).
+                            // The liquid hero CARD. iOS builds it as
+                            // `.background(NoopPanelSurface(cornerRadius: 26, elevated: true, surfaceOpacity: cardOpacity))`
+                            // — the SAME shared card surface every other card uses, just at the hero's own 26
+                            // radius and raised. It is deliberately NOT a pinned-dark fill: `HeroScoreCell`
+                            // records that #1160 replaced "onDark* when the hero fill was pinned dark" with
+                            // ordinary text tokens on the ordinary panel surface, so the labels below read
+                            // `textSecondary` and the surface is the shared bevel. Android had ported an
+                            // earlier pilot's near-black fill, which is why the hero read as a dark block
+                            // among grey cards while iOS's matches them.
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(
-                                        Palette.heroFill.copy(alpha = Palette.heroFill.alpha * CardAppearance.opacity),
-                                        RoundedCornerShape(LIQUID_HERO_RADIUS),
-                                    )
-                                    .border(1.dp, Palette.heroBorder.copy(alpha = Palette.heroBorder.alpha * CardAppearance.opacity), RoundedCornerShape(LIQUID_HERO_RADIUS))
+                                    .frostedCardSurface(cornerRadius = LIQUID_HERO_RADIUS, elevated = true)
+                                    // iOS: `.padding(.vertical, NoopMetrics.space4)` = 16,
+                                    // `.padding(.horizontal, NoopMetrics.space3)` = 12.
+                                    .padding(vertical = 16.dp, horizontal = 12.dp)
                                     .staggeredAppear(stagger),
                             ) {
                                 ScoreHeroRow(
@@ -2261,14 +2282,22 @@ private fun LiveSessionEntryCard(onOpen: () -> Unit) {
     // liquidPress on the whole tappable card (same interactionSource on clickable + press), matching the
     // workout-in-progress card above. Merged semantics so TalkBack reads one Button, not four stops.
     val interaction = remember { MutableInteractionSource() }
-    NoopCard(
-        tint = teal,
+    Box(
         modifier = Modifier
             .liquidPress(interaction)
             .clickable(interactionSource = interaction, indication = null, onClick = onOpen)
             .semantics(mergeDescendants = true) {
                 contentDescription = uiString(R.string.l10n_today_screen_title_beta_detail_6b39ae21, title, detail)
-            },
+            }
+            .fillMaxWidth()
+            // iOS `LiquidTodayView.liveSessionStartRow`: `.background(NoopPanelSurface(cornerRadius: 18,
+            // surfaceOpacity: cardOpacity))` — a NEUTRAL panel. Only the shield GLYPH is cyan there; Android
+            // tinted the whole surface, so this row read as a coloured block where iOS's reads as ordinary
+            // neutral chrome that happens to carry a coloured icon. The 18 radius and the 14/11 padding are
+            // the iOS values too (Android was on the card default of 22 and 16).
+            .clip(RoundedCornerShape(18.dp))
+            .frostedCardSurface(cornerRadius = 18.dp)
+            .padding(horizontal = 14.dp, vertical = 11.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -2535,6 +2564,45 @@ private fun ScoringGuideIntroCard(onOpen: () -> Unit, onDismiss: () -> Unit) {
  *  Single source of truth so a size tweak keeps all three in lockstep. */
 private val HeaderClusterControl = 36.dp
 
+/**
+ * iOS parity: dissolve the trailing edge of the day title under the control cluster instead of ending it
+ * with an ellipsis. Twin of iOS `headerTrailingControlFadeMask(reserving:)`.
+ *
+ * @param reservePx the cluster's MEASURED width. 0 before the first layout pass, where the title simply
+ *   draws unmasked for one frame rather than being guessed at.
+ */
+private fun Modifier.fadeUnderTrailingControls(reservePx: Int): Modifier =
+    if (reservePx <= 0) {
+        this
+    } else {
+        this
+            // Offscreen isolation is REQUIRED here, not tidiness. `DstIn` erases whatever the layer already
+            // holds, and without a layer of its own that is the day-of-sky painted behind the title — the
+            // mask would eat a hole in the backdrop, not just in the text.
+            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+            .drawWithContent {
+                drawContent()
+                if (size.width <= 0f) return@drawWithContent
+                // The soft edge itself, so the title thins out rather than stopping dead at the reserve.
+                // 48dp is `NoopMetrics.headerTextFadeWidth`, the width iOS fades this same text over.
+                val fade = Metrics.headerTextFadeWidth.toPx()
+                val holdUntil = (size.width - reservePx - fade).coerceAtLeast(0f)
+                val goneBy = (size.width - reservePx).coerceAtLeast(0f)
+                drawRect(
+                    brush = Brush.horizontalGradient(
+                        0f to Color.Black,
+                        (holdUntil / size.width).coerceIn(0f, 1f) to Color.Black,
+                        (goneBy / size.width).coerceIn(0f, 1f) to Color.Transparent,
+                        1f to Color.Transparent,
+                        startX = 0f,
+                        endX = size.width,
+                    ),
+                    // Keeps the title where the mask is opaque, erases it where the mask is clear.
+                    blendMode = BlendMode.DstIn,
+                )
+            }
+    }
+
 @Composable
 private fun LiquidTodayHeader(
     dayTitle: String,
@@ -2558,6 +2626,10 @@ private fun LiquidTodayHeader(
     onQuickActions: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenDevices: () -> Unit,
+    // #2110: section order/visibility + both nested card editors. Lives in THIS cluster (iOS's position)
+    // rather than on the wordmark row, which is where Android had to put it while the title could not fade
+    // out from under a wider cluster. See fadeUnderTrailingControls for what changed.
+    onCustomize: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showPicker by remember { mutableStateOf(false) }
@@ -2590,17 +2662,25 @@ private fun LiquidTodayHeader(
         }
     }
 
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
+    // iOS parity: `LiquidTodayView.scene` lays the title out FULL WIDTH inside a ZStack and OVERLAYS the
+    // control cluster at `.topTrailing`, so a control added to the cluster never takes width from the day
+    // title — the title instead fades beneath it, under a MEASURED reserve
+    // (`headerTrailingControlFadeMask(reserving:)`). This was a Row, so every control ate into the title and
+    // a long day ended in a hard ellipsis mid-screen: the visible reason the two headers read differently.
+    //
+    // The reserve is the cluster's own measured width rather than a constant. iOS spells out why at its
+    // definition — "a constant is only ever right for the exact set of controls it was written against, and
+    // this row has already gained one". Reading it here also means the fade tracks the sync chip as it
+    // changes width between states, instead of a separate approximation of it.
+    var clusterWidthPx by remember { mutableIntStateOf(0) }
+    Box(modifier = modifier.fillMaxWidth()) {
         // LEFT: the tappable title block — big rounded-bold day title over the human date line. Taps open the
-        // day picker; a horizontal swipe across the dashboard still changes the day. weight(1f) so the title
-        // claims the leading room and never pushes the trailing control cluster. Mirrors iOS's title Button.
+        // day picker; a horizontal swipe across the dashboard still changes the day. Mirrors iOS's title
+        // Button, which is likewise `frame(maxWidth: .infinity, alignment: .leading)` under the cluster.
         Column(
             modifier = Modifier
-                .weight(1f)
+                .fillMaxWidth()
+                .fadeUnderTrailingControls(clusterWidthPx)
                 // #492: NO rounded clip here. With indication = null there's no ripple to shape, and the
                 // rounded corners were clipping the title/date text's bottom-left (the "W" of "Wednesday").
                 // iOS's title Button uses a plain contentShape(Rectangle()) with no clip — mirror that.
@@ -2610,7 +2690,7 @@ private fun LiquidTodayHeader(
                     onClickLabel = uiString(R.string.today_action_change_day),
                     onClick = { showPicker = true },
                 )
-                .semantics { contentDescription = uiString(R.string.l10n_today_screen_daytitle_humandate_tap_to_pick_a_7e12ce96, dayTitle, humanDate) },
+                .semantics { contentDescription = uiString(R.string.today_day_pick_hint, dayTitle) },
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(
@@ -2633,15 +2713,13 @@ private fun LiquidTodayHeader(
         }
 
         // RIGHT: the controls, in order — [sync chip] · avatar · + · battery ring. Each ~36dp, 8dp apart.
-        //
-        // #2110: deliberately NOT where the Customize control went, even though that is where iOS keeps it.
-        // The title Column beside this is weight(1f) with maxLines=1 + Ellipsis, so every control added here
-        // is width taken from the day title, and Android starts from a wider cluster than iOS because of the
-        // sync chip iOS has no equivalent of. iOS can afford its fourth control because it fades the title
-        // under a MEASURED cluster width (headerTrailingControlFadeMask); Android has no such reserve. On a
-        // 393dp phone a fifth control leaves the 28sp title ~117dp, and "Yesterday" needs ~139dp, so it
-        // would have started ellipsizing a day title that fits today.
+        // Overlaid at the top-trailing corner (iOS's ZStack `alignment: .topTrailing`), so the cluster no
+        // longer competes with the title for width; it reports its measured width upward instead, and the
+        // title fades beneath it. See the note above for why that ordering is the point.
         Row(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .onSizeChanged { clusterWidthPx = it.width },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -2685,6 +2763,12 @@ private fun LiquidTodayHeader(
                 is HeaderBatteryDisplay.State.Charge ->
                     LiquidBatteryRing(batteryPct = battery.pct, isRing = battery.isRing, onClick = onOpenDevices)
             }
+            // (d) Customize Today (section order/visibility + the nested editors). iOS keeps this here,
+            // fourth in the cluster; Android previously could not, because a fifth control took the day
+            // title down to ~117dp on a 393dp phone where "Yesterday" needs ~139dp, so the title would have
+            // ellipsized. It now fades under the cluster instead of ellipsizing, which is what makes iOS's
+            // placement affordable — the trade is a graceful fade rather than a hard cut.
+            CustomizeDisc(onClick = onCustomize)
         }
     }
 }
@@ -3276,7 +3360,11 @@ private fun HeroRingColumn(
             // from pushing the third column right or being clipped at the screen edge.
             AutoSizeValue(
                 text = domainLabel.uppercase(),
-                style = NoopType.overline,
+                // iOS `HeroScoreCell`: `Text(label.uppercased()).font(StrandFont.overline).tracking(1.6)`
+                // — 1.6, not the house `overlineTracking` (0.45). The hero label is one of three places iOS
+                // tracks ALL-CAPS harder than `.strandOverline` does; the Key-Metrics tile label is another
+                // (1.0 at 10pt). Both keep their own value here rather than inheriting the section-header one.
+                style = NoopType.overline.copy(letterSpacing = 1.6.sp),
                 color = Palette.textSecondary,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -3450,13 +3538,15 @@ private fun SynthesisHeroCard(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // The greeting yields/ellipsises first; the pill keeps its full width (#527).
-            Text(
-                greetingWord(),
+            // The greeting yields first; the pill keeps its full width (#527) — and it SHRINKS to 0.8x
+            // before it is ever truncated, mirroring the iOS `lineLimit(1).minimumScaleFactor(0.8)`. A plain
+            // ellipsised Text cut the German "Guten Nachmittag" to "Guten Nachmi…" on a 360dp phone, which
+            // the English "Good afternoon" never showed.
+            AutoSizeValue(
+                text = greetingWord(),
                 style = NoopType.subhead,
                 color = Palette.textSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                minScale = 0.8f,
                 modifier = Modifier.weight(1f, fill = false),
             )
             Spacer(Modifier.weight(1f))
@@ -3767,7 +3857,7 @@ private fun HeroMetricRows(
             }
             HeroVitalRow(
                 label = uiString(R.string.l10n_today_screen_heart_rate_variability_a137586d),
-                value = hrv?.let { "${it.roundToInt()} ms" } ?: NO_DATA,
+                value = hrv?.let { uiString(R.string.l10n_today_screen_lld_ms_1fe6bb9c, it.roundToInt()) } ?: NO_DATA,
                 tint = Palette.metricCyan,
                 fraction = hrv?.let { (it / 120.0).coerceIn(0.0, 1.0) },
                 metricKey = dashboardCardMetricKey(DashboardCard.HRV),
@@ -3775,7 +3865,7 @@ private fun HeroMetricRows(
             )
             HeroVitalRow(
                 label = uiString(R.string.l10n_today_screen_resting_heart_rate_348928d6),
-                value = rhr?.let { "$it bpm" } ?: NO_DATA,
+                value = rhr?.let { uiString(R.string.today_driver_value_bpm, it) } ?: NO_DATA,
                 tint = Palette.metricRose,
                 fraction = rhr?.let { (it / 100.0).coerceIn(0.0, 1.0) },
                 metricKey = dashboardCardMetricKey(DashboardCard.RESTING_HR),
@@ -4234,6 +4324,10 @@ private fun YourCardsSection(
                     // "last night" with no provenance. iOS TodayView.sleepSourceSubtitle twin.
                     subtitleOverride = if (card == DashboardCard.STEPS_AVERAGE_30)
                         uiString(R.string.steps_average_coverage, stepsAverage30.second)
+                    else if (card == DashboardCard.BLOOD_OXYGEN && spo2UsingCandidate(
+                            (carriedDay ?: day)?.spo2Pct ?: spo2Day?.spo2Pct,
+                            ((carriedDay ?: day)?.day ?: day?.day)?.let { spo2CandidateByDay[it] },
+                        )) uiString(R.string.spo2_strap_estimate_caption)
                     else sleepSourceSubtitle(card, day),
                     // #706/#684: every card now opens its OWN detail, matching iOS. The Stress card -> Stress;
                     // the overnight vitals (HRV / Resting HR / Respiratory / SpO₂ / Skin Temp) + Fitness age /
@@ -5477,7 +5571,25 @@ private fun RecoveryDriversSection(
     // day (#543) so the breakdown matches the carried ring instead of vanishing at the rollover.
     val readDay = carriedDay ?: displayDay
     val drivers = remember(days, readDay, hrvEpoch) { recoveryChargeDrivers(days, readDay, hrvEpoch) }
-    if (drivers.isEmpty()) return
+    // Mirror iOS's `chargeBreakdownEmptyNote`: with no drivers (a fresh strap, or a navigated past day with
+    // no score) render an honest explanation rather than nothing, so tapping Charge never opens a gap.
+    if (drivers.isEmpty()) {
+        NoopCard(padding = Metrics.space18, tint = Palette.chargeColor) {
+            Column(verticalArrangement = Arrangement.spacedBy(Metrics.space2)) {
+                Text(
+                    uiString(R.string.today_charge_breakdown_empty),
+                    style = NoopType.headline,
+                    color = Palette.textPrimary,
+                )
+                Text(
+                    uiString(R.string.today_needs_strap),
+                    style = NoopType.subhead,
+                    color = Palette.textSecondary,
+                )
+            }
+        }
+        return
+    }
 
     val tier = remember(days, readDay, hrvEpoch) { chargeConfidenceTier(days, readDay, hrvEpoch) }
     val overline = carriedDay?.let { uiString(R.string.today_charge_carried, carriedCaption(it.day).localized()) }
@@ -5584,7 +5696,15 @@ private fun DriverRow(driver: ChargeDriver) {
         ChargeDriverVerdict.WARMER_THAN_BASELINE_LIMITING -> uiString(R.string.today_driver_warmer_limiting)
         ChargeDriverVerdict.COOLER_THAN_BASELINE_LIMITING -> uiString(R.string.today_driver_cooler_limiting)
     }
-    val driverA11y = uiString(R.string.today_driver_a11y, label, valueText, baselineText, signed, verdict)
+    // `baselineText` is empty for the units with no personal baseline — sleep quality's %, and the skin
+    // temperature deviation, which is already expressed against the baseline. Handing that empty slot to
+    // the five-part sentence voiced a doubled comma on device ("Sleep quality, 87%, , 0 points, a strong
+    // night"), so the slot is dropped rather than spoken when there is nothing in it.
+    val driverA11y = if (baselineText.isBlank()) {
+        uiString(R.string.today_driver_a11y_no_baseline, label, valueText, signed, verdict)
+    } else {
+        uiString(R.string.today_driver_a11y, label, valueText, baselineText, signed, verdict)
+    }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -5649,7 +5769,7 @@ private fun RecoveryContributorsSection(day: DailyMetric?, carriedDay: DailyMetr
             // HRV, higher is better; map a typical 20–120 ms span. Teal (its biometric hue; iOS metricCyan).
             ContributorBar(
                 label = uiString(R.string.today_metric_hrv),
-                readout = hrv?.let { "${it.roundToInt()} ms" } ?: NO_DATA,
+                readout = hrv?.let { uiString(R.string.l10n_today_screen_lld_ms_1fe6bb9c, it.roundToInt()) } ?: NO_DATA,
                 fraction = hrv?.let { ((it - 20.0) / 100.0) },
                 color = Palette.metricCyan,
             )
@@ -5657,7 +5777,7 @@ private fun RecoveryContributorsSection(day: DailyMetric?, carriedDay: DailyMetr
             // chargeColor, the recovery contributor reads on the WHOOP-green Charge world, not gold).
             ContributorBar(
                 label = uiString(R.string.l10n_today_screen_resting_hr_26677094),
-                readout = rhr?.let { "${it.roundToInt()} bpm" } ?: NO_DATA,
+                readout = rhr?.let { uiString(R.string.today_driver_value_bpm, it.roundToInt()) } ?: NO_DATA,
                 fraction = rhr?.let { 1.0 - ((it - 40.0) / 40.0) },
                 color = Palette.chargeColor,
             )
@@ -5698,11 +5818,17 @@ private fun ContributorBar(label: String, readout: String, fraction: Double?, co
             Overline(label, modifier = Modifier.weight(1f))
             Text(displayReadout, style = NoopType.captionNumber, color = Palette.textPrimary)
         }
-        LiquidTube(
-            frac = fillFrac,
+        // iOS `ChargeBreakdownFormat`'s driver row draws its magnitude as
+        // `PipBar(value:range:segments: 16, tint:, height: 6)` — a SEGMENTED bar. Android had a continuous
+        // `LiquidTube` here, while the Health hub's own ContributorBar already used PipBar, so the same
+        // "contributor strength" idiom read as two different controls on two screens. The charge drivers
+        // are the same signals in both places (HRV / resting HR / sleep / respiratory), so they take the
+        // same bar and the same 16-segment 6dp spec.
+        PipBar(
+            value = (fillFrac * 100.0).toFloat(),
+            segments = 16,
             tint = color,
-            height = Metrics.progressHeight,
-            animated = false,
+            height = 6.dp,
             modifier = Modifier
                 .fillMaxWidth()
                 .semantics { contentDescription = uiString(R.string.l10n_today_screen_label_readout_3f166607, label, displayReadout) },
@@ -6163,16 +6289,19 @@ private fun MetricGrid(
     val hasOverflow = allTiles.size > METRICS_COLLAPSED_CAP
     val tiles = if (metricsExpanded || !hasOverflow) allTiles else allTiles.take(METRICS_COLLAPSED_CAP)
 
-    // iOS `keyMetricsSection` LazyVGrid: 3 columns, spacing 8. Build from rows so tile heights tile uniformly
-    // and a partial last row pads with empty weight so the columns stay aligned.
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        tiles.chunked(3).forEach { rowTiles ->
+    // iOS `LiquidTodayView.keyMetricsSection`: `LazyVGrid(columns: repeating GridItem(.flexible(),
+    // spacing: NoopMetrics.gap), count: 2, spacing: NoopMetrics.gap)` — TWO columns at a 12 gap. Android
+    // had three columns at 8, so every Key-Metrics row packed three narrow tiles where iOS shows two wide
+    // ones. Both iOS grids agree on two columns on a phone: the liquid one says `count: 2` outright, and
+    // the classic one is `.adaptive(minimum: 150)`, which fits two, not three, inside a phone's 361pt.
+    Column(verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
+        tiles.chunked(2).forEach { rowTiles ->
             // Detailed rows equalise heights (IntrinsicSize.Max + fillMaxHeight, the #399 idiom): a
             // graph-less tile (Steps/Weight/Calories) sharing a row with graphed neighbours must not
             // shrink its card. Compact rows keep the plain layout, byte-identical to before.
             Row(
                 modifier = if (detailed) Modifier.height(IntrinsicSize.Max) else Modifier,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(Metrics.gap),
             ) {
                 rowTiles.forEach { (metric, tile) ->
                     LiquidKeyTile(
@@ -6181,10 +6310,20 @@ private fun MetricGrid(
                         detailed = detailed,
                         windowDays = windowDays,
                         onClick = tapFor(metric),
-                        modifier = Modifier.weight(1f).then(if (detailed) Modifier.fillMaxHeight() else Modifier),
+                        modifier = Modifier
+                            .weight(1f)
+                            // iOS pins a MINIMUM height per tile — 116 compact, 154 detailed — so a value
+                            // tile and a sparkline tile read as the same object and the matrix stays even
+                            // across rows, not just within one. The per-row IntrinsicSize idiom above only
+                            // ever equalised a row; this is what makes two rows agree.
+                            .heightIn(
+                                min = if (detailed) Metrics.keyMetricTileMinHeightDetailed
+                                else Metrics.keyMetricTileMinHeight,
+                            )
+                            .then(if (detailed) Modifier.fillMaxHeight() else Modifier),
                     )
                 }
-                repeat(3 - rowTiles.size) { Spacer(Modifier.weight(1f)) }
+                repeat(2 - rowTiles.size) { Spacer(Modifier.weight(1f)) }
             }
         }
         // S5: the "Show all metrics" / "Show fewer" expander — a centered link like iOS. Toggles visibility
@@ -6198,7 +6337,7 @@ private fun MetricGrid(
             ) {
                 Text(
                     if (metricsExpanded) uiString(R.string.today_show_fewer_metrics)
-                    else uiString(R.string.today_show_all_metrics, hidden),
+                    else uiString(R.string.today_show_all_metrics),
                     style = NoopType.subhead,
                 )
                 Spacer(Modifier.width(4.dp))
@@ -6291,40 +6430,56 @@ private fun LiquidKeyTile(
     }
     Column(
         modifier = base
-            .clip(RoundedCornerShape(16.dp))
-            .frostedCardSurface(cornerRadius = 16.dp)
-            .padding(horizontal = 12.dp, vertical = 11.dp)
+            // iOS `LiquidTodayView.ktile` spec, matched value-for-value below: its own 18 corner
+            // (`NoopPanelSurface(cornerRadius: 18)`), 14pt padding on both axes, and a 10pt inner stack.
+            // Android had compressed all of these (16 / 12x11 / 6), which is why the tiles read airy once
+            // their height was pinned to iOS's 116 — the box was iOS's, the contents were sized for a
+            // smaller one.
+            .clip(RoundedCornerShape(Metrics.keyMetricTileRadius))
+            .frostedCardSurface(cornerRadius = Metrics.keyMetricTileRadius)
+            .padding(horizontal = 14.dp, vertical = 14.dp)
             .semantics { contentDescription = uiString(R.string.l10n_today_screen_data_label_data_value_data_unit_27f6fd6b, data.label, displayValue, data.unit).trim() },
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         // iOS ktile parity: a small metric glyph before the overline label, tinted to the tile colour at
         // 0.72 opacity (LiquidTodayView `Image(systemName:).foregroundStyle(tint.opacity(0.72))`). Decorative
         // — the tile's own semantics already announce the label/value, so the icon is contentDescription-null.
+        // 11pt in a 14-wide frame on iOS; an 11dp glyph with a 6dp gap between it and the label.
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Icon(
                 icon,
                 contentDescription = null,
                 tint = data.tint.copy(alpha = 0.72f),
-                modifier = Modifier.size(12.dp),
+                modifier = Modifier.size(11.dp),
             )
-            Text(
+            // `overlineScaled(10)` at tracking 1.0 on iOS. This is one of the few sites where iOS does NOT
+            // use the `overlineTracking` constant: its tile labels are smaller and more open than
+            // `strandOverline`, so this keeps its own 10/1.0 pair rather than the 11/0.45 house one.
+            // AutoSizeValue applies iOS's `minimumScaleFactor(0.82)` — the label shrinks to fit instead of
+            // truncating, which is what keeps long localised labels ("BLOOD OXYGEN", "RESPIRATORY RATE")
+            // whole in a tile this narrow.
+            AutoSizeValue(
                 data.label.uppercase(),
-                style = NoopType.overline.copy(fontSize = 9.sp, letterSpacing = 1.2.sp),
+                style = NoopType.overline.copy(fontSize = 10.sp, letterSpacing = 1.0.sp),
                 color = Palette.textTertiary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                minScale = 0.82f,
                 modifier = Modifier.weight(1f),
             )
         }
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(
+            AutoSizeValue(
                 displayValue,
-                style = NoopType.number(17f),
+                // iOS `StrandFont.number(24)` — which is exactly `NoopType.tileValue`, the token this app
+                // already had. The tile had been using number(17), so every Key-Metric figure was about a
+                // third smaller than its iOS twin.
+                style = NoopType.tileValue,
                 color = if (hasValue) Palette.textPrimary else Palette.textTertiary,
-                maxLines = 1,
+                // iOS `minimumScaleFactor(0.75)`: the figure shrinks to fit rather than truncating, so a
+                // long localised value stays readable instead of becoming "1.2…".
+                minScale = 0.75f,
             )
             if (data.unit.isNotEmpty() && hasValue) {
                 Text(
@@ -6340,12 +6495,12 @@ private fun LiquidKeyTile(
         // read), or, on a blank tile, what actually unblocks it. One line, ellipsised, and only rendered
         // when a tile supplies one, so every other tile keeps its current height.
         data.caption?.let { cap ->
-            Text(
+            AutoSizeValue(
                 cap,
                 style = NoopType.caption,
                 color = Palette.textTertiary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                // iOS `minimumScaleFactor(0.8)` on the ktile caption.
+                minScale = 0.8f,
             )
         }
         // Detailed rows are height-equalised (fillMaxHeight): pin the bar + graph to the bottom edge so a
@@ -6354,7 +6509,8 @@ private fun LiquidKeyTile(
         LiquidTube(
             frac = data.frac ?: 0.0,
             tint = data.tint,
-            height = 8.dp,
+            // 9 on iOS (`LiquidTube(..., height: 9, ...)`), matching the tube on every other ktile.
+            height = 9.dp,
             animated = false,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -7263,7 +7419,7 @@ private fun TodayWorkoutsSection(workouts: List<WorkoutRow>, onSelect: (WorkoutR
                         onClickLabel = uiString(R.string.today_action_show_workout),
                         onClick = { onSelect(workout) },
                     ),
-                label = WorkoutEditing.displaySport(workout.sport),
+                label = WorkoutEditing.sportCellText(workout.sport),
                 value = localizedMetricValue(workoutDuration(workout)),
                 caption = workoutCaption(workout),
                 accent = workout.strain?.let { Palette.effortTint(it / StrainScorer.maxStrain) } ?: Palette.textPrimary,
@@ -7289,6 +7445,7 @@ private fun TodaySourcesSection(
     val whoopPresent = (footer.whoopDays ?: 0) > 0 || strapBatteryPct != null
     val applePresent = (footer.appleDays ?: 0) > 0 || (footer.appleWorkouts ?: 0) > 0
     val hcPresent = (footer.hcDays ?: 0) > 0 || (footer.hcWorkouts ?: 0) > 0
+    val xiaomiPresent = (footer.xiaomiDays ?: 0) > 0
     if (!expanded) {
         // Collapsed: one tappable "Synced from: ..." line. Each source is named for what it is —
         // Health Connect must NOT fold under "Apple Watch" (issue #176: Health-Connect-only users
@@ -7307,7 +7464,7 @@ private fun TodaySourcesSection(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    syncedFromSummary(hasWhoop = whoopPresent, hasApple = applePresent, hasHealthConnect = hcPresent, hasXiaomi = false)
+                    syncedFromSummary(hasWhoop = whoopPresent, hasApple = applePresent, hasHealthConnect = hcPresent, hasXiaomi = xiaomiPresent)
                         .let { names ->
                             if (names.isEmpty()) uiString(R.string.today_no_sources_yet)
                             else uiString(R.string.today_synced_from, names.localizedSourceList())
@@ -7380,6 +7537,27 @@ private fun TodaySourcesSection(
                 present = hcPresent,
                 detail = countDetail(footer.hcDays, footer.hcWorkouts),
             )
+            // iOS shows this row only once a Mi Band import has landed (`if xiaomiDays > 0`), so a
+            // strap-only install keeps the shorter card. Its second figure is SLEEPS, not workouts: a
+            // Mi Band import brings sleep stages with no sessions to count (`TodayView.swift:4231-4240`).
+            if (xiaomiPresent) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(Palette.hairline),
+                )
+                SourceRow(
+                    badge = uiString(R.string.today_source_mi_band),
+                    tint = Palette.metricAmber,
+                    present = true,
+                    detail = countDetail(
+                        days = footer.xiaomiDays,
+                        second = footer.xiaomiSleeps,
+                        secondRes = R.plurals.today_source_sleeps,
+                    ),
+                )
+            }
         }
     }
 }
@@ -7583,14 +7761,20 @@ private fun ReadinessSection(days: List<DailyMetric>, carriedDay: DailyMetric? =
                 )
                 readiness.signals.forEach { signal ->
                     Row(verticalAlignment = Alignment.Top) {
-                        Box(
+                        // iOS draws a per-flag severity GLYPH here — its own comment: "Colour-independent
+                        // glyph so severity isn't conveyed by hue alone." Android drew a bare coloured dot,
+                        // so an off-night and a good night differed only by hue. Same glyph set, same 9pt
+                        // optical size, hidden from the a11y tree (the flag word is folded into the row's
+                        // own label on iOS; the dot's reading is carried by the detail text here).
+                        Icon(
+                            imageVector = flagIcon(signal.flag),
+                            contentDescription = null,
+                            tint = flagColor(signal.flag),
                             modifier = Modifier
-                                .padding(top = 5.dp)
-                                .size(7.dp)
-                                .clip(CircleShape)
-                                .background(flagColor(signal.flag)),
+                                .padding(top = 4.dp)
+                                .size(11.dp),
                         )
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(6.dp))
                         Text(
                             readinessCopy(signal.labelRes),
                             style = NoopType.caption,
@@ -7640,6 +7824,18 @@ private fun flagColor(flag: ReadinessEngine.Flag): Color = when (flag) {
 }
 
 /**
+ * Flag → severity glyph, mirroring TodayView.flagSymbol (checkmark.circle.fill / minus.circle.fill /
+ * exclamationmark.circle.fill / exclamationmark.triangle.fill). Carried as a glyph rather than only a hue
+ * so the per-signal read is legible without colour vision, exactly as iOS intends.
+ */
+private fun flagIcon(flag: ReadinessEngine.Flag): ImageVector = when (flag) {
+    ReadinessEngine.Flag.GOOD -> Icons.Filled.CheckCircle
+    ReadinessEngine.Flag.NEUTRAL -> Icons.Filled.RemoveCircleOutline
+    ReadinessEngine.Flag.WATCH -> Icons.Filled.Error
+    ReadinessEngine.Flag.BAD -> Icons.Filled.Warning
+}
+
+/**
  * #316 / @63, map a step-sample activity class (0=still, 1=walk, 2=run) to the still/walk/run icon + an
  * accessibility label. Mirrors the iOS Steps-tile glyph set (figure.stand / figure.walk / figure.run) and
  * semantics exactly (cross-platform parity). Returns (null, "") for any other code so an unmapped value
@@ -7658,9 +7854,11 @@ private fun stepActivityIconFor(activityClass: Int): Pair<ImageVector?, Int?> = 
 // Sparkline anchored along the bottom edge. Mirrors the macOS StatTile-with-sparkline
 // while reusing the locked surfaces/typography (NoopCard, Overline, NoopType). Built
 // here rather than mutating the shared StatTile so other screens keep the plain tile.
+// INTERNAL since the Apple Health per-source page: its iOS twin hands every StatTile a sparkline over the
+// resolved window, so that page composes this one rather than re-deriving a second sparkline tile.
 
 @Composable
-private fun SparkStatTile(
+internal fun SparkStatTile(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
@@ -7934,12 +8132,18 @@ private val workoutTimeFmt: DateTimeFormatter =
         .withLocale(Locale.getDefault()).withZone(ZoneId.systemDefault())
 
 @Composable
-private fun countDetail(days: Int?, workouts: Int?): String {
-    if (days == null || workouts == null) return uiString(R.string.today_source_counting)
+private fun countDetail(
+    days: Int?,
+    second: Int?,
+    // Workouts for every session source; SLEEPS for Mi Band, which imports sleep stages rather than
+    // sessions, so "N workouts" would be a confident zero on a card full of imported nights.
+    @PluralsRes secondRes: Int = R.plurals.today_source_workouts,
+): String {
+    if (days == null || second == null) return uiString(R.string.today_source_counting)
     return uiString(
         R.string.today_source_count_joiner,
         uiPlural(R.plurals.today_source_days, days, grouped(days)),
-        uiPlural(R.plurals.today_source_workouts, workouts, grouped(workouts)),
+        uiPlural(secondRes, second, grouped(second)),
     )
 }
 
@@ -7957,7 +8161,7 @@ private fun workoutDuration(row: WorkoutRow): String {
     return if (totalMinutes >= 60) {
         "${totalMinutes / 60}h ${totalMinutes % 60}m"
     } else {
-        "${totalMinutes}m"
+        uiString(R.string.l10n_today_screen_lldm_f8b297ab, totalMinutes)
     }
 }
 

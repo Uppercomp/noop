@@ -67,19 +67,12 @@ private enum class PrimerSection(
 ) {
     SLEEP(
         title = uiString(R.string.l10n_how_noop_works_screen_how_your_sleep_is_sorted_6a8e82e0),
-        body = "NOOP picks your main sleep as your longest real block, and (once it has " +
-            "learned your usual hours) the one nearest your normal sleep time. Everything " +
-            "else that day is a nap. You can always edit bed and wake times.",
+        body = uiString(R.string.l10n_how_noop_works_screen_noop_picks_your_main_sleep_as_your_longe_edf2abdf),
         icon = Icons.Filled.Bedtime,
     ),
     SCORES(
         title = uiString(R.string.l10n_how_noop_works_screen_how_your_scores_work_21a0e2be),
-        body = "Charge, Effort and Rest are scored on your own device from your strap data. " +
-            "Charge needs about four nights of sleep to learn your baseline (that's \"Calibrating\", " +
-            "counted as nights of 4 on the ring), and keeps sharpening over your first couple of weeks. " +
-            "On a WHOOP 5 or MG the strap banks little history, so that count can sit at 0 of 4 until you " +
-            "have worn it across a few nights. That's the strap's sync limit, not a fault. " +
-            "Before there's a number, NOOP shows what it can without faking one.",
+        body = uiString(R.string.l10n_how_noop_works_screen_charge_effort_and_rest_are_scored_on_you_a8ea1d42),
         icon = Icons.Filled.Insights,
     ),
     SCORE_RECIPE(
@@ -96,14 +89,12 @@ private enum class PrimerSection(
     ),
     RECORDING(
         title = uiString(R.string.l10n_how_noop_works_screen_what_recording_means_b896c422),
-        body = "When your strap is connected NOOP is saving data live. \"Last synced\" tells " +
-            "you how fresh it is. If it says \"Not recording\", reconnect.",
+        body = uiString(R.string.l10n_how_noop_works_screen_when_your_strap_is_connected_noop_is_sav_79a2fca7),
         icon = Icons.Filled.Sensors,
     ),
     PROVENANCE(
         title = uiString(R.string.l10n_how_noop_works_screen_where_your_numbers_come_from_e169963a),
-        body = "A badge shows whether a number was scored on-device by NOOP, or imported " +
-            "from Whoop or Apple Health.",
+        body = uiString(R.string.l10n_how_noop_works_screen_a_badge_shows_whether_a_number_was_score_260365d0),
         icon = Icons.Filled.Verified,
     );
 
@@ -176,7 +167,7 @@ private fun Header(onClose: () -> Unit) {
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Overline("The basics", color = Palette.textTertiary)
+            Overline(uiString(R.string.l10n_case_the_basics_94f442df), color = Palette.textTertiary)
             Text(uiString(R.string.l10n_how_noop_works_screen_how_noop_works_3396b27a), style = NoopType.display(26f), color = Palette.textPrimary)
             Text(
                 uiString(R.string.l10n_how_noop_works_screen_sleep_scores_recording_where_your_numbers_1b3e981f),
@@ -201,7 +192,7 @@ private fun Header(onClose: () -> Unit) {
 private fun IntroCard() {
     NoopCard(padding = 20.dp) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Overline("The one rule")
+            Overline(uiString(R.string.l10n_case_the_one_rule_112e155d))
             Text(
                 uiString(R.string.l10n_how_noop_works_screen_noop_never_shows_you_a_number_d1db9958),
                 style = NoopType.subhead,

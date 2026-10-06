@@ -1,6 +1,10 @@
 package com.noop.ui
 
 import com.noop.R
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.TimePickerDefaults
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.foundation.Canvas
@@ -45,6 +49,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -59,6 +64,7 @@ import android.content.ClipboardManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -80,6 +86,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
@@ -90,6 +97,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
@@ -129,42 +137,66 @@ fun Modifier.frostedCardSurface(
     tint: Color? = null,
     cornerRadius: Dp = Metrics.cardRadius,
     washStrength: Float = 1f,
+    // iOS `NoopPanelSurface(elevated:)`: a deeper, wider shadow for a surface meant to sit above its
+    // neighbours — the Today hero, the workout-selection card, chart hover cards. iOS switches to
+    // `opacity 0.34, radius 18, y 10` from `0.18, radius 9, y 5`, and Compose derives both the blur and the
+    // y-offset from the elevation, so the elevation value carries the pair. Defaults false, so every
+    // existing card keeps its exact current shadow.
+    elevated: Boolean = false,
 ): Modifier = composed {
     // "Card transparency" setting: scale the whole glass surface (fill + border + wash) by the user's
     // opacity so cards fade toward the background. Reading the reactive value here makes the slider
     // live-preview. Content drawn above the surface is unaffected, so numbers/labels stay readable.
     val op = CardAppearance.opacity
+    // Light keeps iOS's single 0.10 alpha at either elevation; dark differentiates 0.34 / 0.18.
+    val shadowAlpha = (if (Palette.isLight) 0.10f else if (elevated) 0.34f else 0.18f) * op
     this
         // Elevation idiom: DARK is flat (the hairline + hue carry the edge). LIGHT raises the white card
         // off the warm-paper canvas with a soft drop shadow — the hairline alone is too faint on paper.
-        .then(
-            if (Palette.isLight)
-                Modifier.shadow(elevation = (6f * op).dp, shape = RoundedCornerShape(cornerRadius), clip = false)
-            else Modifier
+        // Elevation: NoopPanelSurface casts a soft shadow in BOTH schemes (Apple uses 0.18 alpha in
+        // dark, 0.10 in light, radius 9 / y 5). Android only raised the light card, so a dark card
+        // had colour and a rim but no depth — half of what makes the Apple card read as lifted.
+        .shadow(
+            elevation = ((if (elevated) 18f else 9f) * op).dp,
+            shape = RoundedCornerShape(cornerRadius),
+            clip = false,
+            ambientColor = Color.Black.copy(alpha = shadowAlpha),
+            spotColor = Color.Black.copy(alpha = shadowAlpha),
         )
         .drawBehind {
             val radiusPx = cornerRadius.toPx()
             val corner = androidx.compose.ui.geometry.CornerRadius(radiusPx, radiusPx)
-            val fill = Palette.surfaceRaised.copy(alpha = Palette.surfaceRaised.alpha * op)
-            val border = Palette.hairline.copy(alpha = Palette.hairline.alpha * op)
+
+            // The Apple card is TOP-LIT: a vertical bevel from surfaceTop down to surfaceBottom, not a
+            // flat fill. Android drew `surfaceRaised` flat, which is why its cards looked unlit beside
+            // iOS's even with matching colours.
+            val bevel = Brush.verticalGradient(
+                colors = listOf(
+                    Palette.surfaceOverlay.copy(alpha = Palette.surfaceOverlay.alpha * op),
+                    Palette.surfaceBottom.copy(alpha = Palette.surfaceBottom.alpha * op),
+                ),
+            )
+            // ...and its rim is a gradient too: borderHighlight at 0.72 down to border at 0.52, at
+            // 0.8dp — brighter along the top edge. A single flat 1dp hairline loses that highlight.
+            val rim = Brush.verticalGradient(
+                colors = listOf(
+                    Palette.hairlineStrong.copy(alpha = 0.72f * op),
+                    Palette.hairline.copy(alpha = 0.52f * op),
+                ),
+            )
 
             if (tint == null) {
-                // NEUTRAL card (iOS FrostedCardSurface tint == nil): a FLAT raised surface — no vertical
-                // bevel gradient, no accent wash, and a PLAIN hairline border (no accent bias).
-                drawRoundRect(color = fill, cornerRadius = corner)
-                drawRoundRect(color = border, cornerRadius = corner, style = Stroke(width = 1.dp.toPx()))
+                drawRoundRect(brush = bevel, cornerRadius = corner)
+                drawRoundRect(brush = rim, cornerRadius = corner, style = Stroke(width = 0.8.dp.toPx()))
             } else {
-                // TINTED card (iOS parity, 2026-06-23 "synthesis has the old blue style"): a FLAT raised
-                // surface — the SAME WHOOP grey as the neutral card, NO navy bevel gradient — carrying only
-                // a whisper of the domain tint as a diagonal hue wash so it stays in the grey family.
-                // 1) Flat raised fill — identical to the neutral card.
-                drawRoundRect(color = fill, cornerRadius = corner)
-                // 2) Faint diagonal accent hue wash over the flat fill (matches iOS FrostedCardSurface ~0.05).
+                // TINTED card: the same top-lit bevel, carrying a whisper of the domain tint as a
+                // diagonal hue wash so it stays in the grey family.
+                drawRoundRect(brush = bevel, cornerRadius = corner)
                 drawRoundRect(
                     brush = Brush.linearGradient(
                         colorStops = arrayOf(
-                            0.0f to tint.copy(alpha = 0.05f * washStrength * op),
-                            0.5f to tint.copy(alpha = 0.015f * washStrength * op),
+                            0.0f to tint.copy(alpha = 0.055f * washStrength * op),
+                            0.5f to tint.copy(alpha = 0.012f * washStrength * op),
                             1.0f to Color.Transparent,
                         ),
                         start = Offset(0f, 0f),
@@ -172,8 +204,7 @@ fun Modifier.frostedCardSurface(
                     ),
                     cornerRadius = corner,
                 )
-                // 3) Plain 1px hairline (no accent bias) — matches the neutral card.
-                drawRoundRect(color = border, cornerRadius = corner, style = Stroke(width = 1.dp.toPx()))
+                drawRoundRect(brush = rim, cornerRadius = corner, style = Stroke(width = 0.8.dp.toPx()))
             }
         }
 }
@@ -244,7 +275,7 @@ fun SyncingHistoryNote(chunks: Int, modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        StatePill("Syncing strap history…", tone = StrandTone.Accent, pulsing = true)
+        StatePill(uiString(R.string.fgs_title_syncing), tone = StrandTone.Accent, pulsing = true)
         if (chunks > 0) {
             Text(
                 uiString(R.string.l10n_components_chunks_chunks_pulled_cec186cf, chunks),
@@ -255,7 +286,11 @@ fun SyncingHistoryNote(chunks: Int, modifier: Modifier = Modifier) {
     }
 }
 
-// MARK: - Overline label (ALL-CAPS, semibold, +0.8 tracking, secondary)
+// MARK: - Overline label (ALL-CAPS, semibold, +0.45 tracking, secondary)
+//
+// Twin of `Text.strandOverline()`: 11pt semibold rounded, `StrandFont.overlineTracking` (0.45), uppercase,
+// `textSecondary`. The tracking figure in this comment used to read 0.8 and then 1.4 — neither was ever the
+// iOS constant; see NoopType.overlineTracking for where 0.45 comes from.
 
 @Composable
 fun Overline(text: String, modifier: Modifier = Modifier, color: Color = Palette.textSecondary) {
@@ -278,15 +313,28 @@ fun SectionHeader(
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
+        // iOS `VStack(alignment: .leading, spacing: 2)`: 2pt of air between the overline and the title.
+        // Android's Column carried no arrangement at all, so the overline sat flush against the title while
+        // iOS's had a gap — on every section header in the app.
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         if (overline != null || trailing != null) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top,
             ) {
-                if (overline != null) Overline(overline, modifier = Modifier.weight(1f))
+                if (overline != null) {
+                    Overline(overline, modifier = Modifier.weight(1f).alignByBaseline())
+                }
                 if (trailing != null) {
-                    Text(trailing, style = NoopType.footnote, color = Palette.textSecondary)
+                    // iOS pairs these under `HStack(alignment: .firstTextBaseline)`, so the footnote trailing
+                    // sits on the OVERLINE's baseline rather than on its top edge. Aligning TOPS instead put
+                    // the two out by the size difference between an 11pt overline and a 13pt footnote.
+                    Text(
+                        trailing,
+                        style = NoopType.footnote,
+                        color = Palette.textSecondary,
+                        modifier = Modifier.alignByBaseline(),
+                    )
                 }
             }
         }
@@ -400,7 +448,9 @@ fun StatePill(
         modifier = modifier
             .clip(shape)
             .background(tone.color.copy(alpha = 0.12f))
-            .border(1.dp, tone.color.copy(alpha = 0.32f), shape)
+            // 0.28, from iOS `StatePill`: `Capsule().stroke(tone.color.opacity(0.28), lineWidth: 1)`.
+            // Android had 0.32, so every tone pill's outline sat a touch stronger than its iOS twin.
+            .border(1.dp, tone.color.copy(alpha = 0.28f), shape)
             .padding(horizontal = 10.dp, vertical = 5.dp)
             .semantics { contentDescription = title },
         verticalAlignment = Alignment.CenterVertically,
@@ -432,9 +482,12 @@ fun SourceBadge(text: String, tint: Color = Palette.accent, modifier: Modifier =
             // when Android's font scaling makes the single-line label taller.
             .heightIn(min = Metrics.sourceBadgeHeight)
             .clip(shape)
-            .background(tint.copy(alpha = 0.14f))
-            .border(1.dp, tint.copy(alpha = 0.30f), shape)
-            .padding(horizontal = Metrics.space8),
+            // iOS `SourceBadge`: `tint.opacity(0.16)` fill, a `tint.opacity(0.34)` strokeBorder, and 9pt of
+            // horizontal padding. Android had 0.14 / 0.30 / 8dp, so every provenance badge sat a shade
+            // dimmer and slightly narrower than its iOS twin.
+            .background(tint.copy(alpha = 0.16f))
+            .border(1.dp, tint.copy(alpha = 0.34f), shape)
+            .padding(horizontal = 9.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -569,6 +622,12 @@ fun StatTile(
 ) {
     // Each tile borrows its accent as a faint card wash, so a metric reads as part of its
     // colour world while staying legible on the deep blue-black. Falls back to the accent.
+    //
+    // The height stays EXACT rather than becoming iOS's `minHeight` floor, for two reasons. iOS needs the
+    // floor only for a SPARKLINE tile — "a sparkline tile's content exceeds the 96pt base" — and Android
+    // splits that case into its own `SparkStatTile`, so nothing here can outgrow the base. And the
+    // `Spacer(Modifier.weight(1f))` below distributes REMAINING height, which an unbounded max height
+    // cannot supply: a floor would collapse that spacer and stop anchoring the value to the tile's bottom.
     NoopCard(modifier = modifier.height(Metrics.tileHeight), padding = 14.dp, tint = tint ?: accent) {
         Column {
             Overline(label)
@@ -1126,7 +1185,7 @@ fun RecoveryRing(
         stops = Palette.recoveryStops,
         tipColor = Palette.recoveryColor(score),
         numberText = valueFormat?.invoke(score) ?: score.toInt().toString(),
-        stateText = Palette.recoveryState(score),
+        stateText = Palette.recoveryState(score).text(),
         supporting = supporting,
         diameter = diameter,
         lineWidth = lineWidth,
@@ -1172,7 +1231,7 @@ fun StrainGauge(
         tipColor = Palette.effortTint(fraction),
         numberText = valueText
             ?: if (clamped % 1.0 == 0.0) clamped.toInt().toString() else String.format(java.util.Locale.US, "%.1f", clamped),
-        captionText = "of ${outOf.toInt()}",
+        captionText = uiString(R.string.l10n_components_of_96aa174a, outOf.toInt()),
         diameter = diameter,
         lineWidth = lineWidth,
         showsLabel = showsLabel,
@@ -1258,21 +1317,75 @@ fun ScenicHeroBackground(
     }
 }
 
+/** Android's canonical tablet breakpoint. See [readableColumnWidth]. */
+internal const val REGULAR_WIDTH_DP = 600
+
+/**
+ * iOS parity: cap the readable column on regular width and centre it, exactly as the iOS ScreenScaffold
+ * does with `.frame(maxWidth: hSizeClass == .regular ? 700 : .infinity, alignment: .center)`.
+ *
+ * Both scaffolds call this in place of their bare `fillMaxWidth()`, so the cap lands on the SCROLL
+ * CONTENT and not on the backdrop — the iOS note above its frame says the same thing, and it is what
+ * keeps a scene-backed screen's sky full-bleed while its cards stay readable.
+ *
+ * Gated on [REGULAR_WIDTH_DP] (600dp), Android's canonical equivalent of a regular horizontal size class.
+ * A phone never reports that width, so the compact branch stays byte-for-byte what it was: this is why the
+ * cap can be added without touching any existing phone layout.
+ */
+@Composable
+private fun Modifier.readableColumnWidth(): Modifier =
+    if (LocalConfiguration.current.screenWidthDp >= REGULAR_WIDTH_DP) {
+        this
+            .fillMaxWidth()
+            // Sizes to the capped content and places it centred in the full-width viewport, which is the
+            // job of the outer `.frame(maxWidth: .infinity, alignment: .center)` on the iOS side.
+            .wrapContentWidth(Alignment.CenterHorizontally)
+            .widthIn(max = Metrics.readableColumnMaxWidth)
+    } else {
+        this.fillMaxWidth()
+    }
+
 // MARK: - ScreenScaffold (ported from Strand/Screens/ScreenScaffold.swift)
 //
 // Standard scrollable screen container: a title + optional subtitle header over the
 // dark surface, then a left-aligned content column with 28dp screen padding.
+
+/**
+ * iOS parity (#198): a top-level tab's scroll container jumps back to the top when its tab is re-tapped.
+ *
+ * Media the two scaffolds below share. [ScrollToTopStore.signal] is read here rather than threaded in as a
+ * parameter because the scaffolds already own their scroll container, so no screen can forget to wire
+ * itself up — the same split that keeps the iOS behaviour in `ScreenScaffold` / `LiquidTodayView` instead
+ * of in every screen.
+ *
+ * The reaction is a CHANGE, never the initial value, matching the iOS `.onChange(of: scrollToTopSignal)`.
+ * A scaffold that scrolled on first composition would yank a tab to the top every time the wearer switched
+ * back to it, because `rememberSaveable` restores the list position across a tab switch.
+ */
+@Composable
+private fun ScrollToTopOnReselect(scrollToTop: suspend () -> Unit) {
+    val signal = ScrollToTopStore.signal
+    // Seeded with the CURRENT token so the first composition is a no-op; only a later value scrolls.
+    var lastHandled by remember { mutableIntStateOf(signal) }
+    LaunchedEffect(signal) {
+        if (signal != lastHandled) {
+            lastHandled = signal
+            scrollToTop()
+        }
+    }
+}
 
 @Composable
 fun ScreenScaffold(
     title: String?,
     subtitle: String? = null,
     modifier: Modifier = Modifier,
-    // Top inset above the content. Defaults to the standard 28dp screen padding; a screen that
-    // supplies its own compact header (Today, title = null) can pass a smaller value to tighten the
-    // gap above its first element — Compose forbids negative padding, so this is how iOS's
-    // `.padding(top: -16)` tightening is expressed.
-    topPadding: Dp = 28.dp,
+    // Top inset above the content. Defaults to 24, matching the iOS ScreenScaffold's `.padding(.top, 24)`;
+    // a screen that supplies its own compact header (Today, title = null) can pass a smaller value to
+    // tighten the gap above its first element — Compose forbids negative padding, so this is how iOS's
+    // `.padding(top: -16)` tightening is expressed. Android shipped 28, which was the macOS value (see the
+    // gutter note below), so every screen also sat 4dp lower than iOS.
+    topPadding: Dp = 24.dp,
     leading: (@Composable () -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
     // Optional full-bleed view drawn behind the scroll content at the TOP of the screen (e.g. Today's
@@ -1295,23 +1408,37 @@ fun ScreenScaffold(
     // two paths share one body.
     val columnModifier: Modifier =
         if (topBackground == null) {
-            modifier.fillMaxWidth().background(Palette.surfaceBase)
+            modifier.readableColumnWidth().background(Palette.surfaceBase)
         } else {
-            Modifier.fillMaxWidth()
+            Modifier.readableColumnWidth()
         }
     val column: @Composable () -> Unit = {
+        // Hoisted out of `verticalScroll` so the re-tap handler below can drive the same instance; the
+        // state is the same remember-scoped one it always was, so scroll position is unchanged.
+        val scrollState = rememberScrollState()
+        ScrollToTopOnReselect { scrollState.animateScrollTo(0) }
         Column(
             modifier = columnModifier
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 // #1836: the bar's height is added to the CONTENT's bottom padding, not to the screen's
                 // layout. That distinction is the whole overlay: the screen reaches the bottom edge so its
                 // backdrop paints behind and around the glass, while the scrolling content still stops
                 // clear of the bar. Zero when the overlay is off, so the slot layout is untouched.
                 .padding(
-                    start = 28.dp,
-                    end = 28.dp,
+                    // iOS parity (2026-07-02 iOS, `NoopMetrics.screenHPadding`): the iOS ScreenScaffold
+                    // insets the column by 16 and keeps 28 only on macOS — "Unified side margins matching
+                    // the floating navigation bar so every page's cards + header line up to the same edges
+                    // (2026-07-02); macOS keeps the classic 28 in the #else branch." Android had taken the
+                    // macOS number, so every screen's content column was 12dp narrower than iOS's on the
+                    // same phone. `Metrics.screenPadding` is the token that already held 16, and the
+                    // scaffolds were bypassing it with this literal.
+                    start = Metrics.screenPadding,
+                    end = Metrics.screenPadding,
                     top = topPadding,
-                    bottom = 28.dp + BottomBarStyleStore.barHeightForContent(),
+                    // Same gutter on the page's own bottom edge, so all four sides agree; the bar's height
+                    // is what actually clears the navigation, and iOS reaches the same total through its
+                    // single `tabBarClearance` constant.
+                    bottom = Metrics.screenPadding + BottomBarStyleStore.barHeightForContent(),
                 ),
             // #765: one shared inter-card spacing token (was a bare `20.dp`), so the eager + lazy scaffolds
             // and every screen through them keep the SAME uniform gap between top-level cards.
@@ -1409,7 +1536,9 @@ fun LazyScreenScaffold(
     // Mirrors ScreenScaffold: a screen with a scene-backed header (Today-style) can tighten the gap
     // above its first row, and supply leading/trailing header actions + a screen-level scene backdrop.
     // All defaulted, so the existing flat callers (Intelligence) are byte-for-byte untouched.
-    topPadding: Dp = 28.dp,
+    // 24, matching the iOS ScreenScaffold's `.padding(.top, 24)` — see ScreenScaffold for why Android
+    // shipped 28 (it was the macOS value).
+    topPadding: Dp = 24.dp,
     // The inter-row vertical spacing between top-level items. Defaults to the shared `screenRowSpacing`
     // (20dp) so every existing caller is byte-for-byte untouched; the liquid Today passes a tighter value
     // to match the iOS Today's compact `VStack(spacing: 12)` section rhythm (the maintainer's "iOS is
@@ -1466,15 +1595,27 @@ fun LazyScreenScaffold(
     // the gap above the first row, exactly like ScreenScaffold's `padding(top = topPadding)`).
     val listModifier: Modifier =
         if (topBackground == null) {
-            modifier.fillMaxWidth().background(Palette.surfaceBase)
+            modifier.readableColumnWidth().background(Palette.surfaceBase)
         } else {
-            Modifier.fillMaxWidth()
+            Modifier.readableColumnWidth()
         }
     val list: @Composable () -> Unit = {
+        // iOS parity (#198): a re-tap of the active tab scrolls its root back to the top. `listState` may
+        // be the caller's own hoisted state (Today's is) — scrolling that same instance here is what keeps
+        // the caller's reads (section reorder, anchor restore) honest rather than fighting a second state.
+        ScrollToTopOnReselect { listState.animateScrollToItem(0) }
         LazyColumn(
             modifier = listModifier,
             state = listState,
-            contentPadding = PaddingValues(start = 28.dp, top = topPadding, end = 28.dp, bottom = 28.dp),
+            // iOS parity: the same 16dp page gutter the eager scaffold uses (and that iOS's
+            // `NoopMetrics.screenHPadding` defines). This literal was 28 — the macOS margin — which is why
+            // every lazy screen was 12dp narrower than its iOS twin. See ScreenScaffold for the full note.
+            contentPadding = PaddingValues(
+                start = Metrics.screenPadding,
+                top = topPadding,
+                end = Metrics.screenPadding,
+                bottom = Metrics.screenPadding,
+            ),
             // #765: the shared inter-card spacing token by default (Today/Explore + the eager screens share
             // one uniform card rhythm); a caller may pass a tighter [rowSpacing] (the liquid Today does, for
             // the iOS-compact section rhythm).
@@ -1620,4 +1761,65 @@ fun BackupFailureDialog(message: String, onDismiss: () -> Unit) {
             }
         },
     )
+}
+
+// MARK: - NoopTimePickerDialog — the ONE time picker
+
+/**
+ * A Material3 [TimePicker] in a plain dialog, wearing the house colours.
+ *
+ * Material3 1.2.x ships `TimePicker` + `rememberTimePickerState` but no packaged dialog, so every call site
+ * would otherwise wrap it itself. NotificationsSettingsScreen has the original of this block; hoisting it
+ * here means the second call site (the wind-down card's usual wake time) cannot drift from it — the same
+ * reason [NoopBusyRow] was hoisted out of five copies.
+ */
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+fun NoopTimePickerDialog(
+    title: String,
+    hour: Int,
+    minute: Int,
+    is24Hour: Boolean = true,
+    onConfirm: (hour: Int, minute: Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val state = rememberTimePickerState(initialHour = hour, initialMinute = minute, is24Hour = is24Hour)
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .clip(RoundedCornerShape(20.dp))
+                .background(Palette.surfaceOverlay)
+                .border(1.dp, Palette.hairline, RoundedCornerShape(20.dp))
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text(title, style = NoopType.headline, color = Palette.textPrimary)
+            TimePicker(
+                state = state,
+                colors = TimePickerDefaults.colors(
+                    clockDialColor = Palette.surfaceInset,
+                    clockDialSelectedContentColor = Palette.surfaceBase,
+                    clockDialUnselectedContentColor = Palette.textPrimary,
+                    selectorColor = Palette.accent,
+                    periodSelectorBorderColor = Palette.hairline,
+                    timeSelectorSelectedContainerColor = Palette.accentMuted,
+                    timeSelectorUnselectedContainerColor = Palette.surfaceInset,
+                    timeSelectorSelectedContentColor = Palette.accent,
+                    timeSelectorUnselectedContentColor = Palette.textPrimary,
+                ),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text(uiString(R.string.l10n_notifications_settings_screen_cancel_77dfd213), style = NoopType.body, color = Palette.textSecondary)
+                }
+                TextButton(onClick = { onConfirm(state.hour, state.minute); onDismiss() }) {
+                    Text(uiString(R.string.l10n_notifications_settings_screen_set_448ab73b), style = NoopType.body, color = Palette.accent)
+                }
+            }
+        }
+    }
 }

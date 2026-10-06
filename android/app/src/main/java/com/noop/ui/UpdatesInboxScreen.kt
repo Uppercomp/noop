@@ -181,7 +181,7 @@ fun UpdatesInboxScreen(
 private fun subtitle(store: UpdateStore): String {
     if (store.items.isEmpty()) return "What's new in the app and your data"
     val n = store.unreadCount
-    return if (n == 0) "All caught up" else "$n unread"
+    return if (n == 0) "All caught up" else uiString(R.string.l10n_updates_inbox_screen_lld_unread_8f7b5042, n)
 }
 
 @Composable
@@ -309,9 +309,9 @@ private fun UpdateRow(
             )
             .semantics {
                 contentDescription = if (item.read) {
-                    "${item.title}. ${item.message}"
+                    uiString(R.string.l10n_updates_inbox_screen_s_ee0136ed, item.title, item.message)
                 } else {
-                    "Unread. ${item.title}. ${item.message}"
+                    uiString(R.string.l10n_updates_inbox_screen_unread_b03f704d, item.title, item.message)
                 }
             },
     ) {
@@ -341,7 +341,7 @@ private fun UpdateRow(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        relativeAgo(item.date / 1000L),
+                        relativeAgo(item.date / 1000L).text(),
                         style = NoopType.footnote,
                         color = Palette.textTertiary,
                         modifier = Modifier.padding(top = 1.dp),

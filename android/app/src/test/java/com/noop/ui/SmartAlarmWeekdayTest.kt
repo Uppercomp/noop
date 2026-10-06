@@ -1,5 +1,6 @@
 package com.noop.ui
 
+import com.noop.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -129,10 +130,31 @@ class SmartAlarmWeekdayTest {
 
     @Test
     fun summary_labels() {
-        assertEquals("Every day", smartAlarmWeekdaySummary(emptySet()))
-        assertEquals("Every day", smartAlarmWeekdaySummary(setOf(1, 2, 3, 4, 5, 6, 7)))
-        assertEquals("Weekdays", smartAlarmWeekdaySummary(setOf(2, 3, 4, 5, 6)))
-        assertEquals("Weekends", smartAlarmWeekdaySummary(setOf(1, 7)))
-        assertEquals("Mon, Wed", smartAlarmWeekdaySummary(setOf(2, 4)))
+        // Resources, not words: the helper is pure and a JVM test has no Application to resolve one
+        // (see DisplayText). The special cases are single parts; any other set is one part per day.
+        assertEquals(
+            listOf(DisplayText.Resource(R.string.l10n_automations_screen_every_day_3b2eb513)),
+            smartAlarmWeekdaySummary(emptySet()),
+        )
+        assertEquals(
+            listOf(DisplayText.Resource(R.string.l10n_automations_screen_every_day_3b2eb513)),
+            smartAlarmWeekdaySummary(setOf(1, 2, 3, 4, 5, 6, 7)),
+        )
+        assertEquals(
+            listOf(DisplayText.Resource(R.string.l10n_automations_screen_weekdays_4ffc67b6)),
+            smartAlarmWeekdaySummary(setOf(2, 3, 4, 5, 6)),
+        )
+        assertEquals(
+            listOf(DisplayText.Resource(R.string.l10n_automations_screen_weekends_2f92a0aa)),
+            smartAlarmWeekdaySummary(setOf(1, 7)),
+        )
+        // Mon + Wed, in the picker's Monday-first order, as two named days.
+        assertEquals(
+            listOf(
+                DisplayText.Resource(R.string.l10n_automations_screen_mon_24b2a099),
+                DisplayText.Resource(R.string.l10n_automations_screen_wed_23408b19),
+            ),
+            smartAlarmWeekdaySummary(setOf(2, 4)),
+        )
     }
 }

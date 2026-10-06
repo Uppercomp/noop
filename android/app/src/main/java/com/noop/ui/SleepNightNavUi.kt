@@ -212,7 +212,7 @@ internal fun NightNavHeader(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Overline("Bedtime", color = Palette.textTertiary)
+                            Overline(uiString(R.string.l10n_caffeine_log_bedtime_e3cb8bd6), color = Palette.textTertiary)
                             Spacer(Modifier.height(Metrics.space4))
                             Text(bedText, style = NoopType.headline, color = Palette.textPrimary)
                         }
@@ -302,7 +302,7 @@ internal fun NightNavHeader(
                         },
                         startCal.get(Calendar.HOUR_OF_DAY), startCal.get(Calendar.MINUTE), true,
                     ).apply {
-                        setTitle("Bedtime")
+                        setTitle(uiString(R.string.l10n_caffeine_log_bedtime_e3cb8bd6))
                         setOnDismissListener {
                             editingBed = false
                             if (sleepEditDraft != null) showTimeChoice = true
@@ -436,7 +436,7 @@ internal fun NightNavHeader(
                 startCal.get(Calendar.HOUR_OF_DAY),
                 startCal.get(Calendar.MINUTE),
                 true,
-            ).apply { setTitle("Nap started") }
+            ).apply { setTitle(uiString(R.string.l10n_sleep_screen_nap_started_d5b588bb)) }
             dialog.setOnDismissListener { addingNapStart = false }
             dialog.show()
             onDispose { runCatching { dialog.dismiss() } }
@@ -466,7 +466,7 @@ internal fun NightNavHeader(
                 endCal.get(Calendar.HOUR_OF_DAY),
                 endCal.get(Calendar.MINUTE),
                 true,
-            ).apply { setTitle("Nap ended") }
+            ).apply { setTitle(uiString(R.string.l10n_sleep_screen_nap_ended_f5b406ea)) }
             dialog.setOnDismissListener { addingNapEnd = false }
             dialog.show()
             onDispose { runCatching { dialog.dismiss() } }

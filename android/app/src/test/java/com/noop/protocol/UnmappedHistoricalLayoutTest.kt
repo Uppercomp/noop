@@ -65,7 +65,7 @@ class UnmappedHistoricalLayoutTest {
         assertEquals("precondition: these bytes DO decode a heart rate", 102, asV18["heart_rate"])
         assertTrue("precondition: these bytes DO decode a gravity vector", asV18["gravity_x"] is Double)
 
-        val unmapped = whoop5FrameWithVersion(22)
+        val unmapped = whoop5FrameWithVersion(23)
         assertEquals(
             "precondition: the record is CRC-VALID, so only the layout decision can archive it",
             true, Framing.parseFrame(unmapped, DeviceFamily.WHOOP5).crcOk,
@@ -111,13 +111,13 @@ class UnmappedHistoricalLayoutTest {
     /**
      * The mapped versions ARE recognised as mapped (the other direction of the lockstep).
      *
-     * This set is now {18, 20, 21, 26}, matching Swift. v20 (raw optical) and v21 (raw 6-axis IMU) were
+     * This set is now {18, 20, 21, 22, 26}, matching Swift. v20 (raw optical) and v21 (raw 6-axis IMU) were
      * the long-standing gap: `Whoop5RawOptical`/`Whoop5RawImu` existed on this side but were wired only
      * to the LIVE deep-buffer route, never to the type-47 historical dispatch, so an offloaded record in
      * either layout decoded to null. `decodeWhoop5HistoricalV2021` closes that.
      */
     @Test fun mappedVersionsAreNotTreatedAsUnmapped() {
-        assertEquals(setOf(18, 20, 21, 26), MAPPED_WHOOP5_HISTORICAL_VERSIONS)
+        assertEquals(setOf(18, 20, 21, 22, 26), MAPPED_WHOOP5_HISTORICAL_VERSIONS)
         for (v in MAPPED_WHOOP5_HISTORICAL_VERSIONS) {
             assertFalse(
                 "v$v has a field map and must not be archived on layout grounds",

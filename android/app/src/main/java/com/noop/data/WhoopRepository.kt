@@ -320,7 +320,14 @@ data class PpgWaveformRow(
     /** #2019: the absolute optical code [samples] are deltas from; null on a legacy row, whose absolute
      *  level is gone for good because a delta series cannot be inverted without it. */
     val baseCode: Long? = null,
-)
+    // Full CRC-verified v26 frame, including timing / status / currently unmapped bytes. Legacy = null.
+    val rawFrame: List<Int>? = null,
+) {
+    val metadata: com.noop.protocol.Whoop5WaveformMetadata?
+        get() = rawFrame?.let { com.noop.protocol.Whoop5WaveformMetadata.decode(it.map(Int::toByte).toByteArray()) }
+    // Signed view of the wire's i32 optical base; keep the stored u32 pattern unchanged for backups.
+    val signedBaseCode: Long? get() = baseCode?.toInt()?.toLong()
+}
 
 /** Count of rows ACTUALLY inserted per stream (mirrors WhoopStore.insert return tuple). */
 data class InsertCounts(
@@ -638,7 +645,7 @@ class WhoopRepository(
             dao.insertPpgWaveform(
                 streams.ppgWaveform.map {
                     PpgWaveformSampleEntity(deviceId, it.ts, StreamPersistence.packPpgSamples(it.samples),
-                        it.burstIndex, it.baseCode)
+                        it.burstIndex, it.baseCode, it.rawFrame?.map(Int::toByte)?.toByteArray())
                 },
             )
             // #1911 rolling retention, amortised and best-effort on exactly the same terms as the v18-aux
@@ -1226,7 +1233,8 @@ class WhoopRepository(
     suspend fun ppgWaveformSamples(deviceId: String, from: Long, to: Long, limit: Int = DEFAULT_LIMIT):
         List<PpgWaveformRow> =
         dao.ppgWaveformSamples(deviceId, from, to, limit)
-            .map { PpgWaveformRow(it.ts, StreamPersistence.unpackPpgSamples(it.samples)) }
+            .map { PpgWaveformRow(it.ts, StreamPersistence.unpackPpgSamples(it.samples),
+                it.burstIndex, it.baseCode, it.rawFrame?.map { byte -> byte.toInt() and 0xFF }) }
 
     /**
      * The banked 5/MG v18 auxiliary fields in [from, to] for one device, ascending by ts — one row per
@@ -1806,6 +1814,17 @@ class WhoopRepository(
     /** Scalar COUNT twin of [workouts] (exact total, no row limit) for count badges. */
     suspend fun workoutsCount(deviceId: String, from: Long, to: Long): Int =
         dao.workoutsCount(deviceId, from, to)
+
+    /**
+     * #1853: fill ONE night's absolute skin temperature, and only when it is currently null. Returns the
+     * rows changed (0 or 1) so the backfill can tell a fill from a no-op rather than assuming success.
+     */
+    suspend fun fillSkinTempC(deviceId: String, day: String, skinTempC: Double): Int =
+        dao.fillSkinTempC(deviceId, day, skinTempC)
+
+    /** Scalar COUNT twin of [sleepSessionsForDevice] (exact total, no row limit) for count badges. */
+    suspend fun sleepSessionsCount(deviceId: String, from: Long, to: Long): Int =
+        dao.sleepSessionsCount(deviceId, from, to)
 
     /** #1058: SUM of per-session `steps` over one source's workouts with startTs in [from, to). */
     suspend fun sumWorkoutSteps(deviceId: String, from: Long, to: Long): Int =

@@ -26,11 +26,6 @@ internal fun dayOwnerSource(deviceId: String?): FusionSource? = when {
     else -> FusionSource.WHOOP_IMPORT
 }
 
-internal sealed interface DisplayText {
-    data class Resource(@StringRes val id: Int, val args: List<Any> = emptyList()) : DisplayText
-    data class Dynamic(val value: String) : DisplayText
-}
-
 internal fun provenanceBadgeLabel(owner: FusionSource?): DisplayText? = when (owner) {
     FusionSource.NOOP_COMPUTED -> DisplayText.Resource(R.string.today_source_on_device)
     FusionSource.WHOOP_IMPORT -> DisplayText.Resource(R.string.today_source_whoop)

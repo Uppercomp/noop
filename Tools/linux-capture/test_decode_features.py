@@ -85,9 +85,9 @@ class FeatureToRowsTests(unittest.TestCase):
         s = out["second"]
         self.assertEqual((s["hr"], s["gx"], s["rr_count"], s["record_version"]), (95, 0.1, 2, 24))
         self.assertEqual(s["spo2_red"], 1234)
-        # Skin temp: raw AS6221 register passes through; °C is its native raw/128 (700/128 = 5.46875).
+        # A raw ADC without a supported family/layout is retained without an invented Celsius scale.
         self.assertEqual(s["skin_temp_raw"], 700)
-        self.assertAlmostEqual(s["skin_temp_c"], 5.46875)
+        self.assertIsNone(s["skin_temp_c"])
         self.assertEqual(len(out["rr"]), 2)
         self.assertEqual(out["rr"][1], {"unix": 1000, "idx": 1, "rr_ms": 610})
 
@@ -164,6 +164,30 @@ class FeatureToRowsTests(unittest.TestCase):
 
 
 class ApplyRowsTests(unittest.TestCase):
+    def test_redecode_replaces_obsolete_temperature_interpretation(self):
+        c = _conn(self)
+        c.execute("INSERT INTO feat_second(device_id, unix, skin_temp_raw, skin_temp_c) "
+                  "VALUES (1,1000,3400,26.5625)")
+        rec = _rec(47, {"skin_temp_raw": 3400}, version=18)
+        rec["family"] = "whoop5"
+        df.apply_rows(c, 1, [df.feature_to_rows(rec)])
+        self.assertEqual(c.execute("SELECT skin_temp_raw,skin_temp_c FROM feat_second").fetchone(),
+                         (3400, 34.0))
+        # An unsupported layout carrying a raw value explicitly withdraws the former conversion.
+        rec["family"] = "whoop4"
+        df.apply_rows(c, 1, [df.feature_to_rows(rec)])
+        self.assertEqual(c.execute("SELECT skin_temp_raw,skin_temp_c FROM feat_second").fetchone(),
+                         (3400, None))
+
+    def test_hr_only_second_does_not_erase_historical_temperature(self):
+        c = _conn(self)
+        rec = _rec(47, {"skin_temp_raw": 3400}, version=18)
+        rec["family"] = "whoop5"
+        df.apply_rows(c, 1, [df.feature_to_rows(rec),
+                             df.feature_to_rows(_rec(40, {"heart_rate": 90}))])
+        self.assertEqual(c.execute("SELECT hr,skin_temp_raw,skin_temp_c FROM feat_second").fetchone(),
+                         (90, 3400, 34.0))
+
     def test_inserts_all_tables(self):
         c = _conn(self)
         mapped = [
@@ -209,6 +233,39 @@ def _fld(name, value, cat):
 
 class NormalizeTests(unittest.TestCase):
     # src frame row shape from WhoopDB.frames_after: (id, hex, char, recv_ms, unix, hr, inner_type)
+    def test_whoop5_r18_temperature_flows_through_normalizer_in_centidegrees(self):
+        # Existing Swift SkinTempConversionTests anchors, plus the supported range boundaries.
+        # Exercise the complete bridge so dropping family in normalization cannot pass unnoticed.
+        src = (1, "aa", "fd4b0005", 0, 1700000000, None, 47)
+        for raw_temp, expected in [(500, 5.0), (2247, 22.47), (3057, 30.57),
+                                   (3400, 34.0), (4500, 45.0)]:
+            with self.subTest(raw=raw_temp):
+                raw = _decoded([_fld("hist_version", 18, "meta"),
+                                _fld("skin_temp_raw", raw_temp, "temp")])
+                second = df.feature_to_rows(df.normalize_decode_record(raw, src, 1))["second"]
+                self.assertEqual(second["skin_temp_raw"], raw_temp)
+                self.assertEqual(second["skin_temp_c"], expected)
+
+    def test_temperature_conversion_requires_known_family_layout_and_historical_type(self):
+        for family, version, packet_type in [("whoop4", 24, 47), (None, 18, 47),
+                                              ("whoop5", 19, 47), ("whoop5", 18, 40)]:
+            with self.subTest(family=family, version=version, packet_type=packet_type):
+                raw = _decoded([_fld("hist_version", version, "meta"),
+                                _fld("skin_temp_raw", 3400, "temp")], family=family)
+                src = (1, "aa", "c", 0, 1700000000, None, packet_type)
+                second = df.feature_to_rows(df.normalize_decode_record(raw, src, 1))["second"]
+                self.assertEqual(second["skin_temp_raw"], 3400)
+                self.assertIsNone(second["skin_temp_c"])
+
+    def test_temperature_conversion_does_not_turn_invalid_raw_values_into_measurements(self):
+        src = (1, "aa", "c", 0, 1700000000, None, 47)
+        for value in [None, True, -1, 0, 499, 4501, 65535, 3400.0, "3400", float("nan")]:
+            with self.subTest(raw=value):
+                raw = _decoded([_fld("hist_version", 18, "meta"),
+                                _fld("skin_temp_raw", value, "temp")])
+                second = df.feature_to_rows(df.normalize_decode_record(raw, src, 1))["second"]
+                self.assertIsNone(second["skin_temp_c"])
+
     def test_flattens_fields_dropping_envelope_and_raw(self):
         raw = _decoded([
             _fld("SOF", "0xAA", "frame"),

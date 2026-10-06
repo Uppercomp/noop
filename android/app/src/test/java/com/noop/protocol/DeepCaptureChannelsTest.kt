@@ -248,11 +248,12 @@ class DeepCaptureChannelsTest {
             heartRateAlt = 14L, rrPacked = 15L, cardiacStatus = 16L, stepCadence = 17L,
             statusWord = 18L, statusWord1 = 19L, statusWord2 = 20L, auxByte82 = 21L,
             opticalBaselineA = 22L, opticalBaselineB = 23L, opticalAmpA = 24L, opticalAmpB = 25L,
-            unknownF32Bits = 26L,
+            unknownF32Bits = 26L, recordFlags = 27L, timestampSubseconds = 28L,
+            auxWord61 = 29L, auxByte64 = 30L, activityClassRaw = 31L,
         )
         assertEquals(V18AuxSlot.entries.size, a.slotValues.size)
         // Slot i must round-trip to position i — this is what makes the persisted bitmap meaningful.
-        assertEquals((10L..26L).toList(), a.slotValues)
+        assertEquals((10L..31L).toList(), a.slotValues)
         assertEquals(a, V18AuxRow.fromSlotValues(1, a.slotValues))
         // Indices must be a dense 0..<n range in declaration order (bitmap bit positions).
         assertEquals(V18AuxSlot.entries.indices.toList(), V18AuxSlot.entries.map { it.index })
@@ -333,7 +334,8 @@ class DeepCaptureChannelsTest {
             ts = 0, recordIndex = 1L, rrCount = 2L, cardiacFlags = 3L, hrQualityFlags = 4L,
             heartRateAlt = 5L, rrPacked = 6L, cardiacStatus = 7L, stepCadence = 8L, statusWord = 9L,
             statusWord1 = 10L, statusWord2 = 11L, auxByte82 = 12L, opticalBaselineA = 13L,
-            opticalBaselineB = 14L, opticalAmpA = 15L, opticalAmpB = 16L, unknownF32Bits = 17L,
+            opticalBaselineB = 14L, opticalAmpA = 15L, opticalAmpB = 16L, unknownF32Bits = 17L, recordFlags = 18L, timestampSubseconds = 19L,
+            auxWord61 = 20L, auxByte64 = 21L, activityClassRaw = 22L,
         )
         val blob = V18AuxCodec.pack(full)
         assertEquals(V18AuxCodec.FORMAT_VERSION, blob[0].toInt() and 0xFF)
@@ -344,9 +346,9 @@ class DeepCaptureChannelsTest {
         for (b in 0 until 4) bitmap = bitmap or ((blob[1 + b].toInt() and 0xFF) shl (8 * b))
         assertEquals((1 shl V18AuxSlot.entries.size) - 1, bitmap)
         assertTrue("a u16 bitmap would no longer fit", V18AuxSlot.entries.size > 16)
-        // 5-byte header + the sum of the declared slot widths — a full row is 32 bytes.
+        // 5-byte header + the sum of the declared slot widths — a full row is 39 bytes.
         assertEquals(5 + V18AuxSlot.entries.sumOf { it.width }, blob.size)
-        assertEquals(32, blob.size)
+        assertEquals(39, blob.size)
         assertEquals(full, V18AuxCodec.unpack(blob, 0))
     }
 

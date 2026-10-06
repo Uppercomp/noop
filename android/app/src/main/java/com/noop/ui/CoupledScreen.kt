@@ -238,7 +238,7 @@ fun CoupledScreen(
             // The brief quotes the footer with the brand word, but the hard legal / anonymity rule wins over
             // the illustrative copy: this keeps the exact intent without the branding word. Byte-identical to
             // the Swift footer caption.
-            "A classic one-glance read of NOOP's own scores. Same data, different lens.",
+            uiString(R.string.l10n_coupled_screen_a_classic_one_glance_read_of_noop_s_own_cbc0f10f),
             style = NoopType.footnote,
             color = Palette.textTertiary,
             modifier = Modifier.padding(top = 4.dp),
@@ -358,6 +358,7 @@ private fun HeroCard(
                         when (caption) {
                             is DisplayText.Resource -> uiString(caption.id, *caption.args.toTypedArray())
                             is DisplayText.Dynamic -> caption.value
+                            is DisplayText.Prefixed -> caption.prefix + caption.inner.plain()
                         },
                         style = NoopType.footnote,
                         color = Palette.textTertiary,
@@ -448,7 +449,7 @@ private fun StrainCard(dayStrain21: Double?, recovery: Double?, calories: Double
             ) {
                 if (dayStrain21 != null) {
                     val strainFrac = (dayStrain21 / COUPLED_STRAIN_OUT_OF).coerceIn(0.0, 1.0)
-                    Text(strainBandWord(dayStrain21 / COUPLED_STRAIN_OUT_OF), style = NoopType.overline, color = Palette.effortColor)
+                    Text(strainBandWord(dayStrain21 / COUPLED_STRAIN_OUT_OF).text(), style = NoopType.overline, color = Palette.effortColor)
                     Spacer(Modifier.size(4.dp))
                     Box(modifier = Modifier.size(148.dp), contentAlignment = Alignment.Center) {
                         LiquidVessel(
@@ -637,16 +638,19 @@ internal fun hoursMinutes(minutes: Double): String {
 }
 
 /**
- * The strain band word for a 0..1 fill fraction, byte-identical to the Swift StrandDesign StrainGauge bands
- * (LIGHT/MODERATE/STRENUOUS/HIGH/ALL-OUT at 6/10/14/18 of 21). The Android StrainGauge has no internal state
- * word, so the coupled strain card computes it for the overline.
+ * The effort band word for a 0..1 fill fraction — the SAME four bands and the same words as the iOS
+ * `CoupledView.strainBandWord` (Light / Moderate / Strenuous / High at 6 and 10 and 14 of 21).
+ *
+ * It used to be five uppercase bands of its own (LIGHT/MODERATE/STRENUOUS/HIGH/ALL-OUT at 6/10/14/18),
+ * which is neither iOS's wording nor its thresholds — so a day at 16 of 21 read "HIGH" here and "High"
+ * there, and the two disagreed about the band above 18. "Strenuous" is `Dynamic` because the catalog
+ * carries no translation for it, exactly as iOS shows it untranslated.
  */
-internal fun strainBandWord(fraction: Double): String = when {
-    fraction < 6.0 / 21 -> "LIGHT"
-    fraction < 10.0 / 21 -> "MODERATE"
-    fraction < 14.0 / 21 -> "STRENUOUS"
-    fraction < 18.0 / 21 -> "HIGH"
-    else -> "ALL-OUT"
+internal fun strainBandWord(fraction: Double): DisplayText = when {
+    fraction < 6.0 / 21 -> DisplayText.Resource(R.string.l10n_coupled_screen_light_a36ef8ab)
+    fraction < 10.0 / 21 -> DisplayText.Resource(R.string.l10n_coupled_screen_moderate_ea8b09c2)
+    fraction < 14.0 / 21 -> DisplayText.Dynamic("Strenuous")
+    else -> DisplayText.Resource(R.string.l10n_coupled_screen_high_b1a5954a)
 }
 
 /**

@@ -402,12 +402,19 @@ public struct PpgWaveformSample: Equatable, Codable, Sendable {
     /// written before it was read, and that nil is TRUE rather than merely missing: a delta series
     /// cannot be inverted without its starting point, so those windows have no recoverable level.
     public let baseCode: Int?
-    public init(ts: Int, samples: [Int], burstIndex: Int? = nil, baseCode: Int? = nil) {
+    // Full CRC-verified v26 frame, including timing / status / currently unmapped bytes. Legacy = nil.
+    public let rawFrame: [UInt8]?
+    public init(ts: Int, samples: [Int], burstIndex: Int? = nil, baseCode: Int? = nil,
+                rawFrame: [UInt8]? = nil) {
         self.ts = ts
         self.samples = samples
         self.burstIndex = burstIndex
         self.baseCode = baseCode
+        self.rawFrame = rawFrame
     }
+    public var metadata: Whoop5WaveformMetadata? { rawFrame.flatMap(Whoop5WaveformMetadata.decode) }
+    // Signed view of the wire's i32 optical base; keep the stored u32 pattern unchanged for backups.
+    public var signedBaseCode: Int? { baseCode.map { Int(Int32(bitPattern: UInt32(truncatingIfNeeded: $0))) } }
 }
 
 /// One wire slot in the 5/MG v18 auxiliary-field record. The `rawValue` is the slot's bit position in
@@ -471,15 +478,21 @@ public enum V18AuxSlot: Int, CaseIterable, Sendable {
     case opticalAmpA            // @108 u8  — paired amplitude/quality-like channel
     case opticalAmpB            // @109 u8  — the other half of the @108/@109 pair
     case unknownF32At113        // @113 f32 — carried as its raw u32 bit pattern; purpose unknown
+    case recordFlags            // @10 u8 — raw; sample-rate interpretation is a candidate
+    case timestampSubseconds    // @19 u16 — raw subsecond clock word
+    case auxWord61              // @61 u16 — meaning unvalidated
+    case auxByte64              // @64 u8 — meaning unvalidated
+    case activityClassRaw       // @63 u8 — includes unknown / invalid codes
 
     /// Wire width in bytes. Fixed per slot — part of the storage contract.
     public var width: Int {
         switch self {
         case .recordIndex, .unknownF32At113: return 4
-        case .rrPacked, .statusWord, .statusWord1, .statusWord2:
+        case .rrPacked, .statusWord, .statusWord1, .statusWord2, .timestampSubseconds, .auxWord61:
             return 2
         case .rrCount, .cardiacFlags, .hrQualityFlags, .heartRateAlt, .cardiacStatus, .stepCadence,
-             .auxByte82, .opticalBaselineA, .opticalBaselineB, .opticalAmpA, .opticalAmpB:
+             .auxByte82, .opticalBaselineA, .opticalBaselineB, .opticalAmpA, .opticalAmpB,
+             .recordFlags, .auxByte64, .activityClassRaw:
             return 1
         }
     }
@@ -509,6 +522,11 @@ public enum V18AuxSlot: Int, CaseIterable, Sendable {
         case .opticalAmpA: return "optical_amp_a"
         case .opticalAmpB: return "optical_amp_b"
         case .unknownF32At113: return "unknown_f32_113"
+        case .recordFlags: return "record_flags"
+        case .timestampSubseconds: return "timestamp_subseconds"
+        case .auxWord61: return "aux_word_61"
+        case .auxByte64: return "aux_byte_64"
+        case .activityClassRaw: return "activity_class_raw"
         }
     }
 }
@@ -557,13 +575,20 @@ public struct V18AuxSample: Equatable, Codable, Sendable {
     public let opticalAmpB: Int?
     /// The raw 32-bit pattern of `unknown_f32_113`, NOT a decoded float. See `unknownF32At113`.
     public let unknownF32Bits: Int?
+    public let recordFlags: Int?
+    public let timestampSubseconds: Int?
+    public let auxWord61: Int?
+    public let auxByte64: Int?
+    public let activityClassRaw: Int?
 
     public init(ts: Int, recordIndex: Int? = nil, rrCount: Int? = nil, cardiacFlags: Int? = nil,
                 hrQualityFlags: Int? = nil, heartRateAlt: Int? = nil, rrPacked: Int? = nil,
                 cardiacStatus: Int? = nil, stepCadence: Int? = nil, statusWord: Int? = nil,
                 statusWord1: Int? = nil, statusWord2: Int? = nil, auxByte82: Int? = nil,
                 opticalBaselineA: Int? = nil, opticalBaselineB: Int? = nil,
-                opticalAmpA: Int? = nil, opticalAmpB: Int? = nil, unknownF32Bits: Int? = nil) {
+                opticalAmpA: Int? = nil, opticalAmpB: Int? = nil, unknownF32Bits: Int? = nil,
+                recordFlags: Int? = nil, timestampSubseconds: Int? = nil, auxWord61: Int? = nil,
+                auxByte64: Int? = nil, activityClassRaw: Int? = nil) {
         self.ts = ts; self.recordIndex = recordIndex; self.rrCount = rrCount
         self.cardiacFlags = cardiacFlags; self.hrQualityFlags = hrQualityFlags
         self.heartRateAlt = heartRateAlt; self.rrPacked = rrPacked
@@ -573,6 +598,8 @@ public struct V18AuxSample: Equatable, Codable, Sendable {
         self.opticalBaselineB = opticalBaselineB
         self.opticalAmpA = opticalAmpA; self.opticalAmpB = opticalAmpB
         self.unknownF32Bits = unknownF32Bits
+        self.recordFlags = recordFlags; self.timestampSubseconds = timestampSubseconds
+        self.auxWord61 = auxWord61; self.auxByte64 = auxByte64; self.activityClassRaw = activityClassRaw
     }
 
     /// Rebuild from the codec's slot array. `values` is indexed by `V18AuxSlot.rawValue`; a short array
@@ -587,7 +614,9 @@ public struct V18AuxSample: Equatable, Codable, Sendable {
                   statusWord2: v(.statusWord2), auxByte82: v(.auxByte82),
                   opticalBaselineA: v(.opticalBaselineA), opticalBaselineB: v(.opticalBaselineB),
                   opticalAmpA: v(.opticalAmpA), opticalAmpB: v(.opticalAmpB),
-                  unknownF32Bits: v(.unknownF32At113))
+                  unknownF32Bits: v(.unknownF32At113), recordFlags: v(.recordFlags),
+                  timestampSubseconds: v(.timestampSubseconds), auxWord61: v(.auxWord61),
+                  auxByte64: v(.auxByte64), activityClassRaw: v(.activityClassRaw))
     }
 
     /// The slot values in wire order — index == `V18AuxSlot.rawValue`. The storage codec's only view of
@@ -595,7 +624,8 @@ public struct V18AuxSample: Equatable, Codable, Sendable {
     public var slotValues: [Int?] {
         [recordIndex, rrCount, cardiacFlags, hrQualityFlags, heartRateAlt, rrPacked, cardiacStatus,
          stepCadence, statusWord, statusWord1, statusWord2, auxByte82, opticalBaselineA,
-         opticalBaselineB, opticalAmpA, opticalAmpB, unknownF32Bits]
+         opticalBaselineB, opticalAmpA, opticalAmpB, unknownF32Bits,
+         recordFlags, timestampSubseconds, auxWord61, auxByte64, activityClassRaw]
     }
 
     /// `unknown_f32_113` re-read as the float the decoder saw. The BITS are what is stored; this is a

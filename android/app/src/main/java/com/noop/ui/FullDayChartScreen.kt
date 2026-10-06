@@ -500,7 +500,7 @@ private fun resolutionSubtitle(points: List<TimelinePoint>, isRaw: Boolean, buck
     if (points.isEmpty()) return "—"
     if (isRaw) return "Raw · per second"
     val m = bucketSeconds / 60
-    return if (m >= 1) "$m-minute average" else "${bucketSeconds}-second average"
+    return if (m >= 1) uiString(R.string.l10n_full_day_chart_screen_lld_minute_average_ec59e4d5, m) else uiString(R.string.l10n_full_day_chart_screen_lld_second_average_9a1c20dd, bucketSeconds)
 }
 
 private fun metricColor(metric: TimelineMetric): Color = when (metric) {
@@ -513,7 +513,7 @@ private fun metricColor(metric: TimelineMetric): Color = when (metric) {
 }
 
 private fun unitSuffix(metric: TimelineMetric, tempUnit: TemperatureUnit): String = when (metric) {
-    TimelineMetric.Hr -> " bpm"
+    TimelineMetric.Hr -> uiString(R.string.l10n_full_day_chart_screen_bpm_55498d21)
     TimelineMetric.SkinTemp -> UnitFormatter.temperatureUnit(tempUnit)   // #101: °C / °F per preference
     TimelineMetric.Hrv -> " ms"
     TimelineMetric.Movement -> " s"   // seconds of movement per ~30 s window (ring's 0x47 activity)
@@ -580,8 +580,8 @@ internal fun landTargetDayStart(
 
 /** "Today" / "Yesterday" / "Wed 18 Jun" label for the Deep Timeline day stepper (#597). */
 private fun dayLabel(dayStartSec: Long, todayStart: Long): String = when (dayStartSec) {
-    todayStart -> "Today"
-    todayStart - 86_400 -> "Yesterday"
+    todayStart -> uiString(R.string.nav_today)
+    todayStart - 86_400 -> uiString(R.string.today_day_yesterday)
     else -> java.text.SimpleDateFormat("EEE d MMM", Locale.US).format(java.util.Date(dayStartSec * 1000))
 }
 

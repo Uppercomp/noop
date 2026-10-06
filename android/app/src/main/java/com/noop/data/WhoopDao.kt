@@ -248,7 +248,7 @@ internal const val PROMOTE_WHOOP4_HISTORY_SQL =
  * and bound by [from, to] inclusive with a row limit.
  */
 @Dao
-interface WhoopDao : DeviceRegistryDao {
+interface WhoopDao : DeviceRegistryDao, LiftLogDao {
 
     // MARK: - Device
 
@@ -1225,6 +1225,26 @@ interface WhoopDao : DeviceRegistryDao {
      *  badges that were materializing the row list for `.size`. */
     @Query("SELECT COUNT(*) FROM workout WHERE deviceId = :deviceId AND startTs >= :from AND startTs <= :to")
     suspend fun workoutsCount(deviceId: String, from: Long, to: Long): Int
+
+    /**
+     * #1853: FILL-ONLY write of one night's absolute skin temperature. The `skinTempC IS NULL` guard is the
+     * whole point — this may fill a null and must never overwrite a measured value — and the statement
+     * touches exactly one column, so `skinTempDevC` and every other scored field are untouched (no rebuild,
+     * no upsert). Returns the rows changed (0 or 1), so a caller can tell a fill from a no-op.
+     *
+     * Twin of Swift `WhoopStore.fillSkinTempC`, whose doc calls the fill-only shape "Non-negotiable".
+     */
+    @Query(
+        "UPDATE dailyMetric SET skinTempC = :skinTempC " +
+        "WHERE deviceId = :deviceId AND day = :day AND skinTempC IS NULL"
+    )
+    suspend fun fillSkinTempC(deviceId: String, day: String, skinTempC: Double): Int
+
+    /** Scalar COUNT twin of [sleepSessions] (no row limit — a count badge wants the exact total), for the
+     *  "N sleeps stored" line iOS reads off `repo.sleeps.count` and for the Today provenance row's sleep
+     *  half, both of which were materializing the row list for `.size`. */
+    @Query("SELECT COUNT(*) FROM sleepSession WHERE deviceId = :deviceId AND startTs >= :from AND startTs <= :to")
+    suspend fun sleepSessionsCount(deviceId: String, from: Long, to: Long): Int
 
     /**
      * #1058: sum per-session `steps` over one source's workouts whose startTs is in [from, to). Used to

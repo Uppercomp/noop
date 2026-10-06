@@ -29,6 +29,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -61,10 +62,11 @@ import kotlin.math.min
 // seconds of every phase, and a long 5-loop buzz when the whole session finishes.
 // With no strap bonded it still works as a big glanceable visual timer (no haptics).
 
-private enum class IntervalPhase(val label: String) {
-    Work("WORK"),
-    Rest("REST"),
-    Done("DONE"),
+/** @StringRes, not a resolved word: an enum constructor runs at class-load, before an Application. */
+private enum class IntervalPhase(@StringRes val labelRes: Int) {
+    Work(R.string.l10n_intervals_screen_work_ebc62427),
+    Rest(R.string.l10n_noop_compact_glance_widget_rest_cbaaa181),
+    Done(R.string.l10n_intervals_screen_done_e782e772),
 }
 
 /**
@@ -212,15 +214,15 @@ fun IntervalsScreen(vm: AppViewModel) {
         item {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             if (live.bonded) {
-                StatePill("Buzz cues on", tone = StrandTone.Positive)
+                StatePill(uiString(R.string.l10n_intervals_screen_buzz_cues_on_5131161e), tone = StrandTone.Positive)
             } else {
-                StatePill("Connect strap for buzz cues", tone = StrandTone.Warning)
+                StatePill(uiString(R.string.l10n_intervals_screen_connect_strap_for_buzz_cues_3ae5d3e5), tone = StrandTone.Warning)
             }
             Spacer(Modifier.weight(1f))
             when {
-                running -> StatePill("Running", tone = StrandTone.Accent, pulsing = true)
-                isFinished -> StatePill("Complete", tone = StrandTone.Positive)
-                else -> StatePill("Paused", tone = StrandTone.Neutral, showsDot = false)
+                running -> StatePill(uiString(R.string.today_steps_activity_running), tone = StrandTone.Accent, pulsing = true)
+                isFinished -> StatePill(uiString(R.string.l10n_intervals_screen_complete_1f5a1abf), tone = StrandTone.Positive)
+                else -> StatePill(uiString(R.string.workout_action_paused), tone = StrandTone.Neutral, showsDot = false)
             }
         }
         }
@@ -243,7 +245,7 @@ fun IntervalsScreen(vm: AppViewModel) {
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        PhaseChip(label = phase.label, color = phaseColor)
+                        PhaseChip(label = uiString(phase.labelRes), color = phaseColor)
                         Spacer(Modifier.weight(1f))
                         RoundChip(currentRound = min(currentRound, rounds), rounds = rounds)
                     }
@@ -258,7 +260,7 @@ fun IntervalsScreen(vm: AppViewModel) {
                             stops = phaseStops,
                             tipColor = phaseColor,
                             numberText = if (isFinished) "✓" else remaining.toString(),
-                            captionText = if (isFinished) "SESSION DONE" else "SECONDS",
+                            captionText = if (isFinished) "SESSION DONE" else uiString(R.string.l10n_intervals_screen_seconds_f7efc6bb),
                             diameter = 240.dp,
                             lineWidth = 18.dp,
                         )
@@ -286,7 +288,7 @@ fun IntervalsScreen(vm: AppViewModel) {
                                 modifier = Modifier.padding(end = 6.dp),
                             )
                             Text(
-                                if (running) "Pause" else if (isFinished) "Restart" else "Start",
+                                if (running) uiString(R.string.workout_action_pause) else if (isFinished) uiString(R.string.l10n_intervals_screen_restart_b134bd55) else uiString(R.string.ground_truth_marker_start),
                                 style = NoopType.headline,
                             )
                         }
@@ -344,7 +346,7 @@ fun IntervalsScreen(vm: AppViewModel) {
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.Bottom,
                 ) {
-                    Overline("Session")
+                    Overline(uiString(R.string.l10n_live_screen_session_f7f1997c))
                     Spacer(Modifier.weight(1f))
                     Text(
                         uiString(R.string.l10n_intervals_screen_timestring_elapsed_timestring_totalplanned_7b68f8d7, timeString(elapsed), timeString(totalPlanned)),
@@ -396,7 +398,7 @@ fun IntervalsScreen(vm: AppViewModel) {
         item {
         NoopCard {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Overline("Configure")
+                Overline(uiString(R.string.l10n_intervals_screen_configure_792c81a4))
                 ConfigStepper(
                     title = uiString(R.string.l10n_intervals_screen_work_00040bab), unit = "sec", value = workSeconds,
                     range = 5..600, step = 5, tint = Palette.effortColor, enabled = !running,

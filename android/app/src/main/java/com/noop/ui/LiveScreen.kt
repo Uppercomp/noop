@@ -218,7 +218,9 @@ fun LiveScreen(viewModel: AppViewModel, onManageDevices: () -> Unit = {}) {
 
     LazyScreenScaffold(
         title = uiString(R.string.l10n_live_screen_live_body_console_54838e06),
-        subtitle = "Current physiology, strap trust, and session controls",
+        // The FULL iOS sentence. The old literal dropped "in one working view.", which made it a
+        // non-key, so the entire subtitle stayed English while the title beside it was translated.
+        subtitle = uiString(R.string.l10n_live_screen_current_physiology_strap_trust_and_session_c_9d4e7a21),
         // LIQUID SKY BACKDROP (the pilot pattern — LiquidScreenSky.kt): the time-of-day liquid sky settles
         // behind the header + hero and the cards float over the flat canvas below. Reuses the shared
         // LiquidScreenSky() slot verbatim; when the day-cycle background is off, the scaffold paints the
@@ -323,8 +325,11 @@ fun LiveScreen(viewModel: AppViewModel, onManageDevices: () -> Unit = {}) {
                 )
                 Text(
                     if (live.syncChunksThisSession > 0)
-                        "Syncing your strap history… ${live.syncChunksThisSession} chunks pulled"
-                    else "Syncing your strap history…",
+                        // iOS's own phrase + Android's chunk count: the count is an Android-only extra (there
+                        // is no catalog key for it), so that branch stays verbatim English while the plain
+                        // one — the state the pill shows for most of a sync — is the translated iOS sentence.
+                        "Syncing strap history · ${live.syncChunksThisSession} chunks pulled"
+                    else uiString(R.string.l10n_live_screen_syncing_strap_history_b45868fa),
                     style = NoopType.footnote,
                     color = Palette.textSecondary,
                 )
@@ -339,9 +344,13 @@ fun LiveScreen(viewModel: AppViewModel, onManageDevices: () -> Unit = {}) {
                     modifier = Modifier.fillMaxWidth(),
                 )
             } else {
+                // No "Not synced yet" branch here on purpose: this item only exists once something HAS
+                // happened (the gate above), because a never-synced strap is already stated once by the
+                // console header's LAST SYNC "Never". A second line saying the same thing is the
+                // "two readouts of one fact" trap.
                 live.lastSyncAt?.let { at ->
                     Text(
-                        uiString(R.string.l10n_live_screen_history_synced_relativeago_at_0ece753a, relativeAgo(at)),
+                        uiString(R.string.l10n_live_screen_history_synced_relativeago_at_0ece753a, relativeAgo(at).text()),
                         style = NoopType.footnote,
                         color = Palette.textTertiary,
                         modifier = Modifier.fillMaxWidth(),
@@ -375,7 +384,26 @@ fun LiveScreen(viewModel: AppViewModel, onManageDevices: () -> Unit = {}) {
 
         // Session console — record or inspect the current stream.
         item {
-        SectionHeader(title = uiString(R.string.l10n_live_screen_session_f7f1997c), overline = "Record or inspect the current stream")
+        SectionHeader(title = uiString(R.string.l10n_live_screen_session_f7f1997c), overline = uiString(R.string.l10n_live_screen_record_or_inspect_the_current_stream_0abd31c3))
+        }
+
+        // iOS's `sessionPrompt`: a headline + a body that swaps on the live link, sitting between the
+        // "Session" header and the action row. Android went straight from the header to the buttons, so the
+        // screen never said what the actions were for.
+        item {
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                uiString(R.string.live_ready_for_marked_effort),
+                style = NoopType.headline,
+                color = Palette.textPrimary,
+            )
+            Text(
+                if (activeConnection) uiString(R.string.live_session_prompt_connected)
+                else uiString(R.string.live_session_prompt_disconnected),
+                style = NoopType.subhead,
+                color = Palette.textSecondary,
+            )
+        }
         }
 
         // Manual workout — start/stop a session yourself; records HR + strain until you end it.
@@ -503,9 +531,9 @@ fun LiveScreen(viewModel: AppViewModel, onManageDevices: () -> Unit = {}) {
             lastWorkout?.let { row ->
                 val mins = ((row.durationS ?: 0.0) / 60).toInt()
                 val parts = listOfNotNull(
-                    "$mins min",
+                    uiString(R.string.l10n_live_screen_lld_min_b6190882, mins),
                     row.distanceM?.let { liveDistance(it, unitSystem) },
-                    row.avgHr?.let { "$it avg bpm" },
+                    row.avgHr?.let { uiString(R.string.l10n_live_screen_lld_avg_bpm_e18b31fd, it) },
                     row.strain?.let { "strain ${UnitFormatter.effortDisplay(it, effortScale)}" },
                 )
                 Text(
@@ -604,9 +632,9 @@ fun LiveScreen(viewModel: AppViewModel, onManageDevices: () -> Unit = {}) {
                 )
                 Text(
                     when {
-                        live.scanning -> "Searching…"
-                        live.connected -> "Re-scan"
-                        else -> "Connect"
+                        live.scanning -> uiString(R.string.l10n_add_device_wizard_searching_1a6a5ba8)
+                        live.connected -> uiString(R.string.l10n_live_screen_re_scan_8bd32cdf)
+                        else -> uiString(R.string.l10n_coach_screen_connect_b65463cb)
                     },
                     style = NoopType.captionNumber,
                     maxLines = 1,
@@ -709,7 +737,7 @@ fun LiveScreen(viewModel: AppViewModel, onManageDevices: () -> Unit = {}) {
                     )
                 }
                 Text(
-                    if (live.backfilling) "Syncing…" else "Sync now",
+                    if (live.backfilling) uiString(R.string.l10n_health_screen_syncing_221ca630) else uiString(R.string.l10n_health_screen_sync_now_2b7d938e),
                     style = NoopType.captionNumber,
                     maxLines = 1,
                     softWrap = false,
@@ -744,7 +772,7 @@ private fun MaxHrZoneCard(hrMax: Int, zone5Bpm: Int, coachingOn: Boolean) {
                 StatTile(
                     modifier = Modifier.weight(1f),
                     label = uiString(R.string.l10n_live_screen_max_hr_6acd9e07),
-                    value = "$hrMax bpm",
+                    value = uiString(R.string.l10n_live_screen_lld_bpm_db9ccd70, hrMax),
                     accent = Palette.textPrimary,
                 )
                 StatTile(
@@ -832,11 +860,11 @@ private fun ConsoleHeader(
             val (label, tone) = when {
                 live.encryptedBond && live.backfilling -> "Bonded · syncing" to StrandTone.Accent
                 live.encryptedBond -> "Bonded" to StrandTone.Positive
-                live.bonded -> "Live HR (not fully paired)" to StrandTone.Warning
-                ringStreaming(live) -> "Streaming" to StrandTone.Positive   // #56: trusted non-WHOOP stream
-                live.connected -> "Connected" to StrandTone.Warning
-                live.scanning -> "Searching…" to StrandTone.Warning
-                else -> "Disconnected" to StrandTone.Critical
+                live.bonded -> uiString(R.string.l10n_data_sources_screen_live_hr_not_fully_paired_6fd6ddb1) to StrandTone.Warning
+                ringStreaming(live) -> uiString(R.string.l10n_live_screen_streaming_0247ce35) to StrandTone.Positive   // #56: trusted non-WHOOP stream
+                live.connected -> uiString(R.string.recording_chip_title_connected) to StrandTone.Warning
+                live.scanning -> uiString(R.string.l10n_add_device_wizard_searching_1a6a5ba8) to StrandTone.Warning
+                else -> uiString(R.string.l10n_live_screen_disconnected_771e05f2) to StrandTone.Critical
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -851,14 +879,14 @@ private fun ConsoleHeader(
                     SourceBadge(connectionModeBadge(live, activeConnection), tint = connectionModeColor(live, activeConnection))
                 }
                 if (live.backfilling) {
-                    SourceBadge("SYNCING ${live.syncChunksThisSession}", tint = Palette.metricCyan)
+                    SourceBadge(uiString(R.string.l10n_live_screen_syncing_lld_82c1558d, live.syncChunksThisSession), tint = Palette.metricCyan)
                 }
             }
             // Stats row — battery / worn / last-sync. Worn is only trustworthy on a live link.
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
                 // Charging bolt next to the battery % when the strap reports it's charging (PR #568 reimpl).
                 HeaderStat(
-                    "Battery",
+                    uiString(R.string.l10n_devices_screen_battery_4a9be042),
                     // The ACTIVE device's charge. A non-WHOOP active device never falls back to the
                     // strap's number: an em dash says "not reported", where the strap's charge under
                     // the ring's name is a confident lie, and was the reported bug (#2075).
@@ -866,8 +894,8 @@ private fun ConsoleHeader(
                         ?.let { "$it%" } ?: "—",
                     charging = live.charging == true,
                 )
-                HeaderStat("Worn", wornLabel(live, activeConnection, ouraWear))
-                HeaderStat("Last sync", lastSyncLabel(live))
+                HeaderStat(uiString(R.string.l10n_live_screen_worn_cafe5884), wornLabel(live, activeConnection, ouraWear))
+                HeaderStat(uiString(R.string.l10n_live_screen_last_sync_ef0ef267), lastSyncLabel(live))
             }
         }
     }
@@ -942,7 +970,7 @@ private fun OfflineConnectCallout(scanning: Boolean, onConnect: () -> Unit) {
                     modifier = Modifier.size(18.dp).padding(end = 4.dp),
                 )
                 Text(
-                    if (scanning) "Searching…" else "Scan & Connect",
+                    if (scanning) uiString(R.string.l10n_add_device_wizard_searching_1a6a5ba8) else uiString(R.string.l10n_live_screen_scan_connect_ac25e587),
                     style = NoopType.captionNumber,
                     maxLines = 1,
                     softWrap = false,
@@ -1057,18 +1085,18 @@ private fun wornLabel(live: LiveState, activeConnection: Boolean, ouraWear: Oura
     val liveLink = activeConnection || ringStreaming(live)
     return when {
         !liveLink -> "—"
-        ouraWear != null -> if (ouraWear == OuraWearState.WORN) "Yes" else "No"
-        else -> if (live.worn) "Yes" else "No"
+        ouraWear != null -> if (ouraWear == OuraWearState.WORN) uiString(R.string.l10n_live_screen_yes_5397e058) else uiString(R.string.l10n_live_screen_no_816c52fd)
+        else -> if (live.worn) uiString(R.string.l10n_live_screen_yes_5397e058) else uiString(R.string.l10n_live_screen_no_816c52fd)
     }
 }
 
 private fun connectionModeBadge(live: LiveState, activeConnection: Boolean): String = when {
-    activeConnection && live.encryptedBond -> "FULL BOND"
-    activeConnection -> "LIVE HR ONLY"
-    ringStreaming(live) -> "STREAMING"
-    live.connected -> "CONNECTING"
-    live.encryptedBond -> "PAIRED"
-    else -> "OFFLINE"
+    activeConnection && live.encryptedBond -> uiString(R.string.l10n_live_screen_full_bond_e650c98a)
+    activeConnection -> uiString(R.string.l10n_live_screen_live_hr_only_c644daf7)
+    ringStreaming(live) -> uiString(R.string.l10n_live_screen_streaming_0247ce35)
+    live.connected -> uiString(R.string.l10n_live_screen_connecting_48b998e8)
+    live.encryptedBond -> uiString(R.string.l10n_live_screen_paired_b6a18ec6)
+    else -> uiString(R.string.l10n_live_screen_offline_c689932b)
 }
 
 /** Whether to render the connection-mode badge. False exactly when the badge would read "OFFLINE" —
@@ -1083,7 +1111,7 @@ private fun connectionModeColor(live: LiveState, activeConnection: Boolean): Col
 }
 
 private fun lastSyncLabel(live: LiveState): String =
-    live.lastSyncAt?.let { relativeAgo(it) } ?: "Never"
+    live.lastSyncAt?.let { relativeAgo(it).plain() } ?: uiString(R.string.push_never)
 
 // MARK: - Body console (focal HR ring + live physiology)
 
@@ -1139,7 +1167,7 @@ private fun HeartReadout(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Overline("Heart Rate")
+        Overline(uiString(R.string.l10n_health_screen_heart_rate_dde6e8f7))
         Box(
             modifier = Modifier
                 .fillMaxWidth(0.6f)
@@ -1175,7 +1203,7 @@ private fun HeartReadout(
                         color = Palette.textSecondary,
                     )
                 }
-                Text("bpm", style = NoopType.subhead, color = Palette.textSecondary)
+                Text(uiString(R.string.l10n_workouts_screen_hrr_bpm_516), style = NoopType.subhead, color = Palette.textSecondary)
                 if (zone >= 1) {
                     Text(uiString(R.string.l10n_live_screen_zone_zone_b8e9c0f9, zone), style = NoopType.overline, color = tint)
                 }
@@ -1200,7 +1228,7 @@ private fun PhysiologyStack(live: LiveState, activeConnection: Boolean) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.weight(1f)) {
-                Overline("Live Physiology")
+                Overline(uiString(R.string.l10n_case_live_physiology_4a4c3413))
                 Text(connectionModeDetail(live, activeConnection), style = NoopType.headline, color = Palette.textPrimary)
             }
             if (rmssd != null) {
@@ -1217,12 +1245,12 @@ private fun PhysiologyStack(live: LiveState, activeConnection: Boolean) {
             // stream. Mirrors the macOS liveProofMetric(offline:).
             LiveProofMetric(
                 Modifier.weight(1f), "R-R",
-                if (activeConnection) (live.rr.lastOrNull()?.let { "$it ms" } ?: "—") else "Offline",
+                if (activeConnection) (live.rr.lastOrNull()?.let { uiString(R.string.l10n_live_screen_lld_ms_1fe6bb9c, it) } ?: "—") else uiString(R.string.l10n_live_screen_offline_e01fa717),
                 Palette.metricCyan, offline = !activeConnection,
             )
             LiveProofMetric(
-                Modifier.weight(1f), "Event",
-                if (activeConnection) (live.lastEvent ?: "—") else "Offline",
+                Modifier.weight(1f), uiString(R.string.l10n_live_screen_event_ad8919ac),
+                if (activeConnection) (live.lastEvent ?: "—") else uiString(R.string.l10n_live_screen_offline_e01fa717),
                 Palette.statusWarning, offline = !activeConnection,
             )
         }
@@ -1265,8 +1293,13 @@ private fun RRStrip(rrRecent: List<Int>) {
             }
         }
         Text(
-            if (values.isEmpty()) "Waiting for R-R intervals."
-            else "Recent intervals: " + values.takeLast(5).joinToString(" · ") + " ms",
+            if (values.isEmpty()) uiString(R.string.l10n_live_screen_waiting_for_r_r_intervals_62a482a6)
+            // iOS's own sentence ("Recent intervals: %@ ms"), with the joined sample list as the argument:
+            // the "… ms" tail was a separate concatenated fragment here, so it never matched the key.
+            else uiString(
+                R.string.l10n_live_screen_recent_intervals_ms_d787da28,
+                values.takeLast(5).joinToString(" · "),
+            ),
             style = NoopType.footnote,
             color = Palette.textTertiary,
             maxLines = 1,
@@ -1312,7 +1345,7 @@ private fun SignalTrustRail(
 ) {
     val tiles = signalTiles(live, bpm, activeConnection, activeIsWhoop, ouraBatteryPct)
     Column(verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
-        SectionHeader(title = uiString(R.string.l10n_live_screen_signal_trust_4a91fe00), overline = "Proof that the console is current")
+        SectionHeader(title = uiString(R.string.l10n_live_screen_signal_trust_4a91fe00), overline = uiString(R.string.l10n_live_screen_proof_that_the_console_is_current_5c71cf17))
         // Two tiles per row (a LazyVerticalGrid can't live inside the scrolling ScreenScaffold —
         // infinite-height constraints — so use fixed Rows, the correct Compose idiom here).
         tiles.chunked(2).forEach { rowTiles ->
@@ -1342,51 +1375,51 @@ private fun signalTiles(
     ouraBatteryPct: Int?,
 ): List<SignalTile> = listOf(
     SignalTile(
-        "Heart rate",
-        bpm?.let { "$it bpm" } ?: "Missing",
-        if (activeConnection || ringStreaming(live)) "Streaming now" else "No active stream",
+        uiString(R.string.l10n_breathe_screen_heart_rate_410aa15c),
+        bpm?.let { uiString(R.string.l10n_live_screen_lld_bpm_db9ccd70, it) } ?: uiString(R.string.l10n_live_screen_missing_92185dc5),
+        if (activeConnection || ringStreaming(live)) uiString(R.string.l10n_live_screen_streaming_now_a6485c61) else uiString(R.string.l10n_live_screen_no_active_stream_3979d7c0),
         if (bpm == null) Palette.textTertiary else Palette.accent,
     ),
     SignalTile(
-        "R-R intervals",
-        if (live.rrRecent.isEmpty()) "Missing" else "${live.rrRecent.size} recent",
-        rollingRMSSD(live.rrRecent)?.let { "RMSSD ${it.roundToInt()} ms" } ?: "Needs interval frames",
+        uiString(R.string.l10n_live_screen_r_r_intervals_b6d6a795),
+        if (live.rrRecent.isEmpty()) uiString(R.string.l10n_live_screen_missing_92185dc5) else uiString(R.string.l10n_live_screen_lld_recent_27571202, live.rrRecent.size),
+        rollingRMSSD(live.rrRecent)?.let { uiString(R.string.l10n_live_screen_rmssd_lld_ms_e27727ad, it.roundToInt()) } ?: uiString(R.string.l10n_live_screen_needs_interval_frames_16c87202),
         if (live.rrRecent.isEmpty()) Palette.textTertiary else Palette.metricCyan,
     ),
     SignalTile(
-        "Connection",
+        uiString(R.string.l10n_live_screen_connection_6512ee15),
         when {
-            activeConnection && live.encryptedBond -> "Encrypted"
-            activeConnection -> "Partial"
-            ringStreaming(live) -> "Streaming"
-            live.connected -> "Connected"
-            else -> "Offline"
+            activeConnection && live.encryptedBond -> uiString(R.string.l10n_live_screen_encrypted_bde2fbb6)
+            activeConnection -> uiString(R.string.l10n_live_screen_partial_65de2e2a)
+            ringStreaming(live) -> uiString(R.string.l10n_live_screen_streaming_0247ce35)
+            live.connected -> uiString(R.string.recording_chip_title_connected)
+            else -> uiString(R.string.l10n_live_screen_offline_e01fa717)
         },
         when {
-            activeConnection && live.encryptedBond -> "Controls unlocked"
+            activeConnection && live.encryptedBond -> uiString(R.string.l10n_live_screen_controls_unlocked_b637f1c0)
             ringStreaming(live) -> "Live stream, no WHOOP bond"
-            else -> "Standard HR is not a full bond"
+            else -> uiString(R.string.l10n_live_screen_standard_hr_is_not_a_full_bond_95c20ff1)
         },
         connectionModeColor(live, activeConnection),
     ),
     SignalTile(
-        "History sync",
-        if (live.backfilling) "${live.syncChunksThisSession} chunks" else lastSyncLabel(live),
+        uiString(R.string.l10n_live_screen_history_sync_bab48dd7),
+        if (live.backfilling) uiString(R.string.l10n_live_screen_lld_chunks_6c1fc260, live.syncChunksThisSession) else lastSyncLabel(live),
         when {
             live.lastSyncError != null -> live.lastSyncError
             live.backfilling -> "Offload in progress"
-            live.lastSyncAt == null -> "No completed offload yet"
-            else -> "Last offload completed"
+            live.lastSyncAt == null -> uiString(R.string.l10n_live_screen_no_completed_offload_yet_06e21f2c)
+            else -> uiString(R.string.l10n_live_screen_last_offload_completed_e9073159)
         },
         if (live.backfilling) Palette.metricCyan else Palette.textSecondary,
     ),
     SignalTile(
-        "Battery",
+        uiString(R.string.l10n_devices_screen_battery_4a9be042),
         LiveConsoleReadout.batteryPercent(activeIsWhoop, live.batteryPct, ouraBatteryPct)
-            ?.let { "$it%" } ?: "Unknown",
+            ?.let { "$it%" } ?: uiString(R.string.l10n_live_screen_unknown_bc7819b3),
         // "by strap" only when a strap is what reported it (#2075).
-        if (live.charging == true) "Charging"
-        else if (activeIsWhoop) "Last reported by strap" else "Last reported by the ring",
+        if (live.charging == true) uiString(R.string.l10n_live_screen_charging_5f99fe21)
+        else if (activeIsWhoop) uiString(R.string.l10n_live_screen_last_reported_by_strap_c909ee8c) else uiString(R.string.l10n_live_screen_last_reported_by_the_ring_1c98985b),
         batteryTint(
             LiveConsoleReadout.batteryPercent(activeIsWhoop, live.batteryPct, ouraBatteryPct)?.toDouble(),
         ),
@@ -1395,9 +1428,9 @@ private fun signalTiles(
     // WRIST_ON/OFF events, so while OFFLINE it would read a false-green "On wrist". Gate value + tint
     // on activeConnection (triage fix for PR#191, parity with the macOS Wear tile).
     SignalTile(
-        "Wear state",
-        if (activeConnection) (if (live.worn) "On wrist" else "Off wrist") else "Unknown",
-        if (activeConnection) (if (live.worn) "Eligible for live physiology" else "Wear the strap for scoring") else "Connect to read wear state",
+        uiString(R.string.l10n_live_screen_wear_state_ccc12a2e),
+        if (activeConnection) (if (live.worn) uiString(R.string.l10n_live_screen_on_wrist_032cb369) else uiString(R.string.l10n_live_screen_off_wrist_6cd9de3a)) else uiString(R.string.l10n_live_screen_unknown_bc7819b3),
+        if (activeConnection) (if (live.worn) uiString(R.string.l10n_live_screen_eligible_for_live_physiology_061e4d70) else uiString(R.string.l10n_live_screen_wear_the_strap_for_scoring_f18d84e2)) else uiString(R.string.l10n_live_screen_connect_to_read_wear_state_dc929191),
         when {
             !activeConnection -> Palette.textTertiary
             live.worn -> Palette.accent
@@ -1421,18 +1454,18 @@ private fun SignalTrustTile(tile: SignalTile, modifier: Modifier = Modifier) {
 
 private fun signalTrustSummary(live: LiveState, activeConnection: Boolean): String = when {
     activeConnection && live.encryptedBond -> "Encrypted stream - deep controls and history sync available."
-    activeConnection -> "Live heart rate is flowing; full strap controls need an encrypted bond."
-    live.connected -> "Connected, waiting for a streaming state."
+    activeConnection -> uiString(R.string.l10n_live_screen_live_heart_rate_is_flowing_full_strap_co_5cd3f140)
+    live.connected -> uiString(R.string.l10n_live_screen_connected_waiting_for_a_streaming_state_a9dcad9b)
     // The actionable "Scan and connect…" CTA now lives in the above-the-fold OfflineConnectCallout,
     // so this ring caption stays a calm empty-state descriptor rather than a competing CTA.
-    else -> "Live heart rate appears here once a strap is connected."
+    else -> uiString(R.string.l10n_live_screen_live_heart_rate_appears_here_once_a_stra_666119ed)
 }
 
 private fun connectionModeDetail(live: LiveState, activeConnection: Boolean): String = when {
-    activeConnection && live.encryptedBond -> "Full strap stream is active."
-    activeConnection || ringStreaming(live) -> "Heart rate stream is active."
-    live.connected -> "Radio connected, stream not yet trusted."
-    else -> "No live stream."
+    activeConnection && live.encryptedBond -> uiString(R.string.l10n_live_screen_full_strap_stream_is_active_7b7d6f9a)
+    activeConnection || ringStreaming(live) -> uiString(R.string.l10n_live_screen_heart_rate_stream_is_active_0b727875)
+    live.connected -> uiString(R.string.l10n_live_screen_radio_connected_stream_not_yet_trusted_25b075b0)
+    else -> uiString(R.string.l10n_live_screen_no_live_stream_a63346ca)
 }
 
 /** A "feel" RMSSD over the recent R-R buffer — time-gap-unaware on purpose (a live indicator, not a
@@ -1456,13 +1489,16 @@ private fun batteryTint(pct: Double?): Color = when {
  * Coarse relative-time label for the "History synced N ago" sync-status line. Pure + unit-tested
  * (RelativeAgoTest); [nowSec] is injectable for determinism. Buckets to just-now / min / h / d. (PR #85)
  */
-internal fun relativeAgo(epochSec: Long, nowSec: Long = System.currentTimeMillis() / 1000L): String {
+internal fun relativeAgo(epochSec: Long, nowSec: Long = System.currentTimeMillis() / 1000L): DisplayText {
     val d = (nowSec - epochSec).coerceAtLeast(0)
     return when {
-        d < 60L -> "just now"
-        d < 3600L -> "${d / 60L} min ago"
-        d < 86_400L -> "${d / 3600L} h ago"
-        else -> "${d / 86_400L} d ago"
+        // The same four buckets and the same words as the Swift `relativeAgo` (ScreenScaffold.swift), all
+        // four of whose branches are localized keys. As a String this helper could not be tested once
+        // localised — `RelativeAgoTest` calls it with no Application attached.
+        d < 60L -> DisplayText.Resource(R.string.l10n_live_screen_just_now_a7f8e7cc)
+        d < 3600L -> DisplayText.Resource(R.string.l10n_live_screen_lld_min_ago_78433dfd, listOf(d / 60L))
+        d < 86_400L -> DisplayText.Resource(R.string.l10n_live_screen_lld_h_ago_64748239, listOf(d / 3600L))
+        else -> DisplayText.Resource(R.string.l10n_live_screen_lld_d_ago_8ead2956, listOf(d / 86_400L))
     }
 }
 

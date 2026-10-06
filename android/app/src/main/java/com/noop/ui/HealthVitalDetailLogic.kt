@@ -1,5 +1,7 @@
 package com.noop.ui
 
+import androidx.annotation.StringRes
+import com.noop.R
 import com.noop.analytics.Baselines
 import com.noop.analytics.StepsDetailBucket
 import com.noop.analytics.StepsDetailDensity
@@ -266,15 +268,19 @@ internal fun vitalReadingDateLabel(
     }
 }
 
-internal enum class VitalDetailRange(val label: String, val days: Long?) {
-    WEEK("W", 7),
-    TWO_WEEK("2W", 14),
-    THREE_WEEK("3W", 21),
-    MONTH("M", 30),
-    THREE_MONTH("3M", 90),
-    SIX_MONTH("6M", 180),
-    YEAR("1Y", 365),
-    ALL("ALL", null),
+/**
+ * The detail chart's window pills. @StringRes, not resolved labels: an enum constructor runs at class-load,
+ * and every one of these abbreviations is locale-dependent ("1Y" is de "1J", "ALL" is "ALLE" / "全部").
+ */
+internal enum class VitalDetailRange(@StringRes val labelRes: Int, val days: Long?) {
+    WEEK(R.string.l10n_lift_w_e2415cb7, 7),
+    TWO_WEEK(R.string.l10n_trends_explore_screen_s_2w_5b6401e2, 14),
+    THREE_WEEK(R.string.l10n_trends_explore_screen_s_3w_501d3563, 21),
+    MONTH(R.string.l10n_apple_health_screen_m_c63ae6dd, 30),
+    THREE_MONTH(R.string.l10n_apple_health_screen_s_3m_6dce1630, 90),
+    SIX_MONTH(R.string.l10n_apple_health_screen_s_6m_b78ebb44, 180),
+    YEAR(R.string.l10n_apple_health_screen_s_1y_28234cf2, 365),
+    ALL(R.string.l10n_apple_health_screen_all_6b42874e, null),
 }
 
 /** Android-facing view of the shared steps projection. Every chart-facing surface consumes this one

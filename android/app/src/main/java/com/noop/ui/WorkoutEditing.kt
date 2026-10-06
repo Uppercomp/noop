@@ -1,5 +1,6 @@
 package com.noop.ui
 
+import com.noop.R
 import com.noop.analytics.WorkoutsTrace
 import com.noop.data.DismissedWorkout
 import com.noop.data.WorkoutRow
@@ -50,13 +51,33 @@ object WorkoutEditing {
         row.copy(source = "manual", deviceId = "my-whoop", sport = displaySport(row.sport))
 
     /**
+     * The stable English token an unclassified ("detected") bout displays as, on BOTH platforms and in
+     * every language's KEY path. Only [sportCellText] translates it, and only for display.
+     */
+    const val ACTIVITY_SPORT = "Activity"
+
+    /**
      * Sport-cell text. "detected" reads as a neutral "Activity". WHOOP sport names arrive as
      * concatenated camelCase (e.g. "TraditionalStrengthTraining"), which reads as one long
      * unbreakable word and truncates badly — split it into words on the lower→Upper boundary so it
      * renders "Traditional Strength Training". Already-spaced labels (manual/edited) pass through. (#175)
      */
+    /**
+     * The sport CELL text for the UI: [displaySport], with the detector's neutral "Activity" translated.
+     *
+     * Mirrors the iOS twin exactly, which localises this one case
+     * (`if sport == "detected" { return String(localized: "Activity") }`) and passes every real sport name
+     * through unlocalised. The translation belongs HERE rather than inside [displaySport], because
+     * [sportKey], the list filters, the by-sport grouping and the edit-field seed all fold that value —
+     * translating it there would fold a different key per language and split the cross-source dedup.
+     */
+    fun sportCellText(sport: String): String {
+        val cell = displaySport(sport)
+        return if (cell == ACTIVITY_SPORT) uiString(R.string.health_connect_category_activity) else cell
+    }
+
     fun displaySport(sport: String): String {
-        if (sport == "detected") return "Activity"
+        if (sport == "detected") return ACTIVITY_SPORT
         if (sport.isEmpty() || sport.contains(" ")) return sport
         val out = StringBuilder()
         var prev: Char? = null
@@ -554,6 +575,49 @@ data class WorkoutFilter(
 
     /** Apply the filter to a windowed list, preserving order. A no-op when nothing is active. */
     fun apply(rows: List<WorkoutRow>): List<WorkoutRow> = if (!isActive) rows else rows.filter { matches(it) }
+}
+
+// MARK: - Current / Archived (#64 UI split)
+//
+// A VIEW split, never a delete. Auto-deleting real training history would be irreversible on a device with
+// no server and no cloud copy, so this hides older sessions behind a second tab instead of removing them.
+// Twin of Swift `WorkoutsView.Scope` + `WorkoutsView.scopedRows` (Strand/Screens/WorkoutsView.swift),
+// covered by the same cases as StrandTests/WorkoutScopeTests.swift.
+
+/** Which half of the session list is on screen. The coarser cut: it decides WHICH rows the range narrows. */
+enum class WorkoutScope { Current, Archived }
+
+object WorkoutScopeSplit {
+
+    /** How many of the most recent sessions "Current" holds (Swift `WorkoutsView.currentScopeCount`). */
+    const val CURRENT_SCOPE_COUNT = 10
+
+    /**
+     * Split rows into the most recent [currentCount] and everything older.
+     *
+     * Pure and order-preserving: membership is decided by RANKING on `startTs`, but the rows come back in
+     * the order they arrived, so the caller's own sort still decides what the screen shows. Ranking rather
+     * than comparing against a cutoff timestamp is what makes ties safe — two sessions that start in the
+     * same second cannot both sneak past a threshold and hand "Current" an eleventh row.
+     *
+     * The key is `startTs|sport`, matching the Swift twin exactly: two sessions sharing a start second are
+     * distinct rows unless they also share a sport, so the pair still partitions the input.
+     *
+     * Applied AFTER the range and facet filters, so each tab means "the ten most recent of what you are
+     * currently looking at" rather than showing an empty Current when a filter excludes the newest
+     * sessions. The HR-recovery trend deliberately reads the UNSCOPED window — cutting a 90-day analysis to
+     * ten sessions would quietly change what it measures.
+     */
+    fun scopedRows(
+        rows: List<WorkoutRow>,
+        scope: WorkoutScope,
+        currentCount: Int = CURRENT_SCOPE_COUNT,
+    ): List<WorkoutRow> {
+        if (rows.size <= currentCount) return if (scope == WorkoutScope.Current) rows else emptyList()
+        val key: (WorkoutRow) -> String = { "${it.startTs}|${it.sport}" }
+        val newest = rows.sortedByDescending { it.startTs }.take(currentCount).map(key).toHashSet()
+        return rows.filter { if (scope == WorkoutScope.Current) key(it) in newest else key(it) !in newest }
+    }
 }
 
 // MARK: - Merge (#64)

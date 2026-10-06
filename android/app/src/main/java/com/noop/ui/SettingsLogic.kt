@@ -1,6 +1,7 @@
 package com.noop.ui
 
 import android.content.SharedPreferences
+import com.noop.R
 import kotlin.math.roundToInt
 
 // MARK: - Waist stepper (optional VO₂max input)
@@ -41,15 +42,16 @@ internal fun waistInchesStep(current: Double, up: Boolean): Double {
  * already says so a few rows further down ("Needs the full encrypted bond…"). A green "Bonded · streaming"
  * above that contradicts it on the same screen.
  */
-internal fun strapStatusTitle(encryptedBond: Boolean, bonded: Boolean, connected: Boolean): String = when {
-    encryptedBond && connected -> "Bonded · streaming"
-    encryptedBond -> "Bonded · idle"
-    bonded && connected -> "Live HR (not fully paired)"
-    connected -> "Connected"
+internal fun strapStatusTitle(encryptedBond: Boolean, bonded: Boolean, connected: Boolean): DisplayText = when {
+    encryptedBond && connected -> DisplayText.Resource(R.string.l10n_settings_logic_bonded_streaming_4dda60db)
+    // No catalog entry: iOS words this state differently, so there is nothing to translate it from.
+    encryptedBond -> DisplayText.Dynamic("Bonded · idle")
+    bonded && connected -> DisplayText.Resource(R.string.l10n_settings_logic_live_hr_not_fully_paired_6fd6ddb1)
+    connected -> DisplayText.Resource(R.string.l10n_settings_logic_connected_c2f9b7b4)
     // No `bonded`-only idle arm: without an encrypted bond there was never a pairing to be idle from,
     // and labelling that "Paired" would be the same overclaim this change exists to remove. The 5/MG
     // shortcut's `bonded` is cleared on disconnect anyway, so the honest answer here is Disconnected.
-    else -> "Disconnected"
+    else -> DisplayText.Resource(R.string.l10n_settings_logic_disconnected_771e05f2)
 }
 
 /** Positive ONLY for a real encrypted bond on a live link — see [strapStatusTitle]. A live-HR-only link
@@ -66,13 +68,17 @@ internal fun strapStatusDetail(
     bonded: Boolean,
     connected: Boolean,
     scanning: Boolean,
-): String = when {
-    scanning -> "Searching for your WHOOP… make sure it's charged, on your wrist, and the official WHOOP app isn't connected to it."
-    encryptedBond && connected -> "Your strap is paired and sending data. Open Live for a real-time heart rate."
-    bonded && connected -> "Live heart rate is streaming, but your strap is not fully paired. The encrypted pairing is what carries motion, skin temperature, SpO₂ and respiratory rate — without it, sleep is staged from heart rate alone. Buzz, alarms and history sync need it too."
-    connected -> "Connected. Finishing the secure pairing handshake…"
-    bonded -> "Previously paired but not currently connected. Re-scan to reconnect."
-    else -> "No strap connected. Put your WHOOP nearby and tap Re-scan to pair."
+): DisplayText = when {
+    // No catalog entry (iOS phrases the scanning state its own way), so it stays verbatim English.
+    scanning -> DisplayText.Dynamic(
+        "Searching for your WHOOP… make sure it's charged, on your wrist, and the official WHOOP app " +
+            "isn't connected to it.",
+    )
+    encryptedBond && connected -> DisplayText.Resource(R.string.l10n_settings_logic_your_strap_is_paired_and_sending_data_op_ef06dfd4)
+    bonded && connected -> DisplayText.Resource(R.string.l10n_settings_logic_live_heart_rate_is_streaming_but_your_st_934807fc)
+    connected -> DisplayText.Resource(R.string.l10n_settings_logic_connected_finishing_the_secure_pairing_h_1e56d362)
+    bonded -> DisplayText.Resource(R.string.l10n_settings_logic_previously_paired_but_not_currently_conn_0a84a072)
+    else -> DisplayText.Resource(R.string.l10n_settings_logic_no_strap_connected_put_your_whoop_nearby_61a155c1)
 }
 
 internal fun batteryTone(pct: Double): StrandTone = when {
@@ -83,12 +89,12 @@ internal fun batteryTone(pct: Double): StrandTone = when {
 
 // MARK: - Sex options
 
-internal data class SexOption(val tag: String, val label: String)
+internal data class SexOption(val tag: String, val label: DisplayText)
 
 internal val SEX_OPTIONS = listOf(
-    SexOption("male", "Male"),
-    SexOption("female", "Female"),
-    SexOption("nonbinary", "Non-binary"),
+    SexOption("male", DisplayText.Resource(R.string.l10n_settings_logic_male_3f3a489c)),
+    SexOption("female", DisplayText.Resource(R.string.l10n_settings_logic_female_b7c17e97)),
+    SexOption("nonbinary", DisplayText.Resource(R.string.l10n_settings_logic_non_binary_dc82a40c)),
 )
 
 // MARK: - Advanced disclosure persistence (S3)

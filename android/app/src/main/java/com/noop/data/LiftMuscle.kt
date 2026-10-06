@@ -68,6 +68,18 @@ enum class LiftMuscle {
         const val indirectSetCredit: Double = 0.5
 
         /**
+         * Cases in picker order: by region, in the order declared above.
+         *
+         * Swift's `LiftMuscle.ordered` is `allCases` and this is `entries`, so the two agree by
+         * CONSTRUCTION: both are declaration order, and the declarations are kept in step (the token
+         * order itself is pinned by `LiftMuscleParityOracleTest`).
+         */
+        val ordered: List<LiftMuscle> get() = entries
+
+        /** Cases in one region, in declaration order. */
+        fun inRegion(region: Region): List<LiftMuscle> = entries.filter { it.region == region }
+
+        /**
          * Raw token to case, or null when the token is not one this build knows.
          *
          * Kotlin-only by design: Swift gets this free from `RawRepresentable.init(rawValue:)`, so
@@ -75,6 +87,56 @@ enum class LiftMuscle {
          */
         fun fromRaw(raw: String?): LiftMuscle? =
             raw?.let { token -> entries.firstOrNull { it.name == token } }
+
+        /**
+         * Resolve a muscle written by a PERSON in a spreadsheet — the twin of Swift's
+         * `LiftMuscle.init?(sheetName:)`.
+         *
+         * Accepts the stored token (`frontDelts`) and the English display name ("Front delts"), and is
+         * insensitive to case, spaces, hyphens and underscores — so "front delts", "Front-Delts" and
+         * "FRONTDELTS" all land on the same case. Deliberately NOT fuzzy beyond that: the vocabulary is a
+         * stored-data contract, and guessing that "shoulders" means front delts would silently put sets in
+         * a bucket the user did not choose.
+         */
+        fun fromSheetName(raw: String?): LiftMuscle? {
+            val token = raw ?: return null
+            // Fold diacritics first (the same step `HeaderNorm.normalize` takes), then keep only letters
+            // and digits: "Front delts" and "front-delts" both become "frontdelts".
+            val key = java.text.Normalizer.normalize(token.lowercase(), java.text.Normalizer.Form.NFD)
+                .replace(Regex("\\p{Mn}+"), "")
+                .filter { it.isLetterOrDigit() }
+            if (key.isEmpty()) return null
+            entries.firstOrNull { it.name.lowercase() == key }?.let { return it }
+            return sheetNames[key]
+        }
+
+        /**
+         * The English display names, which is what the shipped template's dropdown offers. Written out
+         * rather than derived from the app-layer `displayName` extension, because `data` must not depend on
+         * `ui` — and because this list is a FILE-FORMAT contract, not a label.
+         */
+        private val sheetNames: Map<String, LiftMuscle> = buildMap {
+            put("chest", LiftMuscle.chest)
+            put("frontdelts", LiftMuscle.frontDelts)
+            put("sidedelts", LiftMuscle.sideDelts)
+            put("reardelts", LiftMuscle.rearDelts)
+            put("triceps", LiftMuscle.triceps)
+            put("lats", LiftMuscle.lats)
+            put("upperback", LiftMuscle.upperBack)
+            put("traps", LiftMuscle.traps)
+            put("biceps", LiftMuscle.biceps)
+            put("forearms", LiftMuscle.forearms)
+            put("quads", LiftMuscle.quads)
+            put("hamstrings", LiftMuscle.hamstrings)
+            put("glutes", LiftMuscle.glutes)
+            put("adductors", LiftMuscle.adductors)
+            put("abductors", LiftMuscle.abductors)
+            put("calves", LiftMuscle.calves)
+            put("abs", LiftMuscle.abs)
+            put("obliques", LiftMuscle.obliques)
+            put("lowerback", LiftMuscle.lowerBack)
+            put("neck", LiftMuscle.neck)
+        }
 
         /**
          * Encode a secondary list for storage. Returns null for an empty list so the column stays

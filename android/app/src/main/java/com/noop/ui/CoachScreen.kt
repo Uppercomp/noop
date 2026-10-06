@@ -151,7 +151,7 @@ private fun CoachSetup(vm: CoachViewModel) {
 
             // Provider choice.
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Overline("Provider")
+                Overline(uiString(R.string.l10n_coach_screen_provider_7ceee3f3))
                 SegmentedPillControl(
                     items = AiProvider.entries,
                     selection = provider,
@@ -163,7 +163,7 @@ private fun CoachSetup(vm: CoachViewModel) {
             // Server URL, Custom (local LLM) only.
             if (isCustom) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Overline("Server URL")
+                    Overline(uiString(R.string.l10n_coach_screen_server_url_1d5d1eff))
                     OutlinedTextField(
                         value = customBaseUrl,
                         onValueChange = { vm.setCustomBaseUrl(context, it) },
@@ -198,7 +198,7 @@ private fun CoachSetup(vm: CoachViewModel) {
             // Model dropdown + live-list refresh.
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Overline("Model")
+                    Overline(uiString(R.string.l10n_coach_screen_model_68c2cc7f))
                     Spacer(Modifier.weight(1f))
                     RefreshModelsButton(
                         refreshing = refreshingModels,
@@ -216,11 +216,11 @@ private fun CoachSetup(vm: CoachViewModel) {
 
             // Masked key field, optional for a local Custom server.
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Overline(if (isCustom) "API Key (optional)" else "API Key")
+                Overline(uiString(if (isCustom) R.string.l10n_case_api_key_optional_ad9807cb else R.string.l10n_case_api_key_cf678cab))
                 CoachKeyField(
                     value = keyInput,
                     onValueChange = { keyInput = it },
-                    placeholder = if (isCustom) "Only if your server requires one"
+                    placeholder = if (isCustom) uiString(R.string.l10n_coach_screen_only_if_your_server_requires_one_5369cfe1)
                                   else "Paste your ${provider.displayName} key",
                 )
             }
@@ -844,7 +844,7 @@ internal fun RefreshModelsButton(
             )
         }
         Text(
-            if (refreshing) "Fetching…" else "Refresh models",
+            if (refreshing) "Fetching…" else uiString(R.string.l10n_coach_screen_refresh_models_ba6da3f2),
             style = NoopType.caption,
             color = if (active) Palette.textPrimary else Palette.textTertiary,
         )

@@ -16,6 +16,33 @@ final class PpgWaveformSampleTests: XCTestCase {
         -201, -918, -1563, -1833, -1313, -930, -616, -293, -422, -380, -235, -164,
     ]
 
+    func testRawFrameReadRoundTripAndLegacyAbsence() async throws {
+        let store = try await WhoopStore.inMemory()
+        let sample = PpgWaveformSample(ts: 123, samples: [-1, 2], burstIndex: 7,
+                                      baseCode: 378307, rawFrame: [170, 0, 255])
+        _ = try await store.insert(Streams(ppgWaveform: [sample]), deviceId: "dev")
+        let read = try await store.ppgWaveformSamples(deviceId: "dev", from: 0, to: 200)
+        XCTAssertEqual(read, [sample])
+        XCTAssertNil(PpgWaveformSample(ts: 1, samples: []).rawFrame)
+    }
+
+    func testV48PreservesExistingWaveforms() throws {
+        let queue = try DatabaseQueue()
+        var migrator = WhoopStore.makeMigrator()
+        try migrator.migrate(queue, upTo: "v47-rr-whoop5-fill")
+        try queue.write { db in
+            try db.execute(sql: "INSERT INTO ppgWaveformSample(deviceId,ts,samples,burstIndex,baseCode) VALUES ('dev',123,X'FFFF0200',7,378307)")
+        }
+        try migrator.migrate(queue)
+        try queue.read { db in
+            let row = try XCTUnwrap(Row.fetchOne(db, sql: "SELECT * FROM ppgWaveformSample"))
+            XCTAssertEqual(row["samples"] as Data, Data([255,255,2,0]))
+            XCTAssertEqual(row["burstIndex"] as Int, 7)
+            XCTAssertEqual(row["baseCode"] as Int, 378307)
+            XCTAssertNil(row["rawFrame"] as Data?)
+        }
+    }
+
     func testV27CreatesPpgWaveformTable() async throws {
         let store = try await WhoopStore.inMemory()
         let tables = try await store.tableNames()
@@ -34,7 +61,7 @@ final class PpgWaveformSampleTests: XCTestCase {
         // #2019: `baseCode` is the absolute optical code `samples` are deltas from. Nullable and
         // additive, so an existing row keeps its deltas and reads null, which is the true statement
         // about it: a delta series cannot be inverted without its starting point.
-        XCTAssertEqual(Set(cols), ["deviceId", "ts", "samples", "burstIndex", "baseCode"])
+        XCTAssertEqual(Set(cols), ["deviceId", "ts", "samples", "burstIndex", "baseCode", "rawFrame"])
     }
 
     func testPpgWaveformInsertRoundTripAndDedup() async throws {

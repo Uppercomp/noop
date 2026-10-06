@@ -188,7 +188,7 @@ private fun WidgetContent(snap: WidgetSnapshot, dark: Boolean) {
         Spacer(modifier = GlanceModifier.height(2.dp))
         Text(
             text = when {
-                snap.connected -> "Connected"
+                snap.connected -> uiString(R.string.recording_chip_title_connected)
                 snap.updatedAtMs > 0L ->
                     java.text.SimpleDateFormat(   // #1821: the reader's chosen clock
                         ClockFormat.hourMinutePattern(ClockPrefs.uses24Hour(androidx.glance.LocalContext.current)),

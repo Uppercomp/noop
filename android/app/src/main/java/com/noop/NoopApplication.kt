@@ -10,11 +10,18 @@ import com.noop.ble.SourceIdentity
 import com.noop.ble.WhoopBleClient
 import com.noop.ble.WhoopModel
 import com.noop.data.DeviceRegistry
+import com.noop.data.LiftLogRepository
 import com.noop.data.WhoopDatabase
 import com.noop.data.WhoopRepository
 import com.noop.ui.NoopPrefs
 import com.noop.ui.AppLanguagePrefs
 import com.noop.push.SelfHostedPushScheduler
+import com.noop.ui.LiftSessionController
+import com.noop.ui.LiftSessionPersistence
+import com.noop.ui.LiftSessionStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -59,6 +66,10 @@ class NoopApplication : Application() {
         // case it exists for is a strap that stopped talking. Scheduled here rather than beside a widget
         // so it does not inherit that widget's lifecycle. KEEP, so this is a no-op once scheduled.
         com.noop.notif.StaleBatteryWorker.ensureScheduled(this)
+        // Pick up a gym session a previous run of NOOP left going, before any screen exists: until this
+        // ran on screen-open, the running-session bar showed nothing and a strap tap did nothing until the
+        // Lift Log was opened. Reads one preference and parses it; a no-op when nothing is stored.
+        liftSession.resumeSaved(liftSessionStore)
     }
 
     /** Process-wide Room-backed store. One instance shared by the UI and the background service. */
@@ -68,6 +79,67 @@ class NoopApplication : Application() {
 
     /** Process-wide device registry over the same Room DB — the single source of the active device id. */
     val deviceRegistry: DeviceRegistry by lazy { DeviceRegistry(WhoopDatabase.get(this)) }
+
+    /**
+     * The in-app strength log's read/write façade over the same Room DB.
+     *
+     * Process-wide for the same reason the store and the BLE client are: a gym session outlives the
+     * screen you happen to be looking at, so the thing that reads and writes it cannot be owned by a
+     * screen either.
+     */
+    val liftLog: LiftLogRepository by lazy { LiftLogRepository(WhoopDatabase.get(this)) }
+
+    /** The crash snapshot for an in-flight Lift session — one key in its own preferences file. */
+    val liftSessionStore: LiftSessionStore by lazy { LiftSessionStore.from(this) }
+
+    /**
+     * A process-lifetime scope for the session's rest timers.
+     *
+     * Owned here because a rest that started in the gym has to keep its two one-shot timers (the
+     * five-second warning and the end) firing whether or not any screen is alive to show it.
+     */
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /**
+     * A scope whose lifetime is the PROCESS, for work that must finish whatever the UI does.
+     *
+     * The canonical case is saving a finished session: `LiftSessionController.finish()` flips `isActive`,
+     * which takes the session sheet out of the composition — and a coroutine launched from a composable's
+     * `rememberCoroutineScope()` is cancelled the instant that composable leaves. Saving on a
+     * composition-scoped coroutine therefore wrote the session row and silently dropped its sets, its
+     * program write-back and its paired workout.
+     */
+    val liftScope: CoroutineScope get() = applicationScope
+
+    /**
+     * The strap's double-tap, claimed by a running Lift session for its lifetime.
+     *
+     * The session used to own the gesture inside the sheet that displayed it, so dismissing the sheet made
+     * the strap deaf: taps did nothing and no buzz arrived, in the app or out of it. The handler now lives
+     * at the process level ([LiftSessionController.claimStrap]) and the double-tap dispatch consults it
+     * BEFORE the user's configured automation, which is what "while a session is running, a tap advances a
+     * set" means. Null whenever no session is running.
+     */
+    @Volatile
+    var liftStrapTap: (() -> Unit)? = null
+        private set
+
+    /** The live Lift session — the gym session's owner, above every screen. */
+    val liftSession: LiftSessionController by lazy {
+        LiftSessionController(
+            // The same confirming buzz every other in-session cue uses. Resolved lazily, so building the
+            // controller does not construct the BLE client.
+            buzz = { loops -> ble.buzz(loops) },
+            setStrapHandler = { handler -> liftStrapTap = handler },
+            log = { line -> ble.externalLog(line) },
+            persistSnapshot = { snapshot -> LiftSessionPersistence.store(liftSessionStore, snapshot) },
+            clearSnapshot = { LiftSessionPersistence.store(liftSessionStore, null) },
+            scope = applicationScope,
+            // The Lock Screen readout: posted whenever the session's words change, cleared on teardown
+            // (including the teardown of a session that was never presented).
+            onChanged = { com.noop.notif.LiftSessionNotifier.update(this, liftSession) },
+        )
+    }
 
     /**
      * Active device id, resolved once at startup from the registry and falling back to the legacy

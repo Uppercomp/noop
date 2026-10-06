@@ -11,6 +11,8 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import android.widget.Toast
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,6 +39,7 @@ import com.noop.data.DailyMetric
 import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -54,13 +57,14 @@ import kotlin.math.roundToInt
 
 // MARK: - Range options (mirror Swift ReportRange)
 
-/** The export window choices: trailing N days, or all history. */
-enum class ReportRange(val days: Int?, val label: String, val longName: String) {
-    Days30(30, "30d", "Last 30 days"),
-    Days90(90, "90d", "Last 90 days"),
-    Days180(180, "6M", "Last 6 months"),
-    Days365(365, "1Y", "Last year"),
-    All(null, "All", "All history"),
+/** The export window choices: trailing N days, or all history. Resources, not resolved labels — an enum
+ *  constructor runs at class-load, before an Application exists, and the canvas draws the long name. */
+enum class ReportRange(val days: Int?, @StringRes val labelRes: Int, @StringRes val longNameRes: Int) {
+    Days30(30, R.string.l10n_lab_book_screen_s_30d_dccf34aa, R.string.l10n_trends_report_last_30_days_6b329852),
+    Days90(90, R.string.l10n_trends_report_s_90d_71799504, R.string.l10n_trends_report_last_90_days_c328508b),
+    Days180(180, R.string.l10n_apple_health_screen_s_6m_b78ebb44, R.string.l10n_trends_report_last_6_months_14d5436c),
+    Days365(365, R.string.l10n_apple_health_screen_s_1y_28234cf2, R.string.l10n_trends_report_last_year_3cf4d8d7),
+    All(null, R.string.timeline_all, R.string.trends_all_history),
 }
 
 // MARK: - Data builder (pure glue over the engine)
@@ -303,15 +307,14 @@ object TrendsReportRenderer {
         val left = MARGIN + 16f
         var ty = cardTop + 26f
         text(canvas, "NOOP", left, ty, 11f, sansBold, ACCENT, letterSpacing = 0.12f)
-        textRight(canvas, range.longName.uppercase(), PAGE_W - MARGIN - 16f, ty, 10f, sansBold, TEXT_TERTIARY)
+        textRight(canvas, uiString(range.longNameRes).uppercase(), PAGE_W - MARGIN - 16f, ty, 10f, sansBold, TEXT_TERTIARY)
         ty += 30f
-        text(canvas, "Trends report", left, ty, 26f, sansBold, TEXT_PRIMARY)
+        text(canvas, uiString(R.string.l10n_trends_report_trends_report_887d9874), left, ty, 26f, sansBold, TEXT_PRIMARY)
         ty += 22f
         val span = report.totalDays
-        val dayWord = if (span == 1) "day" else "days"
         text(
             canvas,
-            "${prettyDate(report.start)}-${prettyDate(report.end)}   ·   $span $dayWord",
+            rangeSpan(report.start, report.end, span),
             left, ty, 12f, sans, TEXT_SECONDARY,
         )
         return cardTop + cardH
@@ -328,9 +331,9 @@ object TrendsReportRenderer {
 
         val left = MARGIN + 16f
         var ty = top + 22f
-        text(canvas, "SUMMARY", left, ty, 10f, sansBold, ACCENT, letterSpacing = 0.1f)
+        text(canvas, uiString(R.string.explore_summary).uppercase(), left, ty, 10f, sansBold, ACCENT, letterSpacing = 0.1f)
         ty += 8f
-        text(canvas, "What changed", left, ty + 10f, 16f, sansBold, TEXT_PRIMARY)
+        text(canvas, uiString(R.string.l10n_trends_report_what_changed_7e4b9199), left, ty + 10f, 16f, sansBold, TEXT_PRIMARY)
         ty += 28f
         for (line in report.headlines) {
             text(canvas, "•  $line", left, ty, 12f, sans, TEXT_PRIMARY, maxWidth = PAGE_W - MARGIN - left - 16f)
@@ -349,9 +352,9 @@ object TrendsReportRenderer {
         units: ReportDisplayUnits,
     ): Float {
         var y = top
-        text(canvas, "BY THE NUMBERS", MARGIN, y + 4f, 10f, sansBold, TEXT_TERTIARY, letterSpacing = 0.1f)
+        text(canvas, uiString(R.string.l10n_trends_report_by_the_numbers_58c76110).uppercase(), MARGIN, y + 4f, 10f, sansBold, TEXT_TERTIARY, letterSpacing = 0.1f)
         y += 10f
-        text(canvas, "Metrics", MARGIN, y + 14f, 16f, sansBold, TEXT_PRIMARY)
+        text(canvas, uiString(R.string.l10n_compare_screen_metrics_ddf6a1f0), MARGIN, y + 14f, 16f, sansBold, TEXT_PRIMARY)
         y += 26f
 
         for (stat in report.metrics) {
@@ -387,7 +390,7 @@ object TrendsReportRenderer {
         if (spark.size >= 2) {
             drawSparkline(canvas, spark, left, sparkTop, right - 8f, sparkBottom, accent)
         } else {
-            text(canvas, "Single reading in range", left, sparkTop + 16f, 11f, sans, TEXT_TERTIARY)
+            text(canvas, uiString(R.string.l10n_trends_report_single_reading_in_range_91e43db6), left, sparkTop + 16f, 11f, sans, TEXT_TERTIARY)
         }
 
         // Divider.
@@ -395,10 +398,10 @@ object TrendsReportRenderer {
 
         // Footer stats: Avg / Min(day) / Max(day) / Days, evenly spaced.
         val cols = listOf(
-            "AVG" to TrendsReportFormat.valueText(stat.mean, stat.metric, units),
-            "MIN" to "${TrendsReportFormat.valueText(stat.min.value, stat.metric, units)} · ${prettyDate(stat.min.day)}",
-            "MAX" to "${TrendsReportFormat.valueText(stat.max.value, stat.metric, units)} · ${prettyDate(stat.max.day)}",
-            "DAYS" to "${stat.n}",
+            uiString(R.string.trends_avg).uppercase() to TrendsReportFormat.valueText(stat.mean, stat.metric, units),
+            uiString(R.string.trends_min).uppercase() to "${TrendsReportFormat.valueText(stat.min.value, stat.metric, units)} · ${prettyDate(stat.min.day)}",
+            uiString(R.string.trends_max).uppercase() to "${TrendsReportFormat.valueText(stat.max.value, stat.metric, units)} · ${prettyDate(stat.max.day)}",
+            uiString(R.string.trends_days).uppercase() to "${stat.n}",
         )
         val colW = (right - left) / cols.size
         cols.forEachIndexed { i, (label, value) ->
@@ -433,7 +436,7 @@ object TrendsReportRenderer {
     ) {
         val d = stat.halfDelta
         val (label, color) = if (stat.trend == ReportTrend.FLAT || abs(d) < 0.05) {
-            "steady" to TEXT_TERTIARY
+            uiString(R.string.l10n_trends_report_steady_0c69e7aa) to TEXT_TERTIARY
         } else {
             val up = d > 0
             val sign = if (up) "+" else "−"
@@ -469,10 +472,11 @@ object TrendsReportRenderer {
         val cardH = 110f
         drawCard(canvas, MARGIN, top, PAGE_W - MARGIN, top + cardH, null)
         val left = MARGIN + 16f
-        text(canvas, "Not enough data in this range yet", left, top + 30f, 16f, sansBold, TEXT_PRIMARY)
-        val body = "No workout, stress, recovery, sleep, HRV, resting-HR, strain, respiratory-rate or " +
-            "skin-temp readings fell inside ${range.longName.lowercase()}. Wear your strap a few more days, " +
-            "or pick a wider range, then export again."
+        text(canvas, uiString(R.string.l10n_trends_report_not_enough_data_in_this_range_yet_5a7cd501), left, top + 30f, 16f, sansBold, TEXT_PRIMARY)
+        val body = uiString(
+            R.string.l10n_trends_report_no_workout_stress_recovery_sleep_hrv_res_78e17114,
+            uiString(range.longNameRes).lowercase(Locale.getDefault()),
+        )
         drawWrapped(canvas, body, left, top + 52f, PAGE_W - MARGIN - left - 16f, 16f, 12f, sans, TEXT_SECONDARY)
     }
 
@@ -483,20 +487,15 @@ object TrendsReportRenderer {
         // Provenance legend (#457): make clear which numbers are measured vs. NOOP's own derived scores,
         // so a clinician reading the PDF isn't misled into treating Recovery/Strain as clinical measures.
         // Sits above the hairline; wraps to the page width (~4 lines at this size).
-        val legend = "How to read this: HRV, Resting HR, Sleep duration, Respiratory rate and Skin " +
-            "temperature are measured from the strap (skin temp is shown as the deviation from your own " +
-            "baseline). Workouts is the count of activities you logged or that were detected. Recovery, " +
-            "Strain and Stress are NOOP's own on-device scores, not clinical measures - Recovery is a daily " +
-            "readiness composite (HRV, resting HR, sleep and skin-temp trend), Strain is cardiovascular load " +
-            "derived from heart rate, and Stress is a 0-3 autonomic-load index from resting HR and HRV."
+        val legend = uiString(R.string.l10n_trends_report_how_to_read_this_hrv_resting_hr_sleep_du_e8f8f689)
         drawWrapped(canvas, legend, MARGIN, y - 52f, PAGE_W - 2 * MARGIN, 11f, 9f, sans, TEXT_TERTIARY)
         line(canvas, MARGIN, y - 14f, PAGE_W - MARGIN, y - 14f, HAIRLINE)
         text(
             canvas,
-            "Generated by NOOP on $generatedOn · all on-device, no account, no cloud.",
+            uiString(R.string.l10n_trends_report_generated_by_noop_on_all_on_device_no_ac_f331a0cb, generatedOn),
             MARGIN, y, 10f, sans, TEXT_TERTIARY,
         )
-        text(canvas, "Informational only - not medical advice.", MARGIN, y + 12f, 10f, sans, TEXT_TERTIARY)
+        text(canvas, uiString(R.string.l10n_weekly_digest_card_informational_only_not_medical_advice_593feb77), MARGIN, y + 12f, 10f, sans, TEXT_TERTIARY)
     }
 
     // --- Primitives ---
@@ -616,12 +615,31 @@ object TrendsReportRenderer {
 
     // --- Formatting: see TrendsReportFormat (kept out of this object so it is unit-testable) ---
 
-    /** "Jun 15" from "2026-06-15" via the engine's pure parse (no Calendar/locale). */
+    /**
+     * "Jun 15" from "2026-06-15" via the engine's pure parse (no Calendar), with the month name from the
+     * SAME catalog copy the iOS twin's `prettyDate` uses (`String(localized: "Jan")` … "Dec"). A
+     * device-locale formatter is the other option, but iOS pins this one to catalog copy, so the two
+     * platforms have to agree on the wording.
+     */
     private fun prettyDate(ymd: String): String {
         val p = RangeReportEngine.parseYMD(ymd) ?: return ymd
-        val months = arrayOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
-        val name = if (p.second in 1..12) months[p.second - 1] else "${p.second}"
+        val name = if (p.second in 1..12) monthNames()[p.second - 1] else "${p.second}"
         return "$name ${p.third}"
+    }
+
+    /** The twelve month abbreviations, resolved on demand — a top-level `val` would run at class load. */
+    private fun monthNames(): Array<String> = arrayOf(
+        R.string.l10n_month_jan_efed3690, R.string.l10n_month_feb_dc8415cc, R.string.l10n_month_mar_c4ba0822,
+        R.string.l10n_month_apr_befde54a, R.string.l10n_month_may_c94f4798, R.string.l10n_month_jun_6d90df3b,
+        R.string.l10n_month_jul_b7375584, R.string.l10n_month_aug_75629af5, R.string.l10n_month_sep_fdd289e3,
+        R.string.l10n_month_oct_51327aef, R.string.l10n_month_nov_bb9bfefd, R.string.l10n_month_dec_997f59bc,
+    ).map { uiString(it) }.toTypedArray()
+
+    /** "<start> – <end>  ·  <n> days" — one whole sentence per count, so both variants are translated. */
+    private fun rangeSpan(start: String, end: String, days: Int): String = if (days == 1) {
+        uiString(R.string.l10n_trends_report_s_1_s_2_s_1_day_fff233a0, prettyDate(start), prettyDate(end))
+    } else {
+        uiString(R.string.l10n_trends_report_s_1_s_2_s_3_d_days_4cd63172, prettyDate(start), prettyDate(end), days)
     }
 }
 
@@ -656,7 +674,12 @@ object TrendsReportShare {
             val series = ReportMetric.allCases.associateWith {
                 TrendsReportData.series(it, days, report.start, report.end, stressByDay)
             }
-            val generatedOn = LocalDate.now().format(DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.US))
+            // The twin of the iOS report's `generatedOn` — `DateFormatter` with `dateStyle = .medium` and no
+            // pinned locale, so the stamp reads in the app's own language. A `Locale.US` pattern here printed
+            // "Oct 3, 2026" in a Chinese build.
+            val generatedOn = LocalDate.now().format(
+                DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault()),
+            )
             val file = TrendsReportRenderer.renderPdf(context, report, range, series, generatedOn, units)
                 ?: run {
                     Toast.makeText(context, "Couldn't build the report.", Toast.LENGTH_LONG).show()
@@ -701,22 +724,24 @@ fun TrendsReportExportSection(vm: AppViewModel, modifier: Modifier = Modifier) {
 
     NoopCard(modifier = modifier, tint = Palette.accent) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Overline("Export")
+            Overline(uiString(R.string.l10n_test_centre_screen_export_f3e4fadb))
             Text(uiString(R.string.l10n_trends_report_trends_report_pdf_481e8a5f), style = NoopType.title2, color = Palette.textPrimary)
             Text(
-                uiString(R.string.l10n_trends_report_a_clean_shareable_one_page_pdf_a3c4f889),
+                uiString(R.string.l10n_trends_report_a_clean_shareable_one_page_pdf_a3c4f889, deviceNoun()),
                 style = NoopType.subhead,
                 color = Palette.textSecondary,
             )
 
-            Overline("Range", color = Palette.textTertiary)
+            Overline(uiString(R.string.l10n_trends_report_range_a16c5bbe), color = Palette.textTertiary)
+            // Resolved OUTSIDE the lambda: `SegmentedPillControl` takes a `(T) -> String`, not @Composable.
+            val rangeLabels = ReportRange.entries.map { stringResource(it.labelRes) }
             SegmentedPillControl(
                 items = ReportRange.entries.toList(),
                 selection = range,
-                label = { it.label },
+                label = { rangeLabels[it.ordinal] },
                 onSelect = { range = it },
             )
-            Text(range.longName, style = NoopType.footnote, color = Palette.textTertiary)
+            Text(stringResource(range.longNameRes), style = NoopType.footnote, color = Palette.textTertiary)
 
             // Routed through the unified NoopButton (crisp filled accent, no gold) — the same button
             // system every other CTA uses, mirroring the iOS exportReportRow.

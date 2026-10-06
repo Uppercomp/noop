@@ -126,7 +126,7 @@ fun WeeklyDigestCard(vm: AppViewModel, modifier: Modifier = Modifier) {
 fun WeeklyDigestScreen(vm: AppViewModel) {
     val days by vm.recentDays.collectAsStateWithLifecycle()
     val factor = effortDisplayFactor(UnitPrefs.effortScale(LocalContext.current))
-    ScreenScaffold(title = uiString(R.string.l10n_weekly_digest_card_week_in_review_66d95a07), subtitle = "Your Monday-to-Sunday, read in one glance.") {
+    ScreenScaffold(title = uiString(R.string.l10n_weekly_digest_card_week_in_review_66d95a07), subtitle = uiString(R.string.l10n_weekly_digest_card_your_monday_to_sunday_read_in_one_glance_c475888a)) {
         val digest = buildWeeklyDigest(days, effortDisplayFactor = factor)
         if (digest.isEmpty) {
             DataPendingNote(
@@ -142,9 +142,23 @@ fun WeeklyDigestScreen(vm: AppViewModel) {
 
 // MARK: - Shared content
 
-private val MONTHS = arrayOf(
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-)
+/**
+ * The twelve month abbreviations, from resources.
+ *
+ * The iOS twin builds the same array with `String(localized: "Jan")` … `"Dec"`, i.e. TRANSLATED names
+ * rather than a device-locale formatter, so an English literal here would print "Jun 8" in a German build
+ * where the iPhone prints "Jun. 8".
+ *
+ * A FUNCTION, not a top-level `val`: resolving a resource in a property initializer runs at class load,
+ * before an Application exists, which throws in any JVM test that touches this file. Resolved through
+ * [uiString] because [shortDate] is a plain formatting helper, not a composition.
+ */
+private fun monthNames(): Array<String> = arrayOf(
+    R.string.l10n_month_jan_efed3690, R.string.l10n_month_feb_dc8415cc, R.string.l10n_month_mar_c4ba0822,
+    R.string.l10n_month_apr_befde54a, R.string.l10n_month_may_c94f4798, R.string.l10n_month_jun_6d90df3b,
+    R.string.l10n_month_jul_b7375584, R.string.l10n_month_aug_75629af5, R.string.l10n_month_sep_fdd289e3,
+    R.string.l10n_month_oct_51327aef, R.string.l10n_month_nov_bb9bfefd, R.string.l10n_month_dec_997f59bc,
+).map { uiString(it) }.toTypedArray()
 
 private val DISPLAY_ORDER = listOf(
     WeeklyMetric.CHARGE, WeeklyMetric.EFFORT, WeeklyMetric.REST, WeeklyMetric.HRV, WeeklyMetric.RHR,
@@ -167,7 +181,7 @@ fun WeeklyDigestContent(digest: WeeklyDigest, compact: Boolean = false) {
             verticalAlignment = Alignment.Top,
         ) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Overline("Week in review")
+                Overline(uiString(R.string.trends_week_in_review))
                 Text(weekRangeLabel(digest), style = NoopType.title2, color = Palette.textPrimary)
             }
             Text(
@@ -284,13 +298,14 @@ private fun DeltaChip(s: WeeklyMetricSummary) {
 
 // MARK: - Formatting
 
+/** "Sep 28–Okt 4" — an EN DASH between the two dates, matching the iOS `"\(start)–\(end)"` twin. */
 private fun weekRangeLabel(digest: WeeklyDigest): String =
-    "${shortDate(digest.weekStart)}-${shortDate(digest.weekEnd)}"
+    "${shortDate(digest.weekStart)}–${shortDate(digest.weekEnd)}"
 
 /** "Jun 8" from "2026-06-08", via the engine's own pure parse (no Calendar). */
 private fun shortDate(ymd: String): String {
     val p = WeeklyDigestEngine.parseYMD(ymd) ?: return ymd
-    val name = if (p[1] in 1..12) MONTHS[p[1] - 1] else p[1].toString()
+    val name = if (p[1] in 1..12) monthNames()[p[1] - 1] else p[1].toString()
     return "$name ${p[2]}"
 }
 
@@ -330,7 +345,7 @@ private fun chipTone(s: WeeklyMetricSummary): Color = when {
 private fun rowAccessibility(s: WeeklyMetricSummary, effortScale: EffortScale): String {
     val mean = meanText(s, effortScale)
     if (s.weekOverWeek.current.n == 0 || s.weekOverWeek.previous.n == 0) {
-        return "${s.metric.label}: $mean this week, no comparison."
+        return uiString(R.string.l10n_weekly_digest_card_this_week_no_comparison_cef25a61, s.metric.label, mean)
     }
     val dir = if (s.wowDelta > 0) "up" else if (s.wowDelta < 0) "down" else "unchanged"
     // A rough comparison drops the verdict framing too, so VoiceOver/TalkBack matches the neutral chip.

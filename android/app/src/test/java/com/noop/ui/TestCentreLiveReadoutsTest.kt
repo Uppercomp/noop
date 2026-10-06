@@ -1,5 +1,6 @@
 package com.noop.ui
 
+import com.noop.R
 import com.noop.testcentre.TestDomain
 import com.noop.testcentre.TestModeRegistry
 import org.junit.Assert.assertEquals
@@ -19,7 +20,13 @@ class TestCentreLiveReadoutsTest {
         )
 
         assertEquals(
-            listOf(LiveReadoutRow("lastChargeBreakdown", "Last Charge breakdown", "score=62.5 band=yellow")),
+            listOf(
+                LiveReadoutRow(
+                    "lastChargeBreakdown",
+                    DisplayText.Resource(R.string.l10n_test_centre_live_readouts_last_charge_breakdown_aaf97483),
+                    DisplayText.Dynamic("score=62.5 band=yellow"),
+                ),
+            ),
             rows,
         )
     }
@@ -38,7 +45,7 @@ class TestCentreLiveReadoutsTest {
             ),
         )
 
-        assertEquals("score=62.5 band=yellow", rows.single().value)
+        assertEquals("score=62.5 band=yellow", (rows.single().value as DisplayText.Dynamic).value)
     }
 
     @Test fun everyRegistryDeclaredIdHasExactlyOnePresentationMapping() {

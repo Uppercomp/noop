@@ -89,7 +89,7 @@ the Python capture side does not require Swift.
 | `correlate_ground_truth.py` | **Locate un-decoded record fields using your WHOOP CSV export as known-plaintext.** Cross-references capture frames against the official per-night values (HRV, resting HR, skin temp, SpO₂, respiratory rate) to find each biometric's byte offset + encoding. Reuses the Swift importer's localized header aliases (English + DE/ES). Reports offsets only — your health values never leave the machine. Stdlib only. See [Ground-truth correlation](#ground-truth-correlation-correlate_ground_truthpy). |
 | `validate_spo2_candidate.py` | **Multi-device validation of the v18 SpO₂ candidate at frame @82** (`spo2_candidate_82`). Nightly aggregate of in-band (70–100) samples during `sleep_state=asleep` vs CSV `blood_oxygen_pct`; reports r / MAE / bias / offset-specificity and a promote checklist. **@82 is duty-cycled**, so the tool detects its window schedule per capture, aggregates per window, and reports window coverage; a strap that never emits @82 is classified `feature_absent` rather than failed. Batch mode for several straps. Postable summary has **no raw SpO₂ values** (safe for [#103](https://github.com/ryanbr/noop/issues/103)). Stdlib only. See [SpO₂ candidate validation](#spo₂-candidate-validation-validate_spo2_candidatepy). |
 | `pair_probe.py` | One-shot WHOOP 5 bonding probe: scan → connect → `pair()` → test `fd4b` access. `python3 pair_probe.py <MAC>`. |
-| `analyze_v26_waveform.py` | Characterise the WHOOP 5 **v26** type-47 buffer as PPG @24 Hz using its own co-timestamped HR as ground truth. |
+| `analyze_v26_waveform.py` | Characterise the WHOOP 5 **v26** type-47 buffer as PPG using its own co-timestamped HR as ground truth. Reports **per-run** periods and the **derived** sample rate (`HR * lag / 60`) rather than assuming 24 Hz, and the verdict rests on whether the period **tracks a varying** HR — pooling autocorrelation across runs smears the peak whenever HR moves, and an earlier hardcoded 90–120 bpm band silently excluded most of a wide-ranging capture (both reported "inconclusive" on a real 5.0 capture whose PPG tracks at r=+0.976). |
 | `analyze_v25_waveform.py` | **WHOOP 4.0 v25 PPG → HR span-pinning harness ([#194](https://github.com/ryanbr/noop/issues/194)).** Sweeps the unpinned PPG span (start + sample-count) across a corpus of captures at *known* HRs and reports the span where recovered HR **tracks** ground truth instead of the `1440/N` autocorrelation artifact — or, on resting-only data, exactly what capture is still needed. `--selftest` proves it on synthetic pulses; no args runs the bundled-frames demo. Stdlib only. |
 | `whoop_spot_hrv.py` | **Spot HRV (RMSSD) from the sparse PPG bursts.** Reads the v26 `feat_ppg` channel-0 24 Hz waveform (read-only), detects beats, computes RMSSD per PPG-covered window with a GOOD/COARSE/POOR quality label. See [Spot HRV](#spot-hrv-from-sparse-ppg-whoop_spot_hrvpy). Stdlib only. |
 | `test_whoop_frame.py` | Unit tests for framing / reassembly / HR parsing / buzz frames (no `bleak` needed). |
@@ -97,6 +97,7 @@ the Python capture side does not require Swift.
 | `test_correlate_ground_truth.py` | Unit tests for the CSV/alias loading and the known-plaintext field search (planted-value recovery + false-positive rejection; stdlib only). |
 | `test_validate_spo2_candidate.py` | Unit tests for multi-device SpO₂ @82 validation (planted perfect correlation, incomplete nights, awake gating, offset specificity, duty-cycle detection at planted period/phase, window coverage, the variance floor, flat-zero classification, privacy of postable output; stdlib only). |
 | `test_whoop_spot_hrv.py` | Unit tests for the spot-HRV DSP (synthetic-signal HR/RMSSD recovery, ectopic rejection, grid reconstruction; stdlib only). |
+| `test_analyze_v26_waveform.py` | Unit tests for the v26 PPG characterisation on **synthetic** runs whose heart rate MOVES (per-run period recovery, derived sample rate, and why a pooled autocorrelation cannot reproduce a varying rate; stdlib only, no device data). |
 | `requirements.txt` | `bleak` (runtime dep for capture only). |
 
 ## Capture (`whoop_capture.py`)
@@ -339,6 +340,15 @@ and this decode step can never drift on frame offsets: there is exactly one deco
 real hardware. The decode cursor lives in `sync_state` (`last_decoded_frame_id`), so a run only decodes
 **new** frames; re-runs are **idempotent**.
 
+Temperature conversion is family/layout-specific. WHOOP 5 R18 uses the app's
+centidegree convention (`raw / 100`, accepted range 5–45 °C), not the older
+research bridge's `raw / 128` assumption. Other layouts retain `skin_temp_raw`
+without a Celsius value: WHOOP 4 needs a separate device-specific ADC calibration.
+Use `decode --full` on an existing **capture-tool database** to rebuild old derived
+temperatures from retained frames. Re-decoding also clears an obsolete conversion
+when the new raw reading has no supported scale. This does not migrate a phone's
+app database or change the Android/Swift temperature mapping.
+
 **Why this development matters for the synced data.** The raw offload is the *irreplaceable* part —
 once the strap acks a chunk it may **trim (delete) it** — so capture must never be blocked or risked.
 Decoding is the *rebuildable* part (features can always be re-derived from `frames`). The bridge
@@ -372,12 +382,14 @@ themselves and risk diverging on the offsets.
 | `rr_mean_ms` | ms | mean R-R interval (≈ 60000/`hr`) |
 | `rmssd` | ms | root-mean-square of successive R-R differences — standard short-window **HRV**; NULL when `rr_count` < 2 |
 | `spo2_red`, `spo2_ir` | raw ADC counts | red & IR optical channel intensities. **Not a blood-oxygen %** — the red/IR ratio underlies SpO₂, but we store raw counts (no calibration invented). WHOOP 4 (v24) only |
-| `skin_temp_raw` | raw ADC | skin-temperature sensor reading. **Not °C** — absolute raw count (the app derives a personal-baseline deviation; we keep the raw value). WHOOP 4 (v24) only |
+| `skin_temp_raw` | integer | Unconverted temperature field. WHOOP 4 uses raw ADC counts; WHOOP 5 R18 uses centidegrees under the current interpretation. |
+| `skin_temp_c` | °C or NULL | WHOOP 5 R18 `skin_temp_raw / 100`, within 5–45 °C. NULL for unsupported family/layout or invalid raw value; this is an interpretation convention, not independent calibration. |
 | `resp_raw` | raw ADC | respiration-related raw reading. WHOOP 4 (v24) only |
 | `record_version` | int | source record layout: **24** = WHOOP 4; **18 / 26** = WHOOP 5. Tells the consumer which columns are real vs NULL for this row |
 
-> **Provenance via NULLs.** WHOOP 5 **v18** leaves the optical region unmapped (no verified offsets), so
-> `spo2_*` / `skin_temp_raw` / `resp_raw` are **NULL** there; WHOOP 4 **v24** fills them. Per project rule
+> **Provenance via NULLs.** WHOOP 5 **v18** supplies temperature at offset 73, but no established
+> `spo2_*` or `resp_raw` fields; these remain **NULL** there. WHOOP 4 **v24** supplies raw fields,
+> which are not themselves oxygen percentages or breaths per minute. Per project rule
 > we never invent offsets — an honest NULL beats a fabricated number.
 
 `feat_rr` — individual beat-to-beat intervals (for HRV beyond the per-second summary):

@@ -59,7 +59,7 @@ class Whoop5PpgWaveformStreamTest {
         assertEquals(
             listOf(
                 PpgWaveformRow(ts = 1_780_917_232L, samples = expectedWaveform, burstIndex = 1,
-                    baseCode = expectedBaseCode),
+                    baseCode = expectedBaseCode, rawFrame = bytes(v26Hex).map { it.toInt() and 255 }),
             ),
             streams.ppgWaveform,
         )

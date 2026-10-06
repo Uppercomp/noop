@@ -247,7 +247,7 @@ fun CaffeineLogCard() {
                     Text(uiString(R.string.l10n_caffeine_log_had_it_8576ac66), style = NoopType.footnote, color = Palette.textSecondary)
                     Spacer(Modifier.weight(1f))
                     for (h in intArrayOf(0, 1, 2, 3)) {
-                        CaffeineChip(if (h == 0) "Now" else "${h}h ago") {
+                        CaffeineChip(if (h == 0) "Now" else uiString(R.string.l10n_caffeine_log_lldh_ago_cb467748, h)) {
                             val at = (System.currentTimeMillis() / 1000L) - h * 3600L
                             intakes = addCaffeineIntake(context, at, mgDraft)
                             mgDraft = ""
@@ -293,8 +293,8 @@ private fun CaffeineActiveHint(estimate: CaffeineActiveEstimate, hasAnyLog: Bool
     if (estimate.hasActive) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
-                estimate.totalRemainingMg?.let { "About ${it.roundToInt()} mg may still be active" }
-                    ?: "Caffeine may still be active",
+                estimate.totalRemainingMg?.let { uiString(R.string.l10n_caffeine_log_about_lld_mg_may_still_be_active_b1587705, it.roundToInt()) }
+                    ?: uiString(R.string.l10n_caffeine_log_caffeine_may_still_be_active_4890ab03),
                 style = NoopType.headline,
                 color = Palette.textPrimary,
             )
@@ -302,8 +302,8 @@ private fun CaffeineActiveHint(estimate: CaffeineActiveEstimate, hasAnyLog: Bool
         }
     } else {
         Text(
-            if (!hasAnyLog) "No caffeine logged. Log an intake to see an estimate."
-            else "Estimated mostly cleared. Nothing logged is likely still active.",
+            if (!hasAnyLog) uiString(R.string.l10n_caffeine_log_no_caffeine_logged_log_an_intake_to_see_ebbc2682)
+            else uiString(R.string.l10n_caffeine_log_estimated_mostly_cleared_nothing_logged_7f6a7520),
             style = NoopType.footnote,
             color = Palette.textTertiary,
         )
@@ -321,7 +321,7 @@ private fun caffeineActiveDetail(estimate: CaffeineActiveEstimate): String {
 private fun caffeineHoursLabel(hrs: Double): String {
     if (hrs < 1) return "under an hour"
     val r = hrs.roundToInt()
-    return if (r == 1) "1 hour" else "$r hours"
+    return if (r == 1) "1 hour" else uiString(R.string.l10n_caffeine_log_lld_hours_91d4f0df, r)
 }
 
 private fun caffeineIntakeLabel(intake: CaffeineIntake, context: Context): String {
@@ -329,7 +329,7 @@ private fun caffeineIntakeLabel(intake: CaffeineIntake, context: Context): Strin
     val time = java.text.SimpleDateFormat(
         ClockFormat.hourMinutePattern(ClockPrefs.uses24Hour(context)), java.util.Locale.getDefault(),
     ).format(java.util.Date(intake.atEpochSec * 1000L))
-    return if (intake.mg != null) "$time · ${intake.mg.roundToInt()} mg" else "$time · amount not logged"
+    return if (intake.mg != null) uiString(R.string.l10n_caffeine_log_lld_mg_0a0641ae, time, intake.mg.roundToInt()) else uiString(R.string.l10n_caffeine_log_amount_not_logged_c5c4df37, time)
 }
 
 /** A minutes-since-midnight value as a wall-clock label (e.g. "2:30 PM" / "14:30"), respecting the

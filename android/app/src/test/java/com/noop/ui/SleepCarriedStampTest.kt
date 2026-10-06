@@ -44,6 +44,7 @@ class SleepCarriedStampTest {
             "Carried · ${args.joinToString("")}"
         }
         is DisplayText.Dynamic -> value
+        is DisplayText.Prefixed -> prefix + (inner.asString() ?: "")
         null -> null
     }
 

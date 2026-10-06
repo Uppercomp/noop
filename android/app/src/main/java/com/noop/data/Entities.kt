@@ -693,13 +693,16 @@ data class PpgWaveformSampleEntity(
      * no recoverable absolute level. Use it to tell a reconstructable window from one that never can be.
      */
     val baseCode: Long? = null,
+    val rawFrame: ByteArray? = null,
 ) {
     // ByteArray needs structural equals/hashCode (the generated identity ones break round-trip asserts).
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is PpgWaveformSampleEntity) return false
         return deviceId == other.deviceId && ts == other.ts && samples.contentEquals(other.samples) &&
-            burstIndex == other.burstIndex && baseCode == other.baseCode
+            burstIndex == other.burstIndex && baseCode == other.baseCode &&
+            (if (rawFrame == null) other.rawFrame == null else
+                other.rawFrame != null && rawFrame.contentEquals(other.rawFrame))
     }
 
     override fun hashCode(): Int {
@@ -708,6 +711,7 @@ data class PpgWaveformSampleEntity(
         result = 31 * result + samples.contentHashCode()
         result = 31 * result + (burstIndex ?: 0)
         result = 31 * result + (baseCode?.hashCode() ?: 0)
+        result = 31 * result + (rawFrame?.contentHashCode() ?: 0)
         return result
     }
 }

@@ -1,6 +1,7 @@
 package com.noop.ui
 
 import com.noop.R
+import androidx.compose.material3.TextButton
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import android.content.Intent
@@ -275,7 +276,7 @@ private fun StrapAlarmCard(vm: AppViewModel) {
     NoopCard(padding = 20.dp, tint = if (smartAlarm) Palette.accent else null) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Overline("Morning")
+                Overline(uiString(R.string.l10n_smart_alarm_screen_morning_a0cf4247))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Alarm, contentDescription = null, tint = Palette.accent)
                     Spacer(Modifier.width(10.dp))
@@ -287,7 +288,7 @@ private fun StrapAlarmCard(vm: AppViewModel) {
             // 4.0 path experimental. The 5/MG Experimental-gate branch below is deliberately untouched.
             ToggleRowLocal(
                 label = uiString(R.string.l10n_smart_alarm_screen_wake_me_with_a_strap_buzz_1681ba1d),
-                help = "Arms the strap to buzz at your wake time, even if NOOP is closed. Sends the exact alarm command the official app sends, confirmed buzzing on a real WHOOP 4.0 (community wire capture + on-device test, #535). Keep a backup alarm for anything you truly can't miss.",
+                help = uiString(R.string.l10n_smart_alarm_screen_arms_the_strap_to_buzz_at_your_wake_time_3eb5c4f6),
                 checked = smartAlarm,
                 onChange = { vm.setSmartAlarmEnabled(it) },
             )
@@ -298,7 +299,7 @@ private fun StrapAlarmCard(vm: AppViewModel) {
                     Spacer(Modifier.weight(1f))
                     TimeChip(
                         minutes = alarmMinutes,
-                        accessibilityLabel = "Strap alarm wake time",
+                        accessibilityLabel = uiString(R.string.l10n_smart_alarm_screen_strap_alarm_wake_time_ff4cddb9),
                         onPicked = { vm.setSmartAlarmMinutes(it) },
                     )
                 }
@@ -338,7 +339,7 @@ private fun StrapAlarmCard(vm: AppViewModel) {
                         if (live.bonded)
                             // Truth-sync (#535): confirmed buzzing on a real WHOOP 4.0; byte-identical
                             // wording to the Swift SmartAlarmView.
-                            "Armed on the strap itself, so it can buzz at your wake time even if your phone is asleep or NOOP is closed. Sends the exact alarm command the official app sends, confirmed buzzing on a real WHOOP 4.0 (community wire capture + on-device test, #535). Keep a backup alarm for anything you truly can't miss."
+                            uiString(R.string.l10n_smart_alarm_screen_armed_on_the_strap_itself_so_it_can_buzz_a69329a6)
                         else
                             "Connect your strap to arm this; it's set on the strap's own firmware alarm. Confirmed working on WHOOP 4.0; still experimental on 5.0 and MG. Keep a backup alarm for anything you truly can't miss.",
                         style = NoopType.footnote, color = Palette.textTertiary,
@@ -502,10 +503,20 @@ private fun AlarmSettingsCard(content: @Composable () -> Unit) {
 @Composable
 private fun WindDownCard(vm: AppViewModel) {
     val enabled by vm.windDownEnabled.collectAsStateWithLifecycle()
+    val wakeMinutes by vm.windDownWakeMinutes.collectAsStateWithLifecycle()
+    var showWakePicker by remember { mutableStateOf(false) }
+    // The reminder time comes from the ViewModel's single funnel, so this line and the scheduler agree.
+    val nudgeMinuteToday = remember(wakeMinutes, enabled) {
+        vm.windDownNudgeMinuteOfDay(java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK))
+    }
+    // The two figures iOS interpolates into "The nudge fires Xh Ym before this": the stored sleep need and
+    // lead, read from the same store the arithmetic uses rather than restated as constants here.
+    val windDownSleepNeedHours = remember { vm.windDownSleepNeedMinutes() / 60 }
+    val windDownLeadMinutes = remember { vm.windDownLeadMinutes() }
     NoopCard(padding = 20.dp, tint = if (enabled) DomainTheme.Rest.color else null) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Overline("Evening")
+                Overline(uiString(R.string.l10n_smart_alarm_screen_evening_6734e197))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Bedtime, contentDescription = null, tint = DomainTheme.Rest.color)
                     Spacer(Modifier.width(10.dp))
@@ -518,7 +529,61 @@ private fun WindDownCard(vm: AppViewModel) {
                 checked = enabled,
                 onChange = { vm.setWindDownEnabled(it) },
             )
+            // iOS shows the wake-time field only while the nudge is on, because the time exists to feed the
+            // reminder — with it off there is nothing for the field to explain. See
+            // `SmartAlarmView.swift:372-407` for the same layout and the same three sentences.
+            if (enabled) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(Palette.hairline),
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            uiString(R.string.smart_alarm_winddown_usual_wake),
+                            style = NoopType.body,
+                            color = Palette.textPrimary,
+                        )
+                        Text(
+                            uiString(
+                                R.string.smart_alarm_winddown_fires_before,
+                                windDownSleepNeedHours,
+                                windDownLeadMinutes,
+                            ),
+                            style = NoopType.footnote,
+                            color = Palette.textTertiary,
+                        )
+                        Text(
+                            uiString(R.string.smart_alarm_winddown_not_an_alarm),
+                            style = NoopType.footnote,
+                            color = Palette.textTertiary,
+                        )
+                    }
+                    TextButton(onClick = { showWakePicker = true }) {
+                        Text(hhmm(wakeMinutes), style = NoopType.body, color = Palette.accent)
+                    }
+                }
+                Text(
+                    uiString(R.string.smart_alarm_winddown_reminded_around, hhmm(nudgeMinuteToday)),
+                    style = NoopType.footnote,
+                    color = Palette.textSecondary,
+                )
+            }
         }
+    }
+    if (showWakePicker) {
+        NoopTimePickerDialog(
+            title = uiString(R.string.smart_alarm_winddown_usual_wake),
+            hour = wakeMinutes / 60,
+            minute = wakeMinutes % 60,
+            onConfirm = { h, m -> vm.setWindDownWakeMinutes(h * 60 + m) },
+            onDismiss = { showWakePicker = false },
+        )
     }
 }
 

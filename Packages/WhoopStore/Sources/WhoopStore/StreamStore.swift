@@ -405,13 +405,13 @@ extension WhoopStore {
             // `packPpgSamples`) rather than 24 scalar rows, so this insert is O(records), not O(samples).
             if !streams.ppgWaveform.isEmpty {
                 let stmt = try db.cachedStatement(sql: """
-                    INSERT INTO ppgWaveformSample (deviceId, ts, samples, burstIndex, baseCode)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO ppgWaveformSample (deviceId, ts, samples, burstIndex, baseCode, rawFrame)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     ON CONFLICT(deviceId, ts) DO NOTHING
                     """)
                 for s in streams.ppgWaveform {
                     try stmt.execute(arguments: [deviceId, s.ts, WhoopStore.packPpgSamples(s.samples),
-                                                 s.burstIndex, s.baseCode])
+                                                 s.burstIndex, s.baseCode, s.rawFrame.map { Data($0) }])
                     ppgWaveformWritten += 1
                 }
             }
@@ -740,7 +740,7 @@ extension WhoopStore {
         -> [PpgWaveformSample] {
         try syncRead { db in
             try Row.fetchAll(db, sql: """
-                SELECT ts, samples, burstIndex, baseCode FROM ppgWaveformSample
+                SELECT ts, samples, burstIndex, baseCode, rawFrame FROM ppgWaveformSample
                 WHERE deviceId = ? AND ts >= ? AND ts <= ?
                 ORDER BY ts LIMIT ?
                 """, arguments: [deviceId, from, to, limit])
@@ -751,7 +751,8 @@ extension WhoopStore {
                 .map { PpgWaveformSample(ts: $0["ts"],
                                          samples: WhoopStore.unpackPpgSamples($0["samples"]),
                                          burstIndex: $0["burstIndex"],
-                                         baseCode: $0["baseCode"]) }
+                                         baseCode: $0["baseCode"],
+                                         rawFrame: ($0["rawFrame"] as Data?).map { Array($0) }) }
         }
     }
 

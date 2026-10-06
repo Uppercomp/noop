@@ -156,18 +156,18 @@ fun MarkerEditorScreen(
             )
 
             // --- Marker picker ---
-            SectionHeader("Marker", overline = "what are you logging?")
+            SectionHeader(uiString(R.string.l10n_marker_editor_screen_marker_4290a803), overline = uiString(R.string.l10n_marker_editor_screen_what_are_you_logging_b4b4f126))
             NoopCard {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     when {
                         addingCustom -> {
-                            EditorField("Name") {
-                                EditorTextField(customName, { customName = it }, "e.g. Magnesium")
+                            EditorField(uiString(R.string.l10n_devices_screen_name_709a2322)) {
+                                EditorTextField(customName, { customName = it }, uiString(R.string.l10n_marker_editor_screen_e_g_magnesium_0e3a0d58))
                             }
-                            EditorField("Unit") {
-                                EditorTextField(customUnit, { customUnit = it }, "e.g. mmol/L")
+                            EditorField(uiString(R.string.l10n_marker_editor_screen_unit_f6b935ab)) {
+                                EditorTextField(customUnit, { customUnit = it }, uiString(R.string.l10n_marker_editor_screen_e_g_mmol_l_6d38f413))
                             }
-                            LinkText("Back to the marker list") { addingCustom = false }
+                            LinkText(uiString(R.string.l10n_marker_editor_screen_back_to_the_marker_list_2fbb2d48)) { addingCustom = false }
                         }
                         selection != null -> {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -175,7 +175,7 @@ fun MarkerEditorScreen(
                                     Text(selection!!.displayName, style = NoopType.headline, color = Palette.textPrimary)
                                     Text(selection!!.category.displayName, style = NoopType.footnote, color = Palette.textTertiary)
                                 }
-                                LinkText("Change") {
+                                LinkText(uiString(R.string.l10n_insights_screen_change_64fbd995)) {
                                     selection = null; valueText = ""; diastolicText = ""; unitChoice = 0; search = ""
                                 }
                             }
@@ -201,16 +201,16 @@ fun MarkerEditorScreen(
 
             // --- Reading inputs ---
             if (selection != null || addingCustom) {
-                SectionHeader("Reading", overline = "your number, date and any note")
+                SectionHeader(uiString(R.string.l10n_marker_editor_screen_reading_cffa2af0), overline = uiString(R.string.l10n_marker_editor_screen_your_number_date_and_any_note_b36e5c38))
                 NoopCard {
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         if (isBloodPressure) {
                             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                                EditorField("Systolic", modifier = Modifier.weight(1f)) {
-                                    NumberBox(valueText, { valueText = it }, "e.g. 120", "mmHg")
+                                EditorField(uiString(R.string.l10n_marker_editor_screen_systolic_9b2c3e01), modifier = Modifier.weight(1f)) {
+                                    NumberBox(valueText, { valueText = it }, uiString(R.string.l10n_marker_editor_screen_e_g_120_43aa0bc6), "mmHg")
                                 }
-                                EditorField("Diastolic", modifier = Modifier.weight(1f)) {
-                                    NumberBox(diastolicText, { diastolicText = it }, "e.g. 80", "mmHg")
+                                EditorField(uiString(R.string.l10n_marker_editor_screen_diastolic_2d173b37), modifier = Modifier.weight(1f)) {
+                                    NumberBox(diastolicText, { diastolicText = it }, uiString(R.string.l10n_marker_editor_screen_e_g_80_5e2a6f7d), "mmHg")
                                 }
                             }
                             Text(
@@ -219,7 +219,7 @@ fun MarkerEditorScreen(
                                 color = Palette.textTertiary,
                             )
                         } else {
-                            EditorField("Value") {
+                            EditorField(uiString(R.string.l10n_health_screen_value_8dce170d)) {
                                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     if (unitOptions.size > 1) {
                                         SegmentedPillControl(
@@ -229,7 +229,7 @@ fun MarkerEditorScreen(
                                             onSelect = { unitChoice = it },
                                         )
                                     }
-                                    NumberBox(valueText, { valueText = it }, "e.g. 3.1", activeUnit)
+                                    NumberBox(valueText, { valueText = it }, uiString(R.string.l10n_marker_editor_screen_e_g_3_1_77265b3d), activeUnit)
                                     if (unitOptions.size > 1 && activeUnit != canonicalUnit) {
                                         Text(
                                             uiString(R.string.l10n_marker_editor_screen_stored_as_canonicalunit_0bf7f702, canonicalUnit),
@@ -240,13 +240,13 @@ fun MarkerEditorScreen(
                                 }
                             }
                         }
-                        EditorField("Date taken") {
+                        EditorField(uiString(R.string.l10n_marker_editor_screen_date_taken_76edfcab)) {
                             DateRow(takenAtMillis) { picked -> takenAtMillis = picked }
                         }
-                        EditorField("Note (optional)") {
-                            EditorTextField(note, { note = it }, "e.g. fasting, morning draw")
+                        EditorField(uiString(R.string.l10n_lift_note_optional_4e395670)) {
+                            EditorTextField(note, { note = it }, uiString(R.string.l10n_marker_editor_screen_e_g_fasting_morning_draw_93e0c452))
                         }
-                        EditorField("Reference range from my report (optional)") {
+                        EditorField(uiString(R.string.l10n_marker_editor_screen_reference_range_from_my_report_optional_32247b7b)) {
                             EditorTextField(referenceText, { referenceText = it }, "e.g. 2.0-5.0 (your report's own range)")
                         }
                         Text(
@@ -259,16 +259,16 @@ fun MarkerEditorScreen(
             }
 
             Text(
-                uiString(R.string.l10n_marker_editor_screen_lab_book_keeps_your_own_numbers_9085ce2c),
+                uiString(R.string.l10n_marker_editor_screen_lab_book_keeps_your_own_numbers_9085ce2c, deviceNounPhrase()),
                 style = NoopType.footnote,
                 color = Palette.textTertiary,
             )
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                LinkText("Cancel", color = Palette.textSecondary) { onDismiss() }
+                LinkText(uiString(R.string.l10n_backup_sync_screen_cancel_77dfd213), color = Palette.textSecondary) { onDismiss() }
                 Spacer(Modifier.weight(1f))
                 Box(modifier = Modifier.width(160.dp)) {
-                    PrimaryActionButton("Save", Icons.Filled.Add, enabled = drafts.isNotEmpty()) {
+                    PrimaryActionButton(uiString(R.string.l10n_devices_screen_save_efc007a3), Icons.Filled.Add, enabled = drafts.isNotEmpty()) {
                         if (drafts.isNotEmpty()) onSave(drafts)
                     }
                 }

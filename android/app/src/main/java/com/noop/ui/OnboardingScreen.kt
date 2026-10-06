@@ -248,7 +248,7 @@ private fun OnboardingTopBar(page: Int, total: Int, progress: Float) {
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Overline("NOOP", color = Palette.accent)
+            Overline(uiString(R.string.app_name), color = Palette.accent)
             Spacer(Modifier.weight(1f))
             Text(uiString(R.string.l10n_onboarding_screen_page_total_50b38f9a, page, total), style = NoopType.captionNumber, color = Palette.textTertiary)
         }

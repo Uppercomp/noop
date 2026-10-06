@@ -1,6 +1,8 @@
 package com.noop.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.Color
+import com.noop.R
 import com.noop.analytics.RestScorer
 import com.noop.analytics.SleepDebt
 import com.noop.data.DailyMetric
@@ -9,27 +11,32 @@ import java.util.Locale
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-internal enum class SleepMetricRange(val label: String, val days: Long?) {
-    WEEK("W", 7), MONTH("M", 30), THREE_MONTH("3M", 90),
-    SIX_MONTH("6M", 180), YEAR("1Y", 365), ALL("ALL", null),
+internal enum class SleepMetricRange(@StringRes val labelRes: Int, val days: Long?) {
+    WEEK(R.string.l10n_lift_w_e2415cb7, 7),
+    MONTH(R.string.l10n_apple_health_screen_m_c63ae6dd, 30),
+    THREE_MONTH(R.string.l10n_apple_health_screen_s_3m_6dce1630, 90),
+    SIX_MONTH(R.string.l10n_apple_health_screen_s_6m_b78ebb44, 180),
+    YEAR(R.string.l10n_apple_health_screen_s_1y_28234cf2, 365),
+    ALL(R.string.l10n_apple_health_screen_all_6b42874e, null),
 }
 
 internal data class SleepMetricSpec(
-    val title: String,
+    /** A [DisplayText], not a resolved label: [sleepMetricSpec] is pure and pinned by tests with no Application. */
+    val title: DisplayText,
     val unit: String,
     val color: Color,
     val format: (Double) -> String,
 )
 
 internal fun sleepMetricSpec(key: String): SleepMetricSpec = when (key) {
-    "performance"     -> SleepMetricSpec("Rest", "%", Palette.restColor) { "${it.roundToInt()}" }
-    "efficiency"      -> SleepMetricSpec("Sleep Efficiency", "%", Palette.statusPositive) { "${it.roundToInt()}" }
-    "consistency"     -> SleepMetricSpec("Consistency", "%", Palette.metricCyan) { "${it.roundToInt()}" }
-    "hours_vs_needed" -> SleepMetricSpec("Hours vs Needed", "%", Palette.restColor) { "${it.roundToInt()}" }
-    "restorative"     -> SleepMetricSpec("Restorative", "%", Palette.sleepREM) { "${it.roundToInt()}" }
-    "respiratory"     -> SleepMetricSpec("Respiratory Rate", "rpm", Palette.metricPurple) { String.format(Locale.US, "%.1f", it) }
-    "sleep_debt"      -> SleepMetricSpec("Sleep Debt", "min", Palette.metricRose) { "${it.roundToInt()}" }   // #691: minutes, not decimal hours
-    else              -> SleepMetricSpec(key, "", Palette.accent) { "${it.roundToInt()}" }
+    "performance"     -> SleepMetricSpec(DisplayText.Resource(R.string.trends_rest), "%", Palette.restColor) { "${it.roundToInt()}" }
+    "efficiency"      -> SleepMetricSpec(DisplayText.Resource(R.string.l10n_trends_explore_screen_sleep_efficiency_b4b5c293), "%", Palette.statusPositive) { "${it.roundToInt()}" }
+    "consistency"     -> SleepMetricSpec(DisplayText.Resource(R.string.l10n_sleep_screen_consistency_0ea7b95e), "%", Palette.metricCyan) { "${it.roundToInt()}" }
+    "hours_vs_needed" -> SleepMetricSpec(DisplayText.Resource(R.string.l10n_sleep_screen_hours_vs_needed_500a0aca), "%", Palette.restColor) { "${it.roundToInt()}" }
+    "restorative"     -> SleepMetricSpec(DisplayText.Resource(R.string.l10n_sleep_metric_cards_ui_restorative_adb13db6), "%", Palette.sleepREM) { "${it.roundToInt()}" }
+    "respiratory"     -> SleepMetricSpec(DisplayText.Resource(R.string.l10n_health_screen_respiratory_rate_3fbb532f), "rpm", Palette.metricPurple) { String.format(Locale.US, "%.1f", it) }
+    "sleep_debt"      -> SleepMetricSpec(DisplayText.Resource(R.string.l10n_sleep_screen_sleep_debt_3aec7d9c), "min", Palette.metricRose) { "${it.roundToInt()}" }   // #691: minutes, not decimal hours
+    else              -> SleepMetricSpec(DisplayText.Dynamic(key), "", Palette.accent) { "${it.roundToInt()}" }
 }
 
 internal fun buildSleepMetricPoints(

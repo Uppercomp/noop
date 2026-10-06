@@ -60,7 +60,7 @@ final class UnmappedHistoricalLayoutTests: XCTestCase {
         XCTAssertNotNil(asV18.parsed["heart_rate"], "precondition: these bytes DO decode a heart rate")
         XCTAssertNotNil(asV18.parsed["gravity_x"], "precondition: these bytes DO decode a gravity vector")
 
-        let unmapped = whoop5FrameWithVersion(22)
+        let unmapped = whoop5FrameWithVersion(23)
         XCTAssertEqual(parseFrame(unmapped, family: .whoop5).crcOK, true,
                        "precondition: the record is CRC-VALID, so only the layout decision can archive it")
         XCTAssertTrue(isUnmappedWhoop5HistoricalRecord(unmapped))
@@ -94,7 +94,7 @@ final class UnmappedHistoricalLayoutTests: XCTestCase {
 
     /// The four mapped versions ARE recognised as mapped (the other direction of the lockstep).
     func testMappedVersionsAreNotTreatedAsUnmapped() {
-        XCTAssertEqual(mappedWhoop5HistoricalVersions, [18, 20, 21, 26])
+        XCTAssertEqual(mappedWhoop5HistoricalVersions, [18, 20, 21, 22, 26])
         for v in mappedWhoop5HistoricalVersions {
             XCTAssertFalse(isUnmappedWhoop5HistoricalRecord(whoop5FrameWithVersion(UInt8(v))),
                            "v\(v) has a field map and must not be archived on layout grounds")

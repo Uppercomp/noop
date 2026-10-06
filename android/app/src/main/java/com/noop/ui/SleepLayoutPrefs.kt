@@ -38,7 +38,12 @@ enum class SleepSection(val raw: String, val title: String) {
      *  Sleep sections. iOS deliberately renders these metrics only as Night-detail grid tiles (tap-through),
      *  so these two rawValues are Android-only — the macOS `SleepSection` stops at `asleepDuration`. Safe to
      *  diverge here: `sleep.sectionOrder` is not in the .noopbak whitelist, so a cross-OS restore never
-     *  reads them. (Consistency's underlying score also differs across platforms — a separate parity item.) */
+     *  reads them.
+     *
+     *  The Consistency SCORE itself is no longer a parity item: both sides compute the trailing-14
+     *  bedtime-onset SD as `100 * (1 - sd / 120)` — Android `SleepModelLogic.consistencySeries`, iOS
+     *  `SleepModel.consistencySeries` (`SleepModel.swift`) — which iOS's `ConsistencyCard.swift` records as
+     *  byte-identical to Android. This comment used to claim the two scores still differed. */
     HOURS_VS_NEEDED("hoursVsNeeded", "Hours vs Needed"),
     CONSISTENCY("consistency", "Consistency");
 

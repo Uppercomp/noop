@@ -23,10 +23,12 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.noop.R
 
 // MARK: - Palette — the "Titanium & Gold" re-skin (mirrors StrandDesign/Palette.swift)
 //
@@ -58,6 +60,8 @@ object Palette {
     val surfaceBase get() = active.surfaceBase
     val surfaceRaised get() = active.surfaceRaised
     val surfaceOverlay get() = active.surfaceOverlay
+    /** Lower stop of the card bevel — see [PaletteTokens.surfaceBottom]. */
+    val surfaceBottom get() = active.surfaceBottom
     val surfaceInset get() = active.surfaceInset
     val hairline get() = active.hairline
     val hairlineStrong get() = active.hairlineStrong
@@ -265,13 +269,21 @@ object Palette {
      */
     fun effortTint(fraction: Double): Color = sample(strainStops, fraction.coerceIn(0.0, 1.0).toFloat())
 
-    /** The state word for a recovery score, per spec §9.3. */
-    fun recoveryState(score: Double): String = when {
-        score < 25 -> "DEPLETED"
-        score < 50 -> "LOW"
-        score < 70 -> "MODERATE"
-        score < 88 -> "PRIMED"
-        else -> "PEAK"
+    /**
+     * The state word for a recovery score, per spec §9.3.
+     *
+     * A [DisplayText] rather than a String, because this is a pure helper: iOS resolves every one of these
+     * through `String(localized:)`, and resolving here would need an Application the callers' JVM tests do
+     * not have. Only LOW and PEAK are in the catalog; DEPLETED, MODERATE and PRIMED are absent from it, so
+     * iOS shows those three in English as well and they stay Dynamic — inventing keys would ship
+     * untranslated translations.
+     */
+    fun recoveryState(score: Double): DisplayText = when {
+        score < 25 -> DisplayText.Dynamic("DEPLETED")
+        score < 50 -> DisplayText.Resource(R.string.l10n_stress_screen_low_d8b9679f)
+        score < 70 -> DisplayText.Dynamic("MODERATE")
+        score < 88 -> DisplayText.Dynamic("PRIMED")
+        else -> DisplayText.Resource(R.string.l10n_theme_peak_a9f9b3fc)
     }
 
     /** HR-zone color for a 1..5 zone index (clamped). */
@@ -405,21 +417,46 @@ object Metrics {
     val space18 = 18.dp
     val space24 = 24.dp
     val sourceBadgeHeight = 18.dp
-    val cardRadius = 18.dp   // Bevel continuous radius (18–22dp)
+    // 22, from NoopVisualStyle.cardRadius — NoopMetrics declares `cardRadius` as exactly that token.
+    // Android shipped 18, so every card in the app had visibly tighter corners than iOS.
+    val cardRadius = 22.dp
     val cornerXs = 2.dp
     val cornerSm = 12.dp
     val cornerBadge = 6.dp
     val cornerPill = 50.dp
     val cardPadding = 16.dp
-    val gap = 12.dp           // gap between cards
-    val sectionGap = 28.dp    // gap between sections
+    val gap = 12.dp           // gap between cards (NoopVisualStyle.itemGap)
+    // 26, from NoopVisualStyle.sectionGap (was 28).
+    val sectionGap = 26.dp    // gap between sections
     // #765: the ONE inter-card vertical spacing for a screen's top-level scroll rows. Both ScreenScaffold
     // and LazyScreenScaffold use this for `spacedBy(...)`, so every Today/Explore card sits on the same
     // rhythm instead of a bare `20.dp` literal repeated per scaffold (and Today no longer injects ad-hoc
     // Spacer rows that broke that rhythm). One token = uniform, consistent gaps across the screens.
     val screenRowSpacing = 20.dp
-    val screenPadding = 24.dp
-    val tileHeight = 108.dp   // every metric tile is this tall
+    // 16, from NoopVisualStyle.pagePadding across NoopMetrics.screenPadding. Android shipped 24, which
+    // inset every screen 8dp further from the edge than iOS and visibly narrowed the content column.
+    val screenPadding = 16.dp
+    // iOS's regular-width readable column. The iOS ScreenScaffold frames its column at
+    // `maxWidth: hSizeClass == .regular ? 700 : .infinity` and centres it, so an iPad does not stretch a
+    // card's body text across the whole display. Android had no cap, so every page ran edge to edge on a
+    // tablet. Gated on the 600dp breakpoint — Android's canonical equivalent of a regular horizontal size
+    // class — which a phone never reaches, so no phone layout moves.
+    val readableColumnMaxWidth = 700.dp
+    // 96, from NoopMetrics.tileHeight — "Design Reset: tighter metric tile". Android shipped 108, which is
+    // neither of iOS's two tile heights and made every generic metric tile (Health's, Breathe's and the
+    // shared component's) 12dp taller than its iOS twin.
+    val tileHeight = 96.dp
+    // iOS's Key-Metrics tile height lives as a literal inside the liquid tile
+    // (`LiquidTodayView.ktile`: `.frame(minHeight: keyMetricsDetailed ? 154 : 116)`), not in NoopMetrics.
+    // Named here so the Android grid pins to a token rather than to a second copy of the numbers.
+    val keyMetricTileMinHeight = 116.dp
+    val keyMetricTileMinHeightDetailed = 154.dp
+    // iOS's Key-Metrics tile corner is its own value too — `NoopPanelSurface(tint:, cornerRadius: 18)` in
+    // `LiquidTodayView.ktile` — so it is neither the card radius (22) nor the compact radius (16).
+    val keyMetricTileRadius = 18.dp
+    // 48, from NoopMetrics.headerTextFadeWidth — "Width of the soft fade where long header text passes
+    // beneath trailing controls". The twin of TodayScreen's fadeUnderTrailingControls.
+    val headerTextFadeWidth = 48.dp
     val chartHeight = 220.dp
     val dialogScrollableMaxHeight = 560.dp
     val divider = 1.dp
@@ -456,18 +493,56 @@ object Metrics {
 
 // MARK: - Typography (ported from StrandDesign/Typography.swift §9.2)
 //
-// Helvetica Neue on Apple; on Android we use a Helvetica-Neue FontFamily where one
-// is bundled in res/font, else FontFamily.SansSerif as the documented substitute
-// (no Helvetica asset is bundled, so the platform grotesque stands in) with the same
-// sizes/weights. Numeric/live styles stay in the house sans and request TABULAR
-// figures via fontFeatureSettings = "tnum" (mirroring iOS .monospacedDigit()) so live
-// values don't reflow; Monospace is reserved for the `mono` raw/log style only.
+// NUNITO, bundled, at four pinned weights. This replaced `FontFamily.SansSerif` (Roboto).
+//
+// The comment that used to sit here said "Helvetica Neue on Apple", and that was simply wrong:
+// `StrandFont` in Packages/StrandDesign specifies `design: .rounded` on EVERY style — title1,
+// title2, headline, body, subhead, caption and the display numerals — which on Apple resolves to
+// SF Pro Rounded. Android has no rounded system face, so the whole app was rendering Roboto
+// against the iOS app's rounded one, and that mismatch was visible in every run of text on every
+// screen. It was documented as a font that iOS does not use, so the substitute was never going to
+// be close.
+//
+// SF Pro Rounded is proprietary and cannot be bundled, so Nunito (SIL OFL) stands in: rounded
+// terminals, similar proportions, and a full weight range in one variable file. The four XML
+// families in res/font pin `wght` 400/500/600/700 out of that single file, because Android's
+// `Font(resId, weight)` cannot select an instance of a variable font on its own.
+//
+// Numeric/live styles stay in the house sans and request TABULAR figures via
+// fontFeatureSettings = "tnum" (mirroring iOS .monospacedDigit()) so live values don't reflow;
+// Monospace is reserved for the `mono` raw/log style only.
 
 object NoopType {
-    // Helvetica Neue family — falls back to the platform grotesque (SansSerif) when
-    // no res/font/helvetica_neue asset is bundled, per the v3 type spec.
-    private val sans = FontFamily.SansSerif
+    /**
+     * The house sans: Nunito at four real weights.
+     *
+     * Every `fontWeight` below maps onto one of these, so a style asking for SemiBold gets the
+     * drawn SemiBold rather than a synthesised slant of Regular.
+     */
+    private val sans = FontFamily(
+        Font(R.font.nunito_regular, FontWeight.Normal),
+        Font(R.font.nunito_medium, FontWeight.Medium),
+        Font(R.font.nunito_semibold, FontWeight.SemiBold),
+        Font(R.font.nunito_bold, FontWeight.Bold),
+    )
     private val monoFamily = FontFamily.Monospace
+
+    /**
+     * Overline tracking, 0.45 — the value `StrandFont.overlineTracking` actually holds.
+     *
+     * Android shipped 1.4, taken from the iOS doc comment ("Overline 11 / Bold, +1.4 tracking") rather than
+     * from the constant below it. That comment is stale about the RENDERED value: all 97 iOS use sites
+     * apply `.tracking(StrandFont.overlineTracking)`, and nothing in the iOS app pairs the overline face
+     * with `.tracking(1.4)`. The effect was that every ALL-CAPS section label — "RECOVERY VITALS", "YOUR
+     * CARDS", "SETTINGS" — was letter-spaced about 3× wider than its iOS twin.
+     *
+     * Flagged because the two readings genuinely disagree: the same iOS file also describes this constant
+     * as "≈ 0.13em", and 0.13em of an 11pt face is ≈ 1.4pt, i.e. exactly what Android had. So iOS's 0.45
+     * may itself be an upstream slip against its own stated intent. This follows the RENDERED value because
+     * the goal is to match the iOS app as it appears; the constant is the one line to flip back if the
+     * wider tracking is preferred.
+     */
+    const val overlineTracking = 0.45f
 
     /** Display 64–80 / Bold — the recovery ring number. Tight tracking (≈ -0.04em),
      *  tabular figures so a changing value never reflows. Mirrors StrandFont.display. */
@@ -480,18 +555,28 @@ object NoopType {
      *  display(); exposed to mirror StrandFont.displayTracking. */
     fun displayTracking(size: Float = 72f): Float = -size * 0.04f
 
+    // iOS parity: every size below is the DEFAULT (Large) Dynamic Type value of the semantic style
+    // StrandFont names, because that is what `Font.system(.body, design: .rounded)` actually renders on
+    // iOS. Android had drifted 2sp small on the three most-used styles — body, subhead and footnote — which
+    // is every paragraph, subtitle and piece of small print in the app. The cause is visible in the iOS
+    // source: its doc comments still carry the old literal point sizes ("Footnote 11", "Overline 11 / Bold,
+    // +1.4 tracking") while the code moved to semantic styles, and Android was transcribed from the
+    // COMMENTS. The values they resolve to: .title 28, .title2 22, .headline/.body 17, .subheadline 15,
+    // .footnote 13, .caption 12, .caption2 11.
     val title1 = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 28.sp)
     val title2 = TextStyle(fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 22.sp)
     val headline = TextStyle(fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
-    val body = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 15.sp)
-    val subhead = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 13.sp)
+    val body = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 17.sp)
+    val subhead = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 15.sp)
     val caption = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 12.sp)
-    val footnote = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 11.sp)
+    val footnote = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 13.sp)
 
-    /** Overline 11 / Bold, +1.4 tracking, ALL-CAPS at use site. */
+    /** Overline 11 / SemiBold, +0.45 tracking, ALL-CAPS at use site. */
     val overline = TextStyle(
-        fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 11.sp,
-        letterSpacing = 1.4.sp,
+        // SemiBold, not Bold: StrandFont.overline is `.caption2` at `weight: .semibold`. The iOS doc
+        // comment above it says "Bold", and Android had followed the comment.
+        fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 11.sp,
+        letterSpacing = overlineTracking.sp,
     )
 
     /** Mono 13 — raw / log views. */
@@ -507,15 +592,13 @@ object NoopType {
         fontFamily = monoFamily, fontWeight = weight, fontSize = size.sp,
     )
 
-    val bodyNumber = TextStyle(fontFamily = sans, fontWeight = FontWeight.Medium, fontSize = 15.sp, fontFeatureSettings = "tnum")
+    val bodyNumber = TextStyle(fontFamily = sans, fontWeight = FontWeight.Medium, fontSize = 17.sp, fontFeatureSettings = "tnum")
     val captionNumber = TextStyle(fontFamily = sans, fontWeight = FontWeight.Medium, fontSize = 12.sp, fontFeatureSettings = "tnum")
     val metricInline = number(15f)
     val chartValue = number(18f)
     val chartValueLarge = number(22f)
     val tileValue = number(24f)
     val tileValueLarge = number(26f)
-
-    const val overlineTracking = 1.4f
 }
 
 // MARK: - Material3 bridge

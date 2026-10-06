@@ -49,11 +49,23 @@ not exact computation times. This reconstruction recovered the complete firmware
 `generated a valid SPO2 during sleep`; it contains no numeric oxygen result and does not validate
 the byte-82 candidate. Raw captures remain private; tests use synthetic wrap headers.
 
-**Platform scope:** this investigation is explicitly limited to macOS and the shared Swift core.
-The Android console decoder and its parity vectors are therefore deferred; Android still exposes
-the incorrect u16 `record_index`. This is a deliberate scope limit, not a
-cross-platform parity claim. Update the Kotlin twin and matching wrap/header vectors before
-including this correction in a cross-platform release.
+**Platform scope:** the correction is carried by **both** platforms, and the Kotlin twin and its
+wrap/header vectors are no longer outstanding. Swift's `decodeWhoop5ConsoleLogs`
+(Interpreter.swift) is the reference; Kotlin's `decodeConsoleLogsWhoop5` (Framing.kt) reads the same
+shape — the wrapping u8 `console_sequence` at @9, the separate raw `console_header_byte_10` at @10,
+`unix` u32@12, `subsec` u16@16, and the text at @21..size-4 under the key `log` (the key the Python
+reference decoder and `golden.json` use, so a consumer ported from either side reads the same field).
+Kotlin verified it on 3,257 real frames from two nights, all one shape (76-byte frame,
+`chunk_len`@18 = 52, `channel`@20 = 1), and `FramingTest` pins both the field values and the wrap
+behaviour; `Whoop5ConsoleLogsTests` is the Swift twin.
+
+An earlier version of this paragraph claimed the investigation was "explicitly limited to macOS and
+the shared Swift core", that the Android decoder "still exposes the incorrect u16 `record_index`",
+and that the Kotlin twin must be updated before the correction could reach a cross-platform release.
+That outlived the fix. It was removed because it is costly as well as false: it told a reader this
+platform could not read the console at all, and the console is the one channel where the strap names
+its own optical pipeline (`opt_ir_*`, `lm_hr_pk_m`, `lm_harm_perc`) and reports
+`SIGPROC: generated a valid SPO2 during sleep`.
 
 ## Existing public sources
 
@@ -89,6 +101,26 @@ The documented WHOOP 5 optical layouts do not establish calibrated SpO₂ or a r
 respiration waveform. Keep R18 byte 82 uninterpreted; see the
 [sensor reference](PROTOCOL_SENSORS.md#r18-biometric-summary). NOOP’s candidate
 validation tools are research instrumentation, not a source of validated health metrics.
+
+### What a 5.0 capture does establish about byte 82 — structure, not calibration
+
+One 5.0 capture (firmware 50.41.1.0, 20,453 CRC-valid v18 records) narrows the question without
+answering it. Every non-zero `@82` in that corpus — 330 of them — occurred while `sleep_state`
+(byte 81 bits 4-5) read asleep, and it was zero in **every** record of every other state. The
+non-zero values fell into the three modes already described for this byte: in-band readings of
+70-100 (202 occurrences, arriving in contiguous multi-second episodes with a stable value), bit-7
+sentinels (0x80 / 0xA0 / 0x88 / 0xA8), and sub-70 diagnostic codes (2, 4, 8, 16, 24, 32, 36).
+
+Those episodes also trailed the dense optical windows: v26 records arrive in ~40-second bursts, and
+each in-band run follows a burst by roughly 8-170 s. In the same capture the console channel logged
+`SIGPROC: generated a valid SPO2 during sleep` inside one of those runs, alongside
+`SIGPROC-WEAR-DETECT V5` lines naming `opt_ir_m_ratio` and a PPG heart-rate peak that matched the
+v18 heart rate within 3-5 bpm.
+
+None of that calibrates the byte. Structure — a sleep-gated, episode-shaped field in a percentage
+domain, downstream of the optical bursts — is consistent with a strap-computed SpO₂, and it is the
+reason the candidate is worth pursuing. Equality with a reference is what a shipped metric needs,
+and the contradiction recorded on #103 (two nights moving opposite to the app value) still stands.
 
 ### Comparison tool
 
@@ -136,3 +168,10 @@ do not establish physiological field identity.
 
 Credit to **judes.club**, **Asherlc/dofek**, and **b-nnett/goose** for the public protocol work this
 builds on.
+
+## OpenStrap input coverage
+
+The additive R18 timing/auxiliary slots, lossless R26 frame storage, and tagged R22 research
+map are documented in [WHOOP5_OPENSTRAP_PORT.md](WHOOP5_OPENSTRAP_PORT.md). R22 is retained
+by the existing raw archive and contributes no scored physiology. This extension preserves
+NOOP's current screens and analytics; it does not establish a 5.0 SpO₂ percentage.

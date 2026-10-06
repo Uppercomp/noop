@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.noop.R
+import androidx.annotation.StringRes
 import com.noop.data.DailyMetric
 import com.noop.data.MoodStore
 import com.noop.data.WhoopRepository
@@ -72,27 +73,6 @@ import kotlin.math.roundToInt
 // point (not "now"); if the selected window holds ≥1 point we show it, and only when it
 // holds ZERO points do we auto-widen to the smallest larger range that does. The hero
 // always reads the latest available point + "as of <day>".
-
-// MARK: - Window range (W / M / 3M / 6M / 1Y / ALL)
-
-private enum class ExploreRange(val days: Int?, val label: String, val windowName: String) {
-    Week(7, "W", "week"),
-    Month(30, "M", "month"),
-    Quarter(90, "3M", "quarter"),
-    Half(180, "6M", "6 months"),
-    Year(365, "1Y", "year"),
-    All(null, "ALL", "all time");
-
-    /** This range plus every larger range, ascending , the auto-widen search order. */
-    val widening: List<ExploreRange>
-        get() = entries.dropWhile { it != this }
-
-    /** True when this range can reach PAST the bounded dashboard cap (WhoopRepository.RECENT_DAYS_CAP),
-     *  so the built-in series must come from the UNCAPPED full history rather than the bounded `recentDays`
-     *  flow to avoid silently truncating a deep import (#797 Explore-'All' follow-up). Only the open-ended
-     *  'All' range ([days] == null) does; every fixed range is ≤ the cap, so it keeps using the cheap flow. */
-    val reachesDeep: Boolean get() = days == null || days > WhoopRepository.RECENT_DAYS_CAP
-}
 
 // MARK: - Metric descriptor (Android analogue of MetricCatalog's MetricDescriptor)
 
@@ -153,7 +133,7 @@ private val builtInMetrics: List<MetricSpec> = listOf(
         description = uiString(R.string.explore_description_effort),
     ),
     MetricSpec(
-        key = "hrv", title = "HRV", unit = "ms", category = uiString(R.string.explore_category_charge),
+        key = "hrv", title = uiString(R.string.today_card_hrv), unit = "ms", category = uiString(R.string.explore_category_charge),
         accent = Palette.metricPurple, higherIsBetter = true, decimals = 0,
         dailyPick = { it.avgHrv },
     ),
@@ -215,15 +195,19 @@ private val knownSeriesMetrics: Map<String, MetricSpec> = mapOf(
 
 private data class SeriesPoint(val day: String, val value: Double)
 
-/** Lightweight ordinal day index for slicing windows without date parsing. The series is
- *  already sorted ascending by day (YYYY-MM-DD), so the trailing N entries are the window;
- *  we slice by RELATIVE-TO-LATEST count, matching the macOS day-distance window closely
- *  enough for the per-day daily cache (one row per day). */
-private fun List<SeriesPoint>.windowFor(range: ExploreRange): List<SeriesPoint> {
-    val days = range.days ?: return this
-    if (isEmpty()) return emptyList()
-    return takeLast(days)
-}
+/**
+ * The rows inside the selected window: the shared DAY-DISTANCE slice ([windowByDays]), which is what the
+ * iOS twin's `MetricExplorerView.slice(for:)` computes — trailing days measured back from the series' own
+ * latest point, not from "now".
+ *
+ * This was `takeLast(days)`, a ROW-COUNT window, with a comment claiming it matched the macOS window
+ * "closely enough". It did not: a sparse metric (weekly weight / body fat, or any key with gaps) showed
+ * readings from months ago under a "week" caption, and because a row-count window can never come back
+ * empty, the auto-widen branch behind it — "sparse, widened to …" — could never fire on Android while it
+ * does on iOS. Both now read the latest point the same way.
+ */
+private fun List<SeriesPoint>.windowFor(range: ExploreRange): List<SeriesPoint> =
+    windowByDays(range.days) { it.day }
 
 // MARK: - Summary stats over a window
 
@@ -297,7 +281,7 @@ fun TrendsExploreScreen(vm: AppViewModel) {
                     key = k,
                     title = k.replace('_', ' ').replaceFirstChar { c -> c.uppercase() },
                     unit = "",
-                    category = "Other",
+                    category = uiString(R.string.onboarding_other),
                     accent = Palette.metricCyan,
                     higherIsBetter = null,
                     decimals = 1,
@@ -314,6 +298,9 @@ fun TrendsExploreScreen(vm: AppViewModel) {
 
     var selectedKey by remember { mutableStateOf(builtInMetrics.first().key) }
     var range by remember { mutableStateOf(ExploreRange.Month) }
+    // Pill labels are resolved in the composition and indexed by ordinal, because the control's label
+    // lambda is not @Composable.
+    val rangeLabels = ExploreRange.entries.map { stringResource(it.labelRes) }
     val selected = (metrics.firstOrNull { it.key == selectedKey } ?: metrics.first())
         .copy(effortScale = effortScale)
 
@@ -404,15 +391,18 @@ fun TrendsExploreScreen(vm: AppViewModel) {
         )
         }
 
-        // RANGE BAR , overline + title + the one segmented window control, with a caption
-        // that flags a sparse auto-widen.
+        // RANGE BAR — the iOS twin's `rangeBar`: overline + title, then the ONE segmented window control
+        // sharing the full width, then the caption that flags a sparse auto-widen. iOS stacks these
+        // vertically (the control is `adaptsToAvailableWidth`), which is also what lets the row hold all
+        // eight windows; Android used to put the control BESIDE the title, where eight pills cannot fit.
         item {
-        Row(verticalAlignment = Alignment.Top) {
-            Column(modifier = Modifier.weight(1f)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Overline(selected.category)
                 Text(selected.title, style = NoopType.title2, color = Palette.textPrimary)
-                // The plain-English one-liner for the three headline scores (Charge/Effort/Rest);
-                // null for every other metric, so only the scores show a subtitle here.
+                // The plain-English one-liner for the three headline scores (Charge/Effort/Rest); null for
+                // every other metric. Android-only: the iOS catalog carries these blurbs but its Explore
+                // screen never renders them, so this is kept rather than dropped.
                 selected.description?.let { blurb ->
                     Text(
                         blurb,
@@ -425,17 +415,19 @@ fun TrendsExploreScreen(vm: AppViewModel) {
             SegmentedPillControl(
                 items = ExploreRange.entries.toList(),
                 selection = range,
-                label = { it.label },
+                // The pill labels are resolved OUTSIDE the lambda: `SegmentedPillControl` takes a
+                // `(T) -> String`, which cannot be @Composable.
+                label = { rangeLabels[it.ordinal] },
                 onSelect = { range = it },
+                modifier = Modifier.fillMaxWidth(),
+                adaptsToAvailableWidth = true,
+            )
+            Text(
+                text = exploreRangeCaption(windowed.size, fellBack, effectiveRange, loaded = series.isNotEmpty()).text(),
+                style = NoopType.footnote,
+                color = if (fellBack) Palette.statusWarning else Palette.textTertiary,
             )
         }
-        }
-        item {
-        Text(
-            text = rangeCaption(series, windowed, range, effectiveRange, fellBack),
-            style = NoopType.footnote,
-            color = if (fellBack) Palette.statusWarning else Palette.textTertiary,
-        )
         }
 
         // HERO CHART , line over the window + latest "as of" read-out in the card.
@@ -445,7 +437,6 @@ fun TrendsExploreScreen(vm: AppViewModel) {
             windowed = windowed,
             latest = series.lastOrNull(),
             effectiveRange = effectiveRange,
-            range = range,
             fellBack = fellBack,
         )
         }
@@ -608,27 +599,33 @@ private fun HeroChartCard(
     windowed: List<SeriesPoint>,
     latest: SeriesPoint?,
     effectiveRange: ExploreRange,
-    range: ExploreRange,
     fellBack: Boolean,
 ) {
-    val heroValue = latest?.let { metric.format(it.value) } ?: ","
-    val asOf = latest?.let { "as of ${it.day}" } ?: "no readings yet"
-    // The range bar above already prints the authoritative reading-count caption; the hero only
-    // names its window so the count isn't doubled in one card height.
-    val subtitle = if (fellBack) {
-        "Trailing ${effectiveRange.windowName}"
-    } else {
-        "Trailing ${range.windowName}"
-    }
+    val heroValue = latest?.let { metric.format(it.value) } ?: "—"
+    val asOf = exploreAsOfCaption(latest?.day).text()
+    // The range bar above already prints the authoritative reading-count caption; the hero only names its
+    // window (and its count) so the same sentence shape as iOS is kept without doubling the count's weight.
+    val subtitle = exploreHeroSubtitle(windowed.size, fellBack, effectiveRange).text()
     // Wash the hero card in the metric's domain world (Charge green / Effort amber / Rest indigo).
     NoopCard(tint = domainTint(metric.category)) {
         Column(verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
-            Row(verticalAlignment = Alignment.Top) {
-                Column(modifier = Modifier.weight(1f)) {
+            // iOS `ChartCard`: `HStack(alignment: .firstTextBaseline)` over `VStack(spacing: 2)`. This hero
+            // carried the same two defects ChartCard and SectionHeader each had — tops-aligned, and no gap
+            // between the overline and its subtitle. Both sides are two-line stacks here, so each one shares
+            // its FIRST baseline (the overline on the left, the hero value on the right), which is what the
+            // iOS HStack does.
+            Row {
+                Column(
+                    modifier = Modifier.weight(1f).alignByBaseline(),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
                     Overline(metric.title)
                     Text(subtitle, style = NoopType.footnote, color = Palette.textTertiary)
                 }
-                Column(horizontalAlignment = Alignment.End) {
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    modifier = Modifier.alignByBaseline(),
+                ) {
                     Text(heroValue, style = NoopType.number(20f), color = metric.accent)
                     Text(asOf, style = NoopType.footnote, color = Palette.textTertiary)
                 }
@@ -713,7 +710,7 @@ private fun HeroChartCard(
 
             // Footer chips, mirroring the macOS ChartFooter (Window / Points / Latest).
             Row(horizontalArrangement = Arrangement.spacedBy(Metrics.sectionGap)) {
-                ChartFootItem(stringResource(R.string.explore_chart_window), effectiveRange.label)
+                ChartFootItem(stringResource(R.string.explore_chart_window), stringResource(effectiveRange.labelRes))
                 ChartFootItem(stringResource(R.string.explore_chart_points), "${windowed.size}")
                 ChartFootItem(stringResource(R.string.explore_latest), heroValue)
             }
@@ -721,10 +718,15 @@ private fun HeroChartCard(
     }
 }
 
-/** ISO "yyyy-MM-dd" to the same compact date used by both the axis and selection label. */
+/**
+ * ISO "yyyy-MM-dd" to the compact date used by both the axis and the selection label ("3 Oct" / "3 Okt.").
+ * The iOS twin's TrendChart axis formats with the ACTIVE app language, so this follows the device locale
+ * rather than the fixed-English formatter the per-source pages use — a German Explore chart axis read
+ * English month abbreviations before this.
+ */
 private fun prettyExploreDate(day: String?): String =
     day?.let {
-        runCatching { LocalDate.parse(it).format(DateTimeFormatter.ofPattern("d MMM", Locale.US)) }
+        runCatching { LocalDate.parse(it).format(DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())) }
             .getOrDefault(it)
     }.orEmpty()
 
@@ -797,9 +799,13 @@ private fun StatRow(
         else if ((delta > 0) == better) Palette.statusPositive else Palette.statusCritical
     }
     val deltaCaption = when {
-        hasDelta -> stringResource(R.string.explore_vs_prev_window, effectiveRange.windowName)
+        hasDelta -> DisplayText.Resource(
+            R.string.explore_vs_prev_window, listOf(DisplayText.Resource(effectiveRange.nameRes)),
+        ).text()
         effectiveRange == ExploreRange.All -> stringResource(R.string.explore_all_history)
-        else -> stringResource(R.string.explore_no_prior_window, effectiveRange.windowName)
+        else -> DisplayText.Resource(
+            R.string.explore_no_prior_window, listOf(DisplayText.Resource(effectiveRange.nameRes)),
+        ).text()
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
@@ -841,8 +847,10 @@ private fun StatRow(
             StatTile(
                 modifier = Modifier.weight(1f),
                 label = stringResource(R.string.explore_latest),
-                value = latest?.let { metric.format(it.value) } ?: ",",
-                caption = latest?.day,
+                value = latest?.let { metric.format(it.value) } ?: "—",
+                // iOS `latestCaption`: the day in the active language, with no "as of" prefix here (the
+                // hero card already carries the phrase).
+                caption = latest?.let { exploreLongDay(it.day) },
                 accent = metric.accent,
             )
         }
@@ -868,18 +876,4 @@ private fun previousWindow(
 private fun signed(metric: MetricSpec, delta: Double): String {
     val sign = if (delta >= 0) "+" else "−"
     return sign + metric.format(abs(delta))
-}
-
-private fun rangeCaption(
-    series: List<SeriesPoint>,
-    windowed: List<SeriesPoint>,
-    range: ExploreRange,
-    effectiveRange: ExploreRange,
-    fellBack: Boolean,
-): String {
-    if (series.isEmpty()) return ","
-    val n = windowed.size
-    val unit = if (n == 1) "reading" else "readings"
-    return if (fellBack) "$n $unit · sparse , widened to ${effectiveRange.windowName}"
-    else "$n $unit · ${range.windowName}"
 }

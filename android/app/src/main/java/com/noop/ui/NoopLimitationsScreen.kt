@@ -60,7 +60,7 @@ private val LIMIT_ROWS: List<LimitRow> = listOf(
     LimitRow("Skin temperature", LimitState.PARTIAL, LimitState.FULL),
     LimitRow("Steps", LimitState.PARTIAL, LimitState.FULL),
     LimitRow("Blood oxygen (SpO₂ %)", LimitState.NONE, LimitState.NONE),
-    LimitRow("ECG", LimitState.NONE, LimitState.PARTIAL),
+    LimitRow(uiString(R.string.l10n_noop_limitations_screen_ecg_c5be730b), LimitState.NONE, LimitState.PARTIAL),
     LimitRow("Blood pressure", LimitState.NONE, LimitState.NONE),
 )
 
@@ -79,12 +79,12 @@ fun NoopLimitationsScreen() {
 private fun LimitTableCard() {
     NoopCard(padding = 20.dp) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Overline("What NOOP reads")
+            Overline(uiString(R.string.l10n_case_what_noop_reads_f666266d))
             // Column header.
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("Feature", style = NoopType.caption, color = Palette.textTertiary, modifier = Modifier.weight(1f))
+                Text(uiString(R.string.l10n_whoop_model_comparison_screen_feature_ad565d9d), style = NoopType.caption, color = Palette.textTertiary, modifier = Modifier.weight(1f))
                 Text("4.0", style = NoopType.caption, color = Palette.textTertiary, textAlign = TextAlign.Center, modifier = Modifier.width(48.dp))
-                Text("5.0/MG", style = NoopType.caption, color = Palette.textTertiary, textAlign = TextAlign.Center, modifier = Modifier.width(48.dp))
+                Text(uiString(R.string.l10n_noop_limitations_screen_s_5_0_mg_a1c400a7), style = NoopType.caption, color = Palette.textTertiary, textAlign = TextAlign.Center, modifier = Modifier.width(48.dp))
             }
             LIMIT_ROWS.forEachIndexed { idx, row ->
                 if (idx > 0) Hairline()

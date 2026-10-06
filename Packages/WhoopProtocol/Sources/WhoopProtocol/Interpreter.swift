@@ -421,7 +421,7 @@ private func parseFrameWhoop5(_ frame: [UInt8], collectFields: Bool) -> ParsedFr
 /// this replaced was a record from an unmapped layout that happened to decode a plausible `unix` and
 /// `gravity_x`/`heart_rate` slipping past the archive filter, so its bytes were kept nowhere at all.
 /// `Whoop5HistoricalLayoutMapTests` pins the set against the decoder's actual behaviour.
-public let mappedWhoop5HistoricalVersions: Set<Int> = [18, 20, 21, 26]
+public let mappedWhoop5HistoricalVersions: Set<Int> = [18, 20, 21, 22, 26]
 
 /// True when `frame` is a WHOOP 5/MG type-47 record whose layout version has NO field map — the
 /// records that reach the unmapped branch of `decodeWhoop5Historical` and are therefore never
@@ -461,6 +461,11 @@ private func decodeWhoop5Historical(_ frame: [UInt8], fb: FieldBuilder, payloadE
     case 26:
         decodeWhoop5HistoricalV26(frame, fb: fb, limit: limit)
         return
+    case 22:
+        if let research = decodeWhoop5Research(frame) {
+            for (key, value) in research { fb.parsed[key] = value }
+        }
+        return
     case 20, 21:
         decodeWhoop5HistoricalV2021(frame, fb: fb, version: version, payloadEnd: payloadEnd,
                                     limit: limit)
@@ -474,6 +479,16 @@ private func decodeWhoop5Historical(_ frame: [UInt8], fb: FieldBuilder, payloadE
             fb.region(11, payloadEnd, "HISTORICAL_DATA v\(version) (unmapped layout)", "unknown")
         }
         return
+    }
+    // OpenStrap protocol ecb512b: header timing; retain bytes without asserting rate / clock units.
+    for (off, width, dtype, key) in [(10, 1, "u8", "record_flags"),
+                                    (19, 2, "u16", "timestamp_subseconds"),
+                                    (61, 2, "u16", "aux_word_61"),
+                                    (64, 1, "u8", "aux_byte_64"),
+                                    (63, 1, "u8", "activity_class_raw")] {
+        if let value = readDType(frame, off, dtype, limit) {
+            fb.add(off, width, key, "meta", value: .int(value), note: "raw; interpretation unvalidated")
+        }
     }
     if let idx = readDType(frame, 11, "u32", limit) {
         // A per-record counter: +1 every record and independent of unix (it advances across gaps);
@@ -715,6 +730,8 @@ private func decodeWhoop5Historical(_ frame: [UInt8], fb: FieldBuilder, payloadE
 /// as `ppg_waveform` with NO invented scale. The bytes before [27] (header + a block index) and the
 /// footer after [75] are not mapped; SpO₂/skin-temp have no internal proxy and are left untouched.
 private func decodeWhoop5HistoricalV26(_ frame: [UInt8], fb: FieldBuilder, limit: Int) {
+    // Retained even in the lean parse path, whose rawHex is intentionally empty.
+    if verifyFrame(frame, family: .whoop5).ok { fb.parsed["ppg_raw_frame"] = .intArray(frame.map(Int.init)) }
     // @21 is a small per-burst counter (`burst_index`), NOT the optical channel (PR#553). An earlier read
     // labelled it `ppg_channel` and gated it 1…26 because our two original fixtures happened to read 1 and
     // 2 — but a later capture read 65, far outside any 26-channel sweep, so @21 is not a stable channel id.

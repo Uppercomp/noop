@@ -1103,6 +1103,12 @@ extension WhoopStore {
         migrator.registerMigration("v47-rr-whoop5-fill") { db in
             try db.execute(sql: WhoopStore.whoop5RrFillMigrationSQL)
         }
+        // Twin of Room 41 -> 42: retain the complete CRC-verified v26 frame for future re-decode.
+        migrator.registerMigration("v48-ppg-raw-frame") { db in
+            try db.alter(table: "ppgWaveformSample") { t in
+                t.add(column: "rawFrame", .blob)
+            }
+        }
         return migrator
     }
 }

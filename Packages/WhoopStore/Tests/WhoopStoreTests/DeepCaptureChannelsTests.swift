@@ -145,6 +145,19 @@ final class DeepCaptureChannelsTests: XCTestCase {
         XCTAssertEqual(g, 1)
     }
 
+    func testAppendedSlotsMatchStandaloneSwiftOracle() throws {
+        let url = Bundle.module.url(forResource: "whoop5_research_oracle", withExtension: "json")!
+        let json = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [String: Any]
+        let blobs = json["v18_aux_blobs"] as! [String]
+        for flag in 0...255 {
+            let sample = V18AuxSample(ts: 0, recordFlags: flag, timestampSubseconds: 65535 - flag,
+                                      auxWord61: flag * 257, auxByte64: 255 - flag, activityClassRaw: flag)
+            let packed = V18AuxCodec.pack(sample)
+            XCTAssertEqual(packed.map { String(format: "%02x", $0) }.joined(), blobs[flag])
+            XCTAssertEqual(V18AuxCodec.unpack(packed, ts: 0), sample)
+        }
+    }
+
     // MARK: - Codec
 
     func testCodecHeaderShapeAndSize() {
@@ -152,7 +165,8 @@ final class DeepCaptureChannelsTests: XCTestCase {
                                 heartRateAlt: 5, rrPacked: 6, cardiacStatus: 7, stepCadence: 8,
                                 statusWord: 9, statusWord1: 10, statusWord2: 11, auxByte82: 12,
                                 opticalBaselineA: 13, opticalBaselineB: 14, opticalAmpA: 15,
-                                opticalAmpB: 16, unknownF32Bits: 17)
+                                opticalAmpB: 16, unknownF32Bits: 17, recordFlags: 18, timestampSubseconds: 19,
+                                auxWord61: 20, auxByte64: 21, activityClassRaw: 22)
         let blob = [UInt8](V18AuxCodec.pack(full))
         XCTAssertEqual(blob[0], UInt8(V18AuxCodec.formatVersion))
         // Bitmap is a u32 LE with every slot's bit set. It is a u32 and not a u16 because there are 17
@@ -162,9 +176,9 @@ final class DeepCaptureChannelsTests: XCTestCase {
         for byte in 0..<4 { bitmap |= Int(blob[1 + byte]) << (8 * byte) }
         XCTAssertEqual(bitmap, (1 << V18AuxSlot.allCases.count) - 1)
         XCTAssertGreaterThan(V18AuxSlot.allCases.count, 16, "a u16 bitmap would no longer fit")
-        // 5-byte header + the sum of the declared slot widths — a full row is 32 bytes.
+        // 5-byte header + the sum of the declared slot widths — a full row is 39 bytes.
         XCTAssertEqual(blob.count, 5 + V18AuxSlot.allCases.reduce(0) { $0 + $1.width })
-        XCTAssertEqual(blob.count, 32)
+        XCTAssertEqual(blob.count, 39)
         XCTAssertEqual(V18AuxCodec.unpack(V18AuxCodec.pack(full), ts: 0), full)
     }
 

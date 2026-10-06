@@ -73,6 +73,11 @@ enum class V18AuxSlot(val index: Int, val width: Int, val decoderKey: String) {
     OPTICAL_AMP_A(14, 1, "optical_amp_a"),              // @108 paired amplitude-like channel
     OPTICAL_AMP_B(15, 1, "optical_amp_b"),              // @109 the other half of the @108/@109 pair
     UNKNOWN_F32_113(16, 4, "unknown_f32_113"),          // @113 carried as its raw u32 bit pattern
+    RECORD_FLAGS(17, 1, "record_flags"),              // @10 raw; sample-rate interpretation is a candidate
+    TIMESTAMP_SUBSECONDS(18, 2, "timestamp_subseconds"), // @19 raw subsecond clock word
+    AUX_WORD_61(19, 2, "aux_word_61"),                  // @61 raw adjacent word, meaning unvalidated
+    AUX_BYTE_64(20, 1, "aux_byte_64"),                      // @64 raw adjacent byte, meaning unvalidated
+    ACTIVITY_CLASS_RAW(21, 1, "activity_class_raw"),  // @63 includes unknown / invalid codes
 }
 
 /**
@@ -128,6 +133,11 @@ data class V18AuxRow(
     val opticalAmpB: Long? = null,
     /** The raw 32-bit pattern of `unknown_f32_113`, NOT a decoded float. See [unknownF32At113]. */
     val unknownF32Bits: Long? = null,
+    val recordFlags: Long? = null,
+    val timestampSubseconds: Long? = null,
+    val auxWord61: Long? = null,
+    val auxByte64: Long? = null,
+    val activityClassRaw: Long? = null,
 ) {
     /**
      * The slot values in wire order — position == [V18AuxSlot.index]. The storage codec's only view of
@@ -138,6 +148,7 @@ data class V18AuxRow(
             recordIndex, rrCount, cardiacFlags, hrQualityFlags, heartRateAlt, rrPacked, cardiacStatus,
             stepCadence, statusWord, statusWord1, statusWord2, auxByte82, opticalBaselineA,
             opticalBaselineB, opticalAmpA, opticalAmpB, unknownF32Bits,
+            recordFlags, timestampSubseconds, auxWord61, auxByte64, activityClassRaw,
         )
 
     /**
@@ -177,6 +188,11 @@ data class V18AuxRow(
                 opticalAmpA = v(V18AuxSlot.OPTICAL_AMP_A),
                 opticalAmpB = v(V18AuxSlot.OPTICAL_AMP_B),
                 unknownF32Bits = v(V18AuxSlot.UNKNOWN_F32_113),
+                recordFlags = v(V18AuxSlot.RECORD_FLAGS),
+                timestampSubseconds = v(V18AuxSlot.TIMESTAMP_SUBSECONDS),
+                auxWord61 = v(V18AuxSlot.AUX_WORD_61),
+                auxByte64 = v(V18AuxSlot.AUX_BYTE_64),
+                activityClassRaw = v(V18AuxSlot.ACTIVITY_CLASS_RAW),
             )
         }
     }
@@ -185,7 +201,7 @@ data class V18AuxRow(
 /**
  * Storage codec for the 5/MG v18 auxiliary-field stream (`v18AuxSample.fields`).
  *
- * WHY A BLOB AND NOT COLUMNS. There are seventeen slots and they arrive once per strap-second. Seventeen
+ * WHY A BLOB AND NOT COLUMNS. There are twenty-two slots and they arrive once per strap-second. Twenty-two
  * nullable columns on a hot per-second table costs a header byte per column per row even when the value
  * is NULL, makes every future slot a migration, and spends schema surface on bytes whose meaning nobody
  * has pinned yet. One compact blob costs a 5-byte header plus only the bytes actually present, and a new

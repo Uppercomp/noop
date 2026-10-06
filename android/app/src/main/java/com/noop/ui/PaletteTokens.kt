@@ -21,6 +21,10 @@ data class PaletteTokens(
     val surfaceBase: Color,
     val surfaceRaised: Color,
     val surfaceOverlay: Color,
+    // The bottom stop of the card's top-lit vertical bevel. NoopPanelSurface (the Apple card
+    // treatment) fills `LinearGradient([surfaceTop, surfaceBottom])`; Android had no twin for the
+    // lower stop and drew a FLAT fill, which is why its cards read unlit next to iOS's.
+    val surfaceBottom: Color,
     val surfaceInset: Color,
     val hairline: Color,
     val hairlineStrong: Color,
@@ -90,29 +94,47 @@ data class PaletteTokens(
     // The bright gauge-tip / sparkline-head core: white reads as a highlight on dark; on light it
     // would vanish into the white card, so it flips to a deep ink (crisp centre on the coloured bead).
     val tipCore: Color,
-    // #1160/#1161: the Liquid hero card surface (Today's Charge/Effort/Rest vessel + every screen's hero).
-    // Pinned near-black in DARK; in LIGHT it flips to a frosted white so the hero fits in with the other
-    // cards instead of reading as a broken dark block (was a raw literal inlined in 11 screens). heroBorder
-    // + heroLabel flip with it so the edge stays subtle and the source-badge text stays readable in both.
+    // The translucent panel behind a SCENIC hero — the Sleep/Stress/Live/Trends/Health/WORKOUTS heroes
+    // that iOS draws as white text directly over a full-bleed scene band (Sleep's is
+    // `SleepPerformanceNightScene`, 440pt, supplied as `ScreenScaffold.topBackground`). Android has no
+    // equivalent scene token in every one of those places, so it darkens the same area with a near-black
+    // wash and keeps the white text legible over it. That adaptation is sound.
+    //
+    // It is NOT the Today hero. This comment used to say it was — "Today's Charge/Effort/Rest vessel +
+    // every screen's hero" — and that claim is what put a near-black block among Today's grey cards.
+    // iOS's `LiquidTodayView.heroCard` is `.background(NoopPanelSurface(cornerRadius: 26, elevated: true))`,
+    // the ordinary shared card surface, and `HeroScoreCell` records that #1160 removed the pinned-dark fill
+    // in favour of normal text tokens. Today therefore uses `frostedCardSurface` and does not read these.
     val heroFill: Color,
     val heroBorder: Color,
 )
 
-// WHOOP-reset dark palette (gold killed 2026-06-22). Values match StrandPalette.swift's DARK
-// Titanium column byte-for-byte: blue-grey canvas, WHOOP red→yellow→green recovery, green Charge,
-// blue Effort, slate Rest, amber Stress. NO gold anywhere — accent/gold tokens point to WHOOP blue.
+// WHOOP-reset dark palette (gold killed 2026-06-22). Surfaces, hairlines and text now carry the
+// NoopVisualStyle values that StrandPalette.swift delegates to (`surfaceBase = NoopVisualStyle.canvas`,
+// `hairline = NoopVisualStyle.border`, …), so Android and iOS render the SAME canvas.
+//
+// The previous literals were the old StrandPalette "Titanium" column and had drifted: canvas was
+// #121518 (a much deeper, blue-black) against iOS's #1D1E23 (a lighter NEUTRAL grey-black), and the
+// hairline was #21304A (blue) against iOS's #373A44 (neutral). Since these tokens paint every canvas,
+// card edge and divider in the app, Android read as a different, bluer, higher-contrast app. The data
+// ramps below (recovery / strain / sleep / zones) are unchanged — those still mirror StrandPalette.
 val DarkTokens = PaletteTokens(
-    surfaceBase = Color(0xFF121518), surfaceRaised = Color(0xFF25292C), surfaceOverlay = Color(0xFF1C1F26),
-    surfaceInset = Color(0xFF1F2229), hairline = Color(0xFF21304A), hairlineStrong = Color(0xFF2E3C57),
-    textPrimary = Color(0xFFF4F6F8), textSecondary = Color(0xFFC8CFD8), textTertiary = Color(0xFF8A94A4),
-    glowAmbient = Color(0xFF3A2D0A),
+    surfaceBase = Color(0xFF1D1E23), surfaceRaised = Color(0xFF2A2C34), surfaceOverlay = Color(0xFF30323B),
+    surfaceBottom = Color(0xFF282A31),
+    surfaceInset = Color(0xFF23252C), hairline = Color(0xFF373A44), hairlineStrong = Color(0xFF4B4E59),
+    textPrimary = Color(0xFFF7F7FA), textSecondary = Color(0xFFC3C4CA), textTertiary = Color(0xFF7D7F88),
+    glowAmbient = Color(0x4754E6BD),
     // Brand accent → mint, parity with iOS #1068 (NoopVisualStyle.mint/mintGlow). accentMuted is a dark
     // teal muted surface (green-shifted analog of the old navy 0xFF16233A). Gold stays in the recovery world.
     accent = Color(0xFF69DDB8), accentHover = Color(0xFF54E6BD), accentMuted = Color(0xFF163329), focusRing = Color(0xFF69DDB8),
     recovery000 = Color(0xFFE0463C), recovery030 = Color(0xFFE8743C), recovery055 = Color(0xFFF9DF4A),
     recovery078 = Color(0xFF8FD86A), recovery100 = Color(0xFF03E095),
     strain000 = Color(0xFF9C5A14), strain033 = Color(0xFFC2762A), strain066 = Color(0xFFD98A3D), strain100 = Color(0xFFF0A85A),
-    sleepAwake = Color(0xFFC2CCDA), sleepLight = Color(0xFF4A90E2), sleepDeep = Color(0xFF2F6FCB), sleepREM = Color(0xFF6FA8E8),
+    // Sleep stages: four DISTINCT hues, adopting the WHOOP stage palette iOS took from #988 — awake
+    // white-grey, Light periwinkle, Deep orchid-pink, REM purple. Android still carried the older set of
+    // near-identical blues, which is the exact problem the iOS comment names: "the previous three
+    // near-identical blues made a fragmented on-device hypnogram unreadable".
+    sleepAwake = Color(0xFFCAC8CB), sleepLight = Color(0xFFA7A4F4), sleepDeep = Color(0xFFFD96FD), sleepREM = Color(0xFFAE5BEF),
     zone1 = Color(0xFF4A90E2), zone2 = Color(0xFF3FA9C9), zone3 = Color(0xFFE8B84B), zone4 = Color(0xFFD98A3D), zone5 = Color(0xFFE0662F),
     statusPositive = Color(0xFF03E095), statusWarning = Color(0xFFF0A020), statusCritical = Color(0xFFE0662F),
     metricCyan = Color(0xFF3FA9C9), metricPurple = Color(0xFF4A90E2), metricAmber = Color(0xFFD98A3D), metricRose = Color(0xFFE0662F),
@@ -129,26 +151,38 @@ val DarkTokens = PaletteTokens(
     heroFill = Color(0xCC0D0E14), heroBorder = Color(0x1CFFFFFF),
 )
 
+// Light scheme, aligned to NoopVisualStyle's light column for the same reason as DarkTokens above:
+// iOS light mode is a NEUTRAL grey-white (#F3F4F6 canvas), where Android shipped a warm "Warm Paper"
+// (#EAE3D4) scheme. That is a whole-screen tint difference — every canvas, card and divider — so it
+// read as a differently-branded app rather than the same one in light mode.
 val LightTokens = PaletteTokens(
-    surfaceBase = Color(0xFFEAE3D4), surfaceRaised = Color(0xFFFFFFFF), surfaceOverlay = Color(0xFFFFFFFF),
-    surfaceInset = Color(0xFFDFD8C8), hairline = Color(0xFFD8D0BD), hairlineStrong = Color(0xFFC7BCA4),
-    textPrimary = Color(0xFF1A2230), textSecondary = Color(0xFF4C5564), textTertiary = Color(0xFF7C8696),
-    glowAmbient = Color(0xFFF0E4C0),
+    surfaceBase = Color(0xFFF3F4F6), surfaceRaised = Color(0xFFFFFFFF), surfaceOverlay = Color(0xFFFFFFFF),
+    surfaceBottom = Color(0xFFF4F5F7),
+    surfaceInset = Color(0xFFE8E9ED), hairline = Color(0xFFD8DAE0), hairlineStrong = Color(0xFFFFFFFF),
+    textPrimary = Color(0xFF17181C), textSecondary = Color(0xFF555861), textTertiary = Color(0xFF7D808A),
+    glowAmbient = Color(0x4738C99E),
     // Light chrome accent → brand mint, parity with iOS #1068 (NoopVisualStyle.mint/mintGlow, light side).
-    // accentMuted is a pale mint tint (green-shifted analog of the old pale blue 0xFFE4ECF6); note Android's
-    // light theme is a WARM paper theme, so this shade may want an on-device tweak. Gold stays in recovery.
+    // accentMuted is a pale mint tint (green-shifted analog of the old pale blue 0xFFE4ECF6).
     accent = Color(0xFF149A78), accentHover = Color(0xFF38C99E), accentMuted = Color(0xFFDCEDE6), focusRing = Color(0xFF149A78),
-    recovery000 = Color(0xFF8F6212), recovery030 = Color(0xFFA87718), recovery055 = Color(0xFFC28E26),
-    recovery078 = Color(0xFFD2A23A), recovery100 = Color(0xFFE0B44C),
+    // Recovery — red → orange → yellow → green → mint, the SAME hue progression as dark mode and as iOS.
+    // Android had a gold/bronze ramp here (#8F6212 → #E0B44C), left over from the pre-reset "Warm Paper"
+    // theme. That was not a tint difference but a semantic one: a depleted 0% recovery read GOLD in light
+    // mode where iOS shows WHOOP red, so the score's meaning inverted between themes.
+    recovery000 = Color(0xFFC0392B), recovery030 = Color(0xFFD9682A), recovery055 = Color(0xFFC99A00),
+    recovery078 = Color(0xFF6FB23A), recovery100 = Color(0xFF0F9D62),
     strain000 = Color(0xFF7E460E), strain033 = Color(0xFFA4621B), strain066 = Color(0xFFC2792E), strain100 = Color(0xFFD89240),
-    sleepAwake = Color(0xFF97A2B2), sleepLight = Color(0xFF3A80D6), sleepDeep = Color(0xFF234F9E), sleepREM = Color(0xFF5790DA),
+    // The same four-hue stage set as dark, darkened for contrast on white (iOS light column).
+    sleepAwake = Color(0xFF8E949E), sleepLight = Color(0xFF7B78E0), sleepDeep = Color(0xFFC13EC1), sleepREM = Color(0xFF8E3BD6),
     zone1 = Color(0xFF3A80D6), zone2 = Color(0xFF2E92B4), zone3 = Color(0xFFC28E26), zone4 = Color(0xFFC2792E), zone5 = Color(0xFFC84E1E),
-    statusPositive = Color(0xFFB07D17), statusWarning = Color(0xFFC2792E), statusCritical = Color(0xFFC84E1E),
+    statusPositive = Color(0xFF1F8A5B), statusWarning = Color(0xFFC2792E), statusCritical = Color(0xFFC84E1E),
     metricCyan = Color(0xFF2E92B4), metricPurple = Color(0xFF3A80D6), metricAmber = Color(0xFFC2792E), metricRose = Color(0xFFC84E1E),
-    chargeColor = Color(0xFFB88421), chargeDeep = Color(0xFF8F6212), chargeBright = Color(0xFFE0B44C), chargeGlow = Color(0xFFC8902F),
-    effortColor = Color(0xFFB26A1C), effortDeep = Color(0xFF7E460E), effortBright = Color(0xFFD89240), effortGlow = Color(0xFFB26A1C),
-    restColor = Color(0xFF3A80D6), restDeep = Color(0xFF234F9E), restBright = Color(0xFF5790DA), restGlow = Color(0xFF3A80D6),
-    stressColor = Color(0xFFB88421), stressDeep = Color(0xFF3A80D6), stressBright = Color(0xFFC84E1E), stressGlow = Color(0xFFB88421),
+    // The four score "colour worlds" below were gold/amber in light mode for the same stale reason as the
+    // recovery ramp. iOS keeps each domain's own hue in both themes — Charge green, Effort blue, Rest
+    // steel-blue, Stress amber — so a Charge card is green in light mode exactly as it is in dark.
+    chargeColor = Color(0xFF0F9D62), chargeDeep = Color(0xFF0B7A4A), chargeBright = Color(0xFF5FD89A), chargeGlow = Color(0xFF0F9D62),
+    effortColor = Color(0xFF2A78C8), effortDeep = Color(0xFF1E5B96), effortBright = Color(0xFF5AA0E0), effortGlow = Color(0xFF2A78C8),
+    restColor = Color(0xFF5E7896), restDeep = Color(0xFF234F9E), restBright = Color(0xFF5790DA), restGlow = Color(0xFF3A80D6),
+    stressColor = Color(0xFFC7891A), stressDeep = Color(0xFF3A80D6), stressBright = Color(0xFFC84E1E), stressGlow = Color(0xFFC7891A),
     scenicCenter = Color(0xFFFBF6EA), scenicEdge = Color(0xFFEDE6D6), scenicStar = Color(0xFFD8CDB6),
     cardFillTop = Color(0xFFFFFFFF), cardFillBottom = Color(0xFFFAF7F0),
     gold = Color(0xFFDBA52A), goldLight = Color(0xFFECC766), goldDeep = Color(0xFF9A6B12),

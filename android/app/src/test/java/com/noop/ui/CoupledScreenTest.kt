@@ -1,5 +1,6 @@
 package com.noop.ui
 
+import com.noop.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
@@ -9,7 +10,8 @@ import org.junit.Test
  * Pins the pure display-only helpers behind the Coupled view (task #43) so they stay byte-identical to the
  * Swift [CoupledView] twin:
  *  - the OPTIMAL recovery->strain band mapping (green >= 67 -> 14-18, yellow 34-66 -> 10-14, red < 34 -> 4-10),
- *  - the strain band word thresholds (LIGHT/MODERATE/STRENUOUS/HIGH/ALL-OUT at 6/10/14/18 of 21),
+ *  - the strain band word thresholds (Light / Moderate / Strenuous / High at 6/10/14 of 21, the four
+ *    bands and the words the iOS `CoupledView.strainBandWord` uses),
  *  - the hours:minutes formatter.
  * These are display-only reads (never fed back into scoring), so the values here ARE the contract.
  */
@@ -44,17 +46,18 @@ class CoupledScreenTest {
     }
 
     @Test fun strainBandWord_thresholds_matchTheGauge() {
-        // Fractions of 21, matching the StrandDesign StrainGauge bands at 6/10/14/18.
-        assertEquals("LIGHT", strainBandWord(4.0 / 21))
-        assertEquals("MODERATE", strainBandWord(8.0 / 21))
-        assertEquals("STRENUOUS", strainBandWord(12.0 / 21))
-        assertEquals("HIGH", strainBandWord(16.0 / 21))
-        assertEquals("ALL-OUT", strainBandWord(20.0 / 21))
-        // Boundaries are exclusive-below: exactly 6/21 rolls into MODERATE.
-        assertEquals("MODERATE", strainBandWord(6.0 / 21))
-        assertEquals("STRENUOUS", strainBandWord(10.0 / 21))
-        assertEquals("HIGH", strainBandWord(14.0 / 21))
-        assertEquals("ALL-OUT", strainBandWord(18.0 / 21))
+        // The FOUR bands of the iOS `CoupledView.strainBandWord`, at 6 and 10 and 14 of 21 — not the five
+        // uppercase bands Android used to invent (which put a day at 16/21 in a band iOS does not have).
+        assertEquals(DisplayText.Resource(R.string.l10n_coupled_screen_light_a36ef8ab), strainBandWord(4.0 / 21))
+        assertEquals(DisplayText.Resource(R.string.l10n_coupled_screen_moderate_ea8b09c2), strainBandWord(8.0 / 21))
+        assertEquals(DisplayText.Dynamic("Strenuous"), strainBandWord(12.0 / 21))
+        assertEquals(DisplayText.Resource(R.string.l10n_coupled_screen_high_b1a5954a), strainBandWord(16.0 / 21))
+        assertEquals(DisplayText.Resource(R.string.l10n_coupled_screen_high_b1a5954a), strainBandWord(20.0 / 21))
+        // Boundaries are exclusive-below: exactly 6/21 rolls into the next band.
+        assertEquals(DisplayText.Resource(R.string.l10n_coupled_screen_moderate_ea8b09c2), strainBandWord(6.0 / 21))
+        assertEquals(DisplayText.Dynamic("Strenuous"), strainBandWord(10.0 / 21))
+        assertEquals(DisplayText.Resource(R.string.l10n_coupled_screen_high_b1a5954a), strainBandWord(14.0 / 21))
+        assertEquals(DisplayText.Resource(R.string.l10n_coupled_screen_high_b1a5954a), strainBandWord(18.0 / 21))
     }
 
     @Test fun hoursMinutes_formatsAsHandM() {

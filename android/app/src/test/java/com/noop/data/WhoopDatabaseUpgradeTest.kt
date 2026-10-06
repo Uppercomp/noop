@@ -14,6 +14,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.util.ReflectionHelpers
 import org.robolectric.util.ReflectionHelpers.ClassParameter
+import java.nio.file.FileSystemException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.ZipEntry
@@ -83,6 +84,25 @@ class WhoopDatabaseUpgradeTest {
         }
     }
 
+    @Test
+    fun waveformEvidenceMigrationPreservesExistingRows() {
+        val name = "noop-waveform-evidence.db"
+        val old = helper.createDatabase(name, 41)
+        old.execSQL("INSERT INTO ppgWaveformSample(deviceId,ts,samples,burstIndex,baseCode) " +
+            "VALUES ('dev',123,X'FFFF0200',7,378307)")
+        old.close()
+        val upgraded = helper.runMigrationsAndValidate(name, 42, true, WhoopDatabase.MIGRATION_41_42)
+        upgraded.query("SELECT samples,burstIndex,baseCode,rawFrame FROM ppgWaveformSample").use {
+            assertEquals(true, it.moveToFirst())
+            assertArrayEquals(byteArrayOf(-1, -1, 2, 0), it.getBlob(0))
+            assertEquals(7, it.getInt(1))
+            assertEquals(378307L, it.getLong(2))
+            assertEquals(true, it.isNull(3))
+            assertEquals(false, it.moveToNext())
+        }
+        upgraded.close()
+    }
+
     /** A version bump is not complete until its exact Room export is preserved for the next upgrade. */
     @Test
     fun currentGeneratedSchemaIsCommitted() {
@@ -104,7 +124,14 @@ class WhoopDatabaseUpgradeTest {
 
     @After
     fun removeSchemaArchive() {
-        Files.deleteIfExists(schemaArchive)
+        try {
+            Files.deleteIfExists(schemaArchive)
+        } catch (error: FileSystemException) {
+            // Robolectric retains the mounted asset ZIP until JVM exit; Windows forbids deleting it open.
+            // createSchemaArchive already registers deleteOnExit. Keep other filesystem failures visible.
+            val windows = (System.getProperty("os.name") ?: "").startsWith("Windows")
+            if (!windows || error.reason?.contains("used by another process") != true) throw error
+        }
     }
 
     /** Robolectric's AssetManager mounts archives, while Gradle keeps these fixtures as JVM resources. */

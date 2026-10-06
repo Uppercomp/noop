@@ -163,7 +163,7 @@ fun LiveWorkoutScreen(vm: AppViewModel, onClose: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                Overline("Time", color = Palette.textSecondary)
+                Overline(uiString(R.string.coach_morning_brief_time), color = Palette.textSecondary)
                 Text(
                     // elapsedClock, not a local %d:%02d — that one had no hour roll-over, so this hero
                     // read "90:00" for a 90-minute session while every card that opens this screen read
@@ -307,7 +307,7 @@ private fun SensorRow(sensor: StandardHrSource.SensorMetrics) {
     val power = StandardHrSource.formatPowerWatts(sensor.powerWatts)
     if (speed == null && cadence == null && power == null) return
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Overline("Sensor")
+        Overline(uiString(R.string.l10n_case_sensor_efb9fbf8))
         Row(horizontalArrangement = Arrangement.spacedBy(Metrics.gap), modifier = Modifier.fillMaxWidth()) {
             if (speed != null) {
                 StatTile(modifier = Modifier.weight(1f), label = uiString(R.string.l10n_live_workout_screen_speed_2d2cb022), value = speed, accent = Palette.effortColor)
@@ -336,7 +336,7 @@ private fun EffortGauge(liveStrain: Double, effortScale: EffortScale) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Overline("Effort building", color = Palette.effortColor)
+        Overline(uiString(R.string.l10n_case_effort_building_38314300), color = Palette.effortColor)
         CountUpText(
             value = value,
             format = { v ->
@@ -367,9 +367,9 @@ private fun HeroHeartRate(bpm: Int?, zone: Int) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Overline("Heart rate", color = Palette.textSecondary)
+        Overline(uiString(R.string.l10n_breathe_screen_heart_rate_410aa15c), color = Palette.textSecondary)
         Text(bpm?.toString() ?: "—", style = NoopType.number(72f), color = tint)
-        Text("bpm", style = NoopType.subhead, color = Palette.textSecondary)
+        Text(uiString(R.string.l10n_workouts_screen_hrr_bpm_516), style = NoopType.subhead, color = Palette.textSecondary)
     }
 }
 
@@ -378,11 +378,11 @@ private fun ZoneRail(zone: Int, zoneSet: com.noop.analytics.HrZoneSet) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // Header row: the section label with the current-zone capsule on the right (moved off the HR hero).
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Overline("HR zone")
+            Overline(uiString(R.string.l10n_case_hr_zone_1e6a6acc))
             Spacer(Modifier.weight(1f))
             val capsuleTint = if (zone >= 1) Palette.hrZoneColor(zone) else Palette.effortColor
             Text(
-                if (zone >= 1) "Zone $zone · ${zoneName(zone)}" else "Below Zone 1",
+                if (zone >= 1) uiString(R.string.l10n_live_workout_screen_zone_lld_0f85a4d4, zone, zoneName(zone)) else uiString(R.string.l10n_live_workout_screen_below_zone_1_94222d70),
                 style = NoopType.captionNumber,
                 color = capsuleTint,
                 modifier = Modifier
@@ -422,7 +422,7 @@ private fun ZoneRail(zone: Int, zoneSet: com.noop.analytics.HrZoneSet) {
         Text(
             if (band != null)
                 "Zone $zone: ${band.lower.toInt()} - ${band.upper.toInt()} bpm (${(band.lowerPct * 100).toInt()} - ${(band.upperPct * 100).toInt()}% max HR)"
-            else "Warming up - keep moving to climb into Zone 1.",
+            else uiString(R.string.l10n_live_workout_screen_warming_up_keep_moving_to_climb_into_zon_94eba2c4),
             style = NoopType.footnote,
             color = Palette.textTertiary,
         )
@@ -430,10 +430,10 @@ private fun ZoneRail(zone: Int, zoneSet: com.noop.analytics.HrZoneSet) {
 }
 
 private fun zoneName(zone: Int): String = when (zone) {
-    1 -> "Recovery"
-    2 -> "Fat burn"
-    3 -> "Aerobic"
-    4 -> "Threshold"
-    5 -> "Maximum"
+    1 -> uiString(R.string.l10n_health_screen_recovery_ea924f72)
+    2 -> uiString(R.string.l10n_live_workout_screen_fat_burn_1b2fb6a5)
+    3 -> uiString(R.string.l10n_live_workout_screen_aerobic_78eec809)
+    4 -> uiString(R.string.l10n_live_workout_screen_threshold_c51f7b72)
+    5 -> uiString(R.string.l10n_live_workout_screen_maximum_a8df2fec)
     else -> ""
 }

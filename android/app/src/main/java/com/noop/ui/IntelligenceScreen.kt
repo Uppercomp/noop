@@ -30,12 +30,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.annotation.StringRes
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.noop.analytics.RecoveryForecast
 import com.noop.analytics.RecoveryForecaster
 import com.noop.data.DailyMetric
 import java.time.LocalDate
-import java.util.Calendar
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
@@ -95,6 +97,9 @@ fun IntelligenceScreen(vm: AppViewModel) {
     // filtering is a cheap in-memory predicate; the freeze (#345) was the eager BUILDING of
     // 800+ day cards, which the LazyColumn below now defers to what's on screen.
     var range by remember { mutableStateOf(IntelRange.Month) }
+    // Resolved in the composition and indexed by ordinal: the pill control's label lambda is
+    // not @Composable.
+    val intelRangeLabels = IntelRange.entries.map { stringResource(it.labelRes) }
     val filtered = remember(ordered, range) {
         val n = range.days ?: return@remember ordered
         val cutoff = LocalDate.now().minusDays((n - 1).toLong()).toString()
@@ -125,13 +130,13 @@ fun IntelligenceScreen(vm: AppViewModel) {
                     horizontalArrangement = Arrangement.spacedBy(Metrics.gap),
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Overline("Recent")
+                        Overline(uiString(R.string.l10n_lift_recent_76eec760))
                         Text(uiString(R.string.l10n_intelligence_screen_by_day_2e5d14ca), style = NoopType.title2, color = Palette.textPrimary)
                     }
                     SegmentedPillControl(
                         items = IntelRange.entries.toList(),
                         selection = range,
-                        label = { it.label },
+                        label = { intelRangeLabels[it.ordinal] },
                         onSelect = { range = it },
                     )
                 }
@@ -179,7 +184,7 @@ private fun ForecastCard(f: RecoveryForecast) {
     val charge = f.charge.roundToInt()
     val band = f.band.roundToInt()
     Column(verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
-        SectionHeader("Tomorrow's Charge", overline = "Evening forecast", trailing = "Estimate")
+        SectionHeader(uiString(R.string.l10n_intelligence_screen_tomorrow_s_charge_b98be38b), overline = uiString(R.string.l10n_intelligence_screen_evening_forecast_0cf05da1), trailing = uiString(R.string.l10n_intelligence_screen_estimate_2352230a))
         NoopCard(padding = 20.dp) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -201,7 +206,7 @@ private fun ForecastCard(f: RecoveryForecast) {
                         modifier = Modifier.padding(top = 4.dp),
                     )
                     Text(
-                        Palette.recoveryState(f.charge),
+                        Palette.recoveryState(f.charge).text(),
                         style = NoopType.overline,
                         color = Palette.recoveryColor(f.charge),
                         modifier = Modifier.padding(top = 2.dp),
@@ -232,7 +237,7 @@ private fun sleepHoursLabel(hours: Double): String {
     val half = (hours * 2).roundToInt() / 2.0
     val h = half.toInt()
     val m = ((half - h) * 60).roundToInt()
-    return if (m == 0) "${h}h" else "${h}h ${m}m"
+    return if (m == 0) "${h}h" else uiString(R.string.l10n_intelligence_screen_lldh_lldm_05a73922, h, m)
 }
 
 // MARK: - Explainer (ported from IntelligenceView.explainerCard)
@@ -296,12 +301,12 @@ private fun EmptyNote() {
 private fun ModelBreakdownCard(effortScale: EffortScale) {
     NoopCard(padding = 20.dp, tint = Palette.chargeColor) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Overline("Charge model")
-            WeightRow("Heart-rate variability", "~55%", 0.55f, Palette.metricPurple)
-            WeightRow("Resting heart rate", "~20%", 0.20f, Palette.metricRose)
-            WeightRow("Rest quality", "~15%", 0.15f, Palette.metricCyan)
-            WeightRow("Respiration", "~5%", 0.05f, Palette.accent)
-            WeightRow("Skin-temperature deviation", "~5%", 0.05f, Palette.metricAmber)
+            Overline(uiString(R.string.l10n_intelligence_screen_charge_model_e86b0ed5))
+            WeightRow(uiString(R.string.l10n_today_screen_heart_rate_variability_a137586d), "~55%", 0.55f, Palette.metricPurple)
+            WeightRow(uiString(R.string.trends_resting_hr_full), "~20%", 0.20f, Palette.metricRose)
+            WeightRow(uiString(R.string.l10n_intelligence_screen_rest_quality_0d9fbf48), "~15%", 0.15f, Palette.metricCyan)
+            WeightRow(uiString(R.string.timeline_metric_respiration), "~5%", 0.05f, Palette.accent)
+            WeightRow(uiString(R.string.l10n_intelligence_screen_skin_temperature_deviation_2a1a4608), "~5%", 0.05f, Palette.metricAmber)
 
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
@@ -383,36 +388,36 @@ private fun DayCard(d: DailyMetric, effortScale: EffortScale) {
                 // import covers reads "Whoop" / "Apple Health". Computed rows keep the charge tint; imports
                 // use the accent tint to stand out. Mirrors macOS IntelligenceEngine.DaySource. (Sleep §2.6.)
                 val src = daySourceBadge(d.deviceId)
-                SourceBadge(src.first, tint = src.second)
+                SourceBadge(src.first.text(), tint = src.second)
             }
 
             Row(modifier = Modifier.fillMaxWidth()) {
                 DayStat(
-                    "Charge",
+                    uiString(R.string.trends_charge),
                     d.recovery?.let { "${it.roundToInt()}%" } ?: "—",
                     d.recovery?.let { Palette.recoveryColor(it) } ?: Palette.textSecondary,
                     Modifier.weight(1f),
                 )
                 DayStat(
-                    "Effort",
+                    uiString(R.string.trends_effort),
                     d.strain?.let { UnitFormatter.effortDisplay(it, effortScale) } ?: "—",
                     d.strain?.let { Palette.strainColor(it) } ?: Palette.textSecondary,
                     Modifier.weight(1f),
                 )
                 DayStat(
-                    "Rest",
+                    uiString(R.string.trends_rest),
                     sleepValue(d.totalSleepMin),
                     Palette.restColor,
                     Modifier.weight(1f),
                 )
                 DayStat(
-                    "HRV",
+                    uiString(R.string.today_card_hrv),
                     d.avgHrv?.let { "${it.roundToInt()}" } ?: "—",
                     Palette.metricPurple,
                     Modifier.weight(1f),
                 )
                 DayStat(
-                    "RHR",
+                    uiString(R.string.l10n_insights_screen_rhr_04edf9b3),
                     d.restingHr?.toString() ?: "—",
                     Palette.metricRose,
                     Modifier.weight(1f),
@@ -466,40 +471,36 @@ private fun sleepValue(totalMin: Double?): String {
  * "health-connect"). Brand wording matches the rest of the app (macOS DaySource: "On-device"/"Whoop"/
  * "Apple Health"); imports use the accent tint, computed rows the charge tint. (Sleep overhaul §2.6.)
  */
-internal fun daySourceBadge(deviceId: String): Pair<String, Color> = when {
-    deviceId.endsWith("-noop") -> "On-device" to Palette.chargeColor
+internal fun daySourceBadge(deviceId: String): Pair<DisplayText, Color> = when {
+    deviceId.endsWith("-noop") -> DisplayText.Resource(R.string.today_source_on_device) to Palette.chargeColor
     deviceId == com.noop.data.WhoopRepository.APPLE_HEALTH_SOURCE ||
-        deviceId == com.noop.data.WhoopRepository.HEALTH_CONNECT_SOURCE -> "Apple Health" to Palette.accent
+        deviceId == com.noop.data.WhoopRepository.HEALTH_CONNECT_SOURCE -> DisplayText.Resource(R.string.nav_apple_health) to Palette.accent
     // An Oura night is persisted under the ring's "oura-<uuid>" id (the ring PROVIDES its own SleepNet
     // hypnogram, banked as the merge-winning session) — name it "Oura", not the generic "Whoop" the
     // else-branch would give a non-"-noop" id. Resolved off the canonical brand table, not an "oura" literal.
-    com.noop.data.DeviceBrandCatalog.isOura(deviceId) -> "Oura" to Palette.restColor
-    else -> "Whoop" to Palette.accent
+    com.noop.data.DeviceBrandCatalog.isOura(deviceId) -> DisplayText.Dynamic("Oura") to Palette.restColor
+    else -> DisplayText.Resource(R.string.today_source_whoop) to Palette.accent
 }
 
 /** Recent-window options for the By Day list. `days == null` means show everything. */
-private enum class IntelRange(val days: Int?, val label: String) {
-    Week(7, "W"), Month(30, "M"), Quarter(90, "3M"),
-    Half(180, "6M"), Year(365, "1Y"), All(null, "ALL"),
+private enum class IntelRange(val days: Int?, @StringRes val labelRes: Int) {
+    Week(7, R.string.l10n_lift_w_e2415cb7),
+    Month(30, R.string.l10n_apple_health_screen_m_c63ae6dd),
+    Quarter(90, R.string.l10n_apple_health_screen_s_3m_6dce1630),
+    Half(180, R.string.l10n_apple_health_screen_s_6m_b78ebb44),
+    Year(365, R.string.l10n_apple_health_screen_s_1y_28234cf2),
+    All(null, R.string.l10n_apple_health_screen_all_6b42874e),
 }
 
-/** "YYYY-MM-DD" → "Mon 5 Jun"; falls back to the raw key if it doesn't parse. */
-private fun prettyDay(day: String): String {
-    return try {
-        val parts = day.split("-")
-        val y = parts[0].toInt()
-        val mo = parts[1].toInt()
-        val da = parts[2].toInt()
-        val cal = Calendar.getInstance().apply { set(y, mo - 1, da) }
-        val dow = arrayOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")[
-            cal.get(Calendar.DAY_OF_WEEK) - 1,
-        ]
-        val month = arrayOf(
-            "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-        )[mo - 1]
-        "$dow $da $month"
-    } catch (_: Exception) {
-        day
-    }
-}
+/**
+ * "YYYY-MM-DD" -> "Mon 5 Jun" in the ACTIVE language; falls back to the raw key if it doesn't parse.
+ *
+ * The weekday and month tables used to be hardcoded English, so a German app read "Mon 5 Jun" in an
+ * otherwise translated list. iOS's own By-Day list prints the raw `yyyy-MM-dd` key, so this readable form is
+ * an Android-only nicety and has no catalog key to borrow: it is formatted with the device locale, the way
+ * the rest of the app formats a day.
+ */
+private fun prettyDay(day: String): String =
+    runCatching {
+        LocalDate.parse(day).format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault()))
+    }.getOrDefault(day)

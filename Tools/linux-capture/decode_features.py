@@ -41,8 +41,8 @@ CREATE TABLE IF NOT EXISTS feat_event (
 def apply_schema(conn):
     """Create the value tables + indices on `conn` if absent (idempotent)."""
     conn.executescript(FEATURE_SCHEMA)
-    # Idempotent migration for pre-existing DBs: add skin_temp_c (°C = skin_temp_raw / 128, the AS6221
-    # sensor's native 7.8125 m°C/LSB scale) if an older feat_second lacks it.
+    # Idempotent migration for pre-existing DBs: add the optional interpreted temperature column.
+    # The raw field is not universally a native sensor register; conversion requires family/layout.
     cols = {r[1] for r in conn.execute("PRAGMA table_info(feat_second)")}
     if "skin_temp_c" not in cols:
         conn.execute("ALTER TABLE feat_second ADD COLUMN skin_temp_c REAL")
@@ -104,9 +104,15 @@ def feature_to_rows(rec):
             hr = None
         rr = [x for x in (p.get("rr_intervals") or []) if isinstance(x, int)]
         n, mean, rmssd = rr_stats(rr)
-        # Skin temperature: the decoder emits the raw AS6221 register; °C is its native raw/128.
+        # WHOOP 5 R18 stores centidegrees at @73, not a native AS6221 /128 register.
+        # Match the existing Swift/Kotlin convention and plausibility gate (PROTOCOL_SENSORS.md).
+        # WHOOP 4 needs its own device-specific ADC calibration; this capture bridge has no anchor.
+        # Preserve raw values for other families/layouts without inventing a Celsius measurement.
         st_raw = p.get("skin_temp_raw")
-        st_c = (st_raw / 128.0) if isinstance(st_raw, (int, float)) else None
+        st_c = None
+        if (rec.get("family") == "whoop5" and itype == 47 and rec.get("version") == 18
+                and type(st_raw) is int and 500 <= st_raw <= 4500):
+            st_c = st_raw / 100.0
         out["second"] = {
             "unix": unix, "hr": hr,
             "gx": p.get("gravity_x"), "gy": p.get("gravity_y"), "gz": p.get("gravity_z"),
@@ -147,7 +153,14 @@ _SECOND_SQL = (
     "INSERT INTO feat_second (device_id, unix, " + ", ".join(_SECOND_COLS) + ") "
     "VALUES (?, ?, " + ", ".join(["?"] * len(_SECOND_COLS)) + ") "
     "ON CONFLICT(device_id, unix) DO UPDATE SET " +
-    ", ".join(f"{c} = COALESCE(excluded.{c}, feat_second.{c})" for c in _SECOND_COLS)
+    ", ".join(
+        # A newly decoded raw temperature replaces its interpretation, even when that interpretation
+        # is unknown. Otherwise --full retains obsolete /128 Celsius values for unsupported layouts.
+        "skin_temp_c = CASE WHEN excluded.skin_temp_raw IS NOT NULL THEN excluded.skin_temp_c "
+        "ELSE feat_second.skin_temp_c END"
+        if c == "skin_temp_c" else f"{c} = COALESCE(excluded.{c}, feat_second.{c})"
+        for c in _SECOND_COLS
+    )
 )
 
 
@@ -223,7 +236,8 @@ def normalize_decode_record(raw, src_frame, device_id):
     unix = parsed.get("unix")
     if unix is None:
         unix = src_frame[4]
-    return {"device_id": device_id, "unix": unix, "inner_type": src_frame[6],
+    return {"device_id": device_id, "family": raw.get("family"),
+            "unix": unix, "inner_type": src_frame[6],
             "version": version, "ok": ok, "parsed": parsed}
 
 

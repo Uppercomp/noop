@@ -16,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -45,6 +46,7 @@ internal fun SleepMetricDetailSheetContent(
         buildSleepMetricPoints(days, key, imported, napSleepMinByDay)
     }
     val filteredPoints = remember(allPoints, range) { filterSleepMetricPoints(allPoints, range) }
+    val rangeLabels = SleepMetricRange.entries.map { stringResource(it.labelRes) }
 
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = Metrics.space24, vertical = Metrics.space8),
@@ -60,14 +62,16 @@ internal fun SleepMetricDetailSheetContent(
         } else if (filteredPoints.size < 2) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Overline("Sleep")
-                    Text(spec.title, style = NoopType.title2, color = Palette.textPrimary)
+                    Overline(uiString(R.string.nav_sleep))
+                    Text(spec.title.text(), style = NoopType.title2, color = Palette.textPrimary)
                 }
             }
             SegmentedPillControl(
                 items = SleepMetricRange.entries,
                 selection = range,
-                label = { it.label },
+                // Resolved OUTSIDE the lambda: `SegmentedPillControl` takes a `(T) -> String`, which cannot
+                // be @Composable.
+                label = { rangeLabels[it.ordinal] },
                 onSelect = { range = it },
             )
             Text(uiString(R.string.l10n_sleep_screen_not_enough_history_in_this_range_7e2fd640), style = NoopType.subhead, color = Palette.textSecondary)
@@ -83,7 +87,7 @@ internal fun SleepMetricDetailSheetContent(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Overline("Sleep · ${filteredPoints.size} nights")
-                    Text(spec.title, style = NoopType.title2, color = Palette.textPrimary)
+                    Text(spec.title.text(), style = NoopType.title2, color = Palette.textPrimary)
                     Text(uiString(R.string.l10n_sleep_screen_as_of_latest_first_726f20bb, latest.first), style = NoopType.footnote, color = Palette.textTertiary)
                 }
                 Text(
@@ -95,7 +99,7 @@ internal fun SleepMetricDetailSheetContent(
             SegmentedPillControl(
                 items = SleepMetricRange.entries,
                 selection = range,
-                label = { it.label },
+                label = { rangeLabels[it.ordinal] },
                 onSelect = { range = it },
             )
             Row(
@@ -113,7 +117,7 @@ internal fun SleepMetricDetailSheetContent(
                 LineChart(
                     values = values,
                     modifier = Modifier.weight(1f).height(Metrics.chartHeight)
-                        .semantics { contentDescription = uiString(R.string.l10n_sleep_screen_spec_title_trend_chart_3085ac6e, spec.title) },
+                        .semantics { contentDescription = uiString(R.string.l10n_sleep_screen_spec_title_trend_chart_3085ac6e, spec.title.plain()) },
                     color = spec.color,
                     fill = true,
                     selectionEnabled = true,

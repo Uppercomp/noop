@@ -1,6 +1,7 @@
 package com.noop.ui
 
 import com.noop.R
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -70,6 +71,7 @@ fun AutomationsScreen(viewModel: AppViewModel) {
     // Double-tap action (parity since 4.2.8) — real + persisted via the ViewModel (NoopPrefs). The
     // dispatch runs in the ViewModel on a fresh strap DOUBLE_TAP event; this card just edits the choice.
     val doubleTapAction by viewModel.doubleTapAction.collectAsStateWithLifecycle()
+    val moments by viewModel.moments.collectAsStateWithLifecycle()
 
     // (#766) The strap firmware wake-alarm state used to be read here; it moved to SmartAlarmScreen with
     // the rest of the alarm UI.
@@ -120,7 +122,7 @@ fun AutomationsScreen(viewModel: AppViewModel) {
     // accessibility-walked on scroll.
     LazyScreenScaffold(
         title = uiString(R.string.l10n_automations_screen_automations_82542d6d),
-        subtitle = "Make the strap do things: tap to act, walk away to lock, train by feel.",
+        subtitle = uiString(R.string.l10n_automations_screen_make_the_strap_do_things_tap_to_act_walk_f0de13d0),
     ) {
         // #haptics (#1115): per-event in-session haptic toggles, default ON (opt-out) — turn off any cue you
         // find noisy; the feature keeps working, just without that wrist buzz.
@@ -167,7 +169,7 @@ fun AutomationsScreen(viewModel: AppViewModel) {
         SettingsSection(
             icon = Icons.Filled.TouchApp,
             title = uiString(R.string.l10n_automations_screen_double_tap_8d2f1646),
-            blurb = "Double-tap the strap to trigger an action on this device. (The strap exposes a single double-tap gesture.)",
+            blurb = uiString(R.string.l10n_automations_screen_double_tap_the_strap_to_trigger_an_actio_75da944e),
             active = doubleTapAction != DoubleTapAction.NONE,
         ) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -195,6 +197,35 @@ fun AutomationsScreen(viewModel: AppViewModel) {
                     tone = if (live.bonded) StrandTone.Positive else StrandTone.Warning,
                 )
             }
+            // iOS shows this block only once something has been marked (`if !model.moments.isEmpty`), so a
+            // reader who has never double-tapped sees the card unchanged. Resolved with the same clock
+            // preference every other time on this screen honours.
+            if (moments.isNotEmpty()) {
+                RowDivider()
+                val uses24h = ClockPrefs.uses24Hour(ctx)
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Overline(uiString(R.string.automations_recent_moments))
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            uiString(R.string.automations_clear_moments),
+                            style = NoopType.caption,
+                            color = Palette.accent,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .clickable { viewModel.clearMoments() }
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                        )
+                    }
+                    MomentStore.recent(moments).forEach { ts ->
+                        Text(
+                            momentLabel(ts, uses24h),
+                            style = NoopType.captionNumber,
+                            color = Palette.textSecondary,
+                        )
+                    }
+                }
+            }
         }
         }
 
@@ -203,7 +234,7 @@ fun AutomationsScreen(viewModel: AppViewModel) {
         SettingsSection(
             icon = Icons.Filled.Bolt,
             title = uiString(R.string.l10n_automations_screen_haptic_coaching_e2fab286),
-            blurb = "Train by feel. The strap buzzes so you don't have to watch a screen.",
+            blurb = uiString(R.string.l10n_automations_screen_train_by_feel_the_strap_buzzes_so_you_do_463f60c2),
             active = zoneCoaching,
         ) {
             ToggleRow(
@@ -233,12 +264,12 @@ fun AutomationsScreen(viewModel: AppViewModel) {
         SettingsSection(
             icon = Icons.Filled.Timer,
             title = uiString(R.string.l10n_automations_screen_inactivity_reminder_ca49b1ba),
-            blurb = "A gentle wrist buzz when you've been sitting too long, a nudge to get up and move. Inferred from the strap's motion on each history sync, so it lags real time by a sync or two.",
+            blurb = uiString(R.string.l10n_automations_screen_a_gentle_wrist_buzz_when_you_ve_been_sit_022719d3),
             active = inactivityEnabled,
         ) {
             ToggleRow(
                 label = uiString(R.string.l10n_automations_screen_enable_inactivity_reminder_468c3017),
-                help = "Buzzes after you've been sitting past your threshold.",
+                help = uiString(R.string.l10n_automations_screen_buzzes_after_you_ve_been_sitting_past_yo_1597d772),
                 checked = inactivityEnabled,
                 onChange = {
                     inactivityEnabled = it
@@ -256,7 +287,7 @@ fun AutomationsScreen(viewModel: AppViewModel) {
                 RowDivider()
                 StepperRow(
                     label = uiString(R.string.l10n_automations_screen_sitting_for_e464c472),
-                    help = "Minutes seated before the first nudge.",
+                    help = uiString(R.string.l10n_automations_screen_minutes_seated_before_the_first_nudge_7d30de20),
                     value = inactivityThreshold, suffix = "min", range = 15..120, step = 15,
                     onChange = {
                         inactivityThreshold = it
@@ -266,7 +297,7 @@ fun AutomationsScreen(viewModel: AppViewModel) {
                 RowDivider()
                 StepperRow(
                     label = uiString(R.string.l10n_automations_screen_re_nudge_every_646023cd),
-                    help = "If you're still seated, buzz again this often.",
+                    help = uiString(R.string.l10n_automations_screen_if_you_re_still_seated_buzz_again_this_o_e248b041),
                     value = inactivityReNudge, suffix = "min", range = 15..120, step = 15,
                     onChange = {
                         inactivityReNudge = it
@@ -276,7 +307,7 @@ fun AutomationsScreen(viewModel: AppViewModel) {
                 RowDivider()
                 StepperRow(
                     label = uiString(R.string.l10n_automations_screen_buzz_strength_e895f99e),
-                    help = "How strong the buzz is.",
+                    help = uiString(R.string.l10n_automations_screen_how_strong_the_buzz_is_6ccd8625),
                     value = inactivityBuzzLoops, suffix = "×", range = 1..4, step = 1,
                     onChange = {
                         inactivityBuzzLoops = it
@@ -286,7 +317,7 @@ fun AutomationsScreen(viewModel: AppViewModel) {
                 RowDivider()
                 ToggleRow(
                     label = uiString(R.string.l10n_automations_screen_only_during_active_hours_29c53fc9),
-                    help = "Only nudge during your active hours.",
+                    help = uiString(R.string.l10n_automations_screen_only_nudge_during_your_active_hours_f308e0a9),
                     checked = inactivityActiveHours,
                     onChange = {
                         inactivityActiveHours = it
@@ -300,7 +331,7 @@ fun AutomationsScreen(viewModel: AppViewModel) {
                         Spacer(Modifier.weight(1f))
                         TimeChip(
                             minutes = inactivityActiveStart,
-                            accessibilityLabel = "Active hours start",
+                            accessibilityLabel = uiString(R.string.l10n_automations_screen_active_hours_start_0e4bea34),
                             onPicked = {
                                 inactivityActiveStart = it
                                 InactivityPrefs.setInt(ctx, InactivityPrefs.ACTIVE_START_MIN, it)
@@ -311,7 +342,7 @@ fun AutomationsScreen(viewModel: AppViewModel) {
                         Spacer(Modifier.width(8.dp))
                         TimeChip(
                             minutes = inactivityActiveEnd,
-                            accessibilityLabel = "Active hours end",
+                            accessibilityLabel = uiString(R.string.l10n_automations_screen_active_hours_end_9c483811),
                             onPicked = {
                                 inactivityActiveEnd = it
                                 InactivityPrefs.setInt(ctx, InactivityPrefs.ACTIVE_END_MIN, it)
@@ -333,7 +364,7 @@ fun AutomationsScreen(viewModel: AppViewModel) {
         SettingsSection(
             icon = Icons.Filled.MonitorHeart,
             title = uiString(R.string.l10n_automations_screen_illness_early_warning_453ab477),
-            blurb = "Watches your resting HR, HRV, skin temperature and respiration against your own 28-day baseline. On-device and approximate: informational only, not a diagnosis.",
+            blurb = uiString(R.string.l10n_automations_screen_watches_your_resting_hr_hrv_skin_tempera_1cac89f1),
             active = illnessWatch,
         ) {
             ToggleRow(
@@ -495,7 +526,7 @@ internal fun AlarmDayOverridePicker(
             val effective = overrides[dow] ?: defaultMinutes
             val hasOverride = overrides.containsKey(dow)
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(smartAlarmWeekdayName(dow), style = NoopType.body, color = Palette.textPrimary)
+                Text(smartAlarmWeekdayName(dow).text(), style = NoopType.body, color = Palette.textPrimary)
                 Spacer(Modifier.weight(1f))
                 if (hasOverride) {
                     Text(
@@ -511,7 +542,7 @@ internal fun AlarmDayOverridePicker(
                 }
                 TimeChip(
                     minutes = effective,
-                    accessibilityLabel = "${smartAlarmWeekdayName(dow)} wake time",
+                    accessibilityLabel = uiString(R.string.l10n_automations_screen_wake_time_d56491ec, smartAlarmWeekdayName(dow).text()),
                     onPicked = { onSetOverride(dow, it) },
                 )
             }
@@ -537,8 +568,8 @@ private fun SettingsSection(
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Overline("Automation")
-                    if (active) Overline("ON", color = Palette.accent)
+                    Overline(uiString(R.string.l10n_automations_screen_automation_a15fde51))
+                    if (active) Overline(uiString(R.string.l10n_automations_screen_on_387d7a59), color = Palette.accent)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -573,7 +604,7 @@ private fun DoubleTapActionPicker(
                 .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(selected.label, style = NoopType.body, color = Palette.textPrimary)
+            Text(selected.label.text(), style = NoopType.body, color = Palette.textPrimary)
             Spacer(Modifier.width(4.dp))
             Icon(
                 Icons.Filled.ArrowDropDown,
@@ -587,7 +618,7 @@ private fun DoubleTapActionPicker(
                 DropdownMenuItem(
                     text = {
                         Text(
-                            action.label,
+                            action.label.text(),
                             style = NoopType.body,
                             color = if (action == selected) Palette.accent else Palette.textPrimary,
                         )
@@ -668,7 +699,11 @@ internal fun AlarmWeekdayPicker(selected: Set<Int>, onToggle: (Int) -> Unit) {
                 }
             }
         }
-        Text(smartAlarmWeekdaySummary(selected), style = NoopType.caption, color = Palette.textTertiary)
+        Text(
+            smartAlarmWeekdaySummary(selected).joined(),
+            style = NoopType.caption,
+            color = Palette.textTertiary,
+        )
     }
 }
 
@@ -694,21 +729,38 @@ internal fun toggledSmartAlarmWeekday(dow: Int, days: Set<Int>): Set<Int> {
     return if (next.size == 7) emptySet() else next
 }
 
-/** Human-readable summary of the selection. Pure for tests. Mirrors macOS `weekdaySummary`. */
-internal fun smartAlarmWeekdaySummary(days: Set<Int>): String = when {
-    days.isEmpty() || days.size == 7 -> "Every day"
-    days == setOf(2, 3, 4, 5, 6) -> "Weekdays"
-    days == setOf(1, 7) -> "Weekends"
-    else -> SMART_ALARM_WEEKDAY_ORDER.filter { days.contains(it) }
-        .joinToString(", ") { smartAlarmWeekdayName(it) }
+/**
+ * The selection as PARTS, joined with ", " by the caller — the same shape `syncedFromSummary` and
+ * `heroSourceLabel` use, and for the same reason: a joined String cannot be built in a pure helper once
+ * its pieces are localised (resolving a resource needs the Application). Mirrors macOS
+ * `alarmWeekdaySummary`, including its three special cases.
+ */
+internal fun smartAlarmWeekdaySummary(days: Set<Int>): List<DisplayText> = when {
+    days.isEmpty() || days.size == 7 -> listOf(DisplayText.Resource(R.string.l10n_automations_screen_every_day_3b2eb513))
+    days == setOf(2, 3, 4, 5, 6) -> listOf(DisplayText.Resource(R.string.l10n_automations_screen_weekdays_4ffc67b6))
+    days == setOf(1, 7) -> listOf(DisplayText.Resource(R.string.l10n_automations_screen_weekends_2f92a0aa))
+    else -> SMART_ALARM_WEEKDAY_ORDER.filter { days.contains(it) }.map { smartAlarmWeekdayName(it) }
 }
 
-private fun smartAlarmWeekdayInitial(dow: Int): String = when (dow) {
-    1 -> "S"; 2 -> "M"; 3 -> "T"; 4 -> "W"; 5 -> "T"; 6 -> "F"; 7 -> "S"; else -> "?"
+/**
+ * One-letter day chip. Derived from the LOCALISED short name so the initials follow the language, as
+ * macOS `alarmWeekdayInitial` does ("Mo" -> "M", "Di" -> "D"); the English answers are unchanged.
+ */
+private fun smartAlarmWeekdayInitial(dow: Int): String {
+    val short = smartAlarmWeekdayName(dow).plain()
+    return if (short == "?") "?" else short.take(1)
 }
 
-private fun smartAlarmWeekdayName(dow: Int): String = when (dow) {
-    1 -> "Sun"; 2 -> "Mon"; 3 -> "Tue"; 4 -> "Wed"; 5 -> "Thu"; 6 -> "Fri"; 7 -> "Sat"; else -> "?"
+/** The short weekday name, from the catalog ("So"/"Mo"/... in German), never a hardcoded English one. */
+private fun smartAlarmWeekdayName(dow: Int): DisplayText = when (dow) {
+    1 -> DisplayText.Resource(R.string.l10n_automations_screen_sun_48c98cab)
+    2 -> DisplayText.Resource(R.string.l10n_automations_screen_mon_24b2a099)
+    3 -> DisplayText.Resource(R.string.l10n_automations_screen_tue_529541bb)
+    4 -> DisplayText.Resource(R.string.l10n_automations_screen_wed_23408b19)
+    5 -> DisplayText.Resource(R.string.l10n_automations_screen_thu_3593ccd9)
+    6 -> DisplayText.Resource(R.string.l10n_automations_screen_fri_bbd6e32e)
+    7 -> DisplayText.Resource(R.string.l10n_automations_screen_sat_6b782d41)
+    else -> DisplayText.Dynamic("?")
 }
 
 /** A label/help row with a −[value]+ stepper, clamped to [range] and moved by [step]. */

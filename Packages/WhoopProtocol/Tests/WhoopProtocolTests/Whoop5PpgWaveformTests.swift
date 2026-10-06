@@ -102,7 +102,7 @@ final class Whoop5PpgWaveformTests: XCTestCase {
         let streams = extractHistoricalStreams([f], deviceClockRef: 1_780_917_232, wallClockRef: 1_780_917_232)
         XCTAssertEqual(streams.ppgWaveform,
                        [PpgWaveformSample(ts: 1_780_917_232, samples: expectedWaveform, burstIndex: 1,
-                                          baseCode: expectedBaseCode)])
+                                          baseCode: expectedBaseCode, rawFrame: bytes(v26Hex))])
         XCTAssertTrue(streams.ppgHr.isEmpty, "a lone 1 s record is too short for a confident HR estimate")
         // Not "no rows at all" — the Backfiller's silent-data-loss diagnostic must see this as decoded.
         XCTAssertFalse(streams.isEmpty)

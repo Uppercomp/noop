@@ -49,6 +49,9 @@ import com.noop.analytics.IllnessDistance
 import com.noop.analytics.IllnessSignalEngine
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 // MARK: - Skin-temperature suite cards (v5 pillar) — Compose twin
 //
@@ -125,7 +128,7 @@ fun CycleAwarenessCard(
             // Header: overline + confidence pill.
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Overline("Cycle awareness")
+                    Overline(uiString(R.string.l10n_skin_temp_cards_screen_cycle_awareness_ffb94783))
                     Text(
                         uiString(R.string.l10n_skin_temp_cards_screen_from_your_nightly_temperature_ff8cca1a),
                         style = NoopType.footnote,
@@ -231,7 +234,7 @@ fun BodyClockCard(
         Column(verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Overline("Body clock")
+                    Overline(uiString(R.string.l10n_body_clock_dial_card_body_clock_b0b9b988))
                     Text(uiString(R.string.l10n_skin_temp_cards_screen_light_sleep_timing_only_df2a1552), style = NoopType.footnote, color = Palette.textTertiary)
                 }
                 StatePill(bodyClockConfidenceLabel(estimate.confidence), tone = bodyClockConfidenceTone(estimate.confidence))
@@ -254,7 +257,7 @@ fun BodyClockCard(
             if (plan != null && plan.direction != CircadianEngine.ShiftDirection.NONE && firstDay != null) {
                 HorizontalDivider(color = Palette.hairline)
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Overline("Plan · ${plan.estimatedDays}-day shift")
+                    Overline(uiString(R.string.l10n_skin_temp_cards_screen_plan_lld_day_shift_a7356254, plan.estimatedDays))
                     Text(
                         uiString(R.string.l10n_skin_temp_cards_screen_day_1_bright_light_clockstring_firstday_43b5fe87, clockString(firstDay.brightLightStartHour), clockString(firstDay.brightLightEndHour), clockString(firstDay.targetSleepHour)),
                         style = NoopType.subhead,
@@ -268,7 +271,7 @@ fun BodyClockCard(
                 OutlinedButton(
                     onClick = onOpenPlanner,
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Palette.accent),
-                ) { Text(if (plan == null) "Plan a trip or shift" else "View the full plan") }
+                ) { Text(if (plan == null) uiString(R.string.l10n_skin_temp_cards_screen_plan_a_trip_or_shift_bf373209) else uiString(R.string.l10n_skin_temp_cards_screen_view_the_full_plan_451bac18)) }
             }
         }
     }
@@ -310,11 +313,11 @@ fun HeadsUpCard(
 
             // The visible "why": which signals fired.
             if (result.firedSignals.isNotEmpty()) {
-                WhyRow("Signals up", result.firedSignals, hue)
+                WhyRow(uiString(R.string.l10n_skin_temp_cards_screen_signals_up_7626de19), result.firedSignals, hue)
             }
             // ...and what was ruled out (the differentiating part vs a black-box warning).
             if (result.suppressedBy.isNotEmpty()) {
-                WhyRow("Explained by", result.suppressedBy, Palette.textTertiary)
+                WhyRow(uiString(R.string.l10n_skin_temp_cards_screen_explained_by_0c28b06f), result.suppressedBy, Palette.textTertiary)
             }
             // Optional confidence read from the parallel Mahalanobis distance, only when the level is
             // raised. Subtle by design: it augments, never gates (the engine already decided to raise).
@@ -338,7 +341,7 @@ private fun headsUpConfidenceLine(
 ): String? {
     if (level != IllnessSignalEngine.Level.RAISED) return null
     val d = distance ?: return null
-    return "Confidence: ${illnessConfidenceBand(d.distance)} (distance ${illnessConfidenceFormatted(d.distance)})"
+    return uiString(R.string.l10n_skin_temp_cards_screen_confidence_distance_52b6a957, illnessConfidenceBand(d.distance), illnessConfidenceFormatted(d.distance))
 }
 
 /**
@@ -347,9 +350,9 @@ private fun headsUpConfidenceLine(
  * moderate, else slight. Identical to the Swift twin (IllnessConfidence.band).
  */
 private fun illnessConfidenceBand(distance: Double): String = when {
-    distance >= 3.5 -> "strong"
-    distance >= 2.5 -> "moderate"
-    else -> "slight"
+    distance >= 3.5 -> uiString(R.string.l10n_compare_screen_strong_0117691d)
+    distance >= 2.5 -> uiString(R.string.l10n_compare_screen_moderate_78cd1257)
+    else -> uiString(R.string.l10n_skin_temp_cards_screen_slight_209700f3)
 }
 
 /** One-decimal display value for the distance, locale-independent. Mirrors iOS String(format: "%.1f"). */
@@ -398,9 +401,9 @@ private fun cycleDayText(r: CyclePhaseEngine.Result): String? {
 }
 
 private fun cycleConfidenceLabel(c: CyclePhaseEngine.Confidence): String = when (c) {
-    CyclePhaseEngine.Confidence.LEARNING -> "Learning"
-    CyclePhaseEngine.Confidence.BUILDING -> "Building"
-    CyclePhaseEngine.Confidence.SOLID -> "Solid"
+    CyclePhaseEngine.Confidence.LEARNING -> uiString(R.string.l10n_skin_temp_cards_screen_learning_1016fcb2)
+    CyclePhaseEngine.Confidence.BUILDING -> uiString(R.string.scoring_guide_building)
+    CyclePhaseEngine.Confidence.SOLID -> uiString(R.string.scoring_guide_solid)
 }
 
 private fun cycleConfidenceTone(c: CyclePhaseEngine.Confidence): StrandTone = when (c) {
@@ -409,19 +412,24 @@ private fun cycleConfidenceTone(c: CyclePhaseEngine.Confidence): StrandTone = wh
     CyclePhaseEngine.Confidence.SOLID -> StrandTone.Accent
 }
 
-/** "About 25 min later than your schedule" — a plain, skimmable headline. */
+/** "About 25 min later than your schedule" — a plain, skimmable headline, every branch translated. */
 private fun bodyClockOffsetTitle(e: CircadianEngine.PhaseEstimate): String {
-    if (e.confidence == CircadianEngine.PhaseConfidence.UNREADABLE) return "Hard to read right now"
+    if (e.confidence == CircadianEngine.PhaseConfidence.UNREADABLE) {
+        return uiString(R.string.l10n_skin_temp_cards_screen_hard_to_read_right_now_442c982b)
+    }
     val mins = abs(e.offsetVsScheduleMinutes).roundToInt()
-    if (mins <= 20) return "About in sync with your schedule"
-    val dir = if (e.offsetVsScheduleMinutes > 0) "later" else "earlier"
-    return "About $mins min $dir than your schedule"
+    if (mins <= 20) return uiString(R.string.l10n_skin_temp_cards_screen_about_in_sync_with_your_schedule_b3a53bbc)
+    return if (e.offsetVsScheduleMinutes > 0) {
+        uiString(R.string.l10n_skin_temp_cards_screen_about_lld_min_later_than_your_schedule_92c725ae, mins)
+    } else {
+        uiString(R.string.l10n_skin_temp_cards_screen_about_lld_min_earlier_than_your_schedule_30a5195e, mins)
+    }
 }
 
 private fun bodyClockConfidenceLabel(c: CircadianEngine.PhaseConfidence): String = when (c) {
-    CircadianEngine.PhaseConfidence.UNREADABLE -> "Calibrating"
-    CircadianEngine.PhaseConfidence.WIDE -> "Building"
-    CircadianEngine.PhaseConfidence.SOLID -> "Solid"
+    CircadianEngine.PhaseConfidence.UNREADABLE -> uiString(R.string.l10n_today_screen_calibrating_37c2c9bd)
+    CircadianEngine.PhaseConfidence.WIDE -> uiString(R.string.scoring_guide_building)
+    CircadianEngine.PhaseConfidence.SOLID -> uiString(R.string.scoring_guide_solid)
 }
 
 private fun bodyClockConfidenceTone(c: CircadianEngine.PhaseConfidence): StrandTone = when (c) {
@@ -446,11 +454,11 @@ private fun headsUpGlyph(level: IllnessSignalEngine.Level): ImageVector = when (
 }
 
 private fun headsUpTitle(level: IllnessSignalEngine.Level): String = when (level) {
-    IllnessSignalEngine.Level.RAISED -> "Heads-up"
-    IllnessSignalEngine.Level.ALREADY_UNWELL -> "Rest up"
-    IllnessSignalEngine.Level.SUPPRESSED -> "Probably not illness"
-    IllnessSignalEngine.Level.MILD -> "A few signals are up"
-    IllnessSignalEngine.Level.QUIET -> "Nothing notable"
+    IllnessSignalEngine.Level.RAISED -> uiString(R.string.l10n_skin_temp_cards_screen_heads_up_508bfb09)
+    IllnessSignalEngine.Level.ALREADY_UNWELL -> uiString(R.string.l10n_skin_temp_cards_screen_rest_up_8f8c666f)
+    IllnessSignalEngine.Level.SUPPRESSED -> uiString(R.string.l10n_skin_temp_cards_screen_probably_not_illness_485dd939)
+    IllnessSignalEngine.Level.MILD -> uiString(R.string.l10n_skin_temp_cards_screen_a_few_signals_are_up_9043dcaf)
+    IllnessSignalEngine.Level.QUIET -> uiString(R.string.l10n_skin_temp_cards_screen_nothing_notable_9b3477c0)
 }
 
 // MARK: - Formatting helpers (locale-free, matching the engine's own helpers)
@@ -465,13 +473,19 @@ private fun clockString(hour: Double): String {
     return "%02d:%02d".format(hh, mm)
 }
 
-/** "12 Jun" from a "yyyy-MM-dd" key (display only; the engine math stays UTC). */
+/**
+ * "12 Jun" from a "yyyy-MM-dd" key (display only; the engine math stays UTC).
+ *
+ * Resolved through a LOCALE-AWARE formatter, not a hardcoded English month table: the iOS twin formats
+ * with `.month(.abbreviated).locale(AppLanguage.activeLocale)`, so a German build shows "12 Jun." and a
+ * Chinese one "12 6月". On Android `Locale.getDefault()` IS the app language (`AppLanguagePrefs.wrap`).
+ */
 private fun prettyDay(key: String): String {
     val parts = key.split("-")
     if (parts.size != 3) return key
     val m = parts[1].toIntOrNull() ?: return key
     val d = parts[2].toIntOrNull() ?: return key
     if (m !in 1..12) return key
-    val months = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
-    return "$d ${months[m - 1]}"
+    val date = runCatching { LocalDate.of(parts[0].toInt(), m, d) }.getOrNull() ?: return key
+    return date.format(DateTimeFormatter.ofPattern("d MMM", Locale.getDefault()))
 }

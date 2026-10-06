@@ -99,7 +99,7 @@ fun MindSection(vm: AppViewModel) {
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
-        SectionHeader("Mind", overline = "Mood check-in")
+        SectionHeader(uiString(R.string.explore_category_mind), overline = "Mood check-in")
 
         NoopCard {
             Column(verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
@@ -198,7 +198,7 @@ fun MindSection(vm: AppViewModel) {
 @Composable
 private fun MoodFaceButton(face: MoodFace, selected: Boolean, onClick: () -> Unit) {
     val shape = RoundedCornerShape(50)
-    val desc = "${face.word}, mood ${face.value.toInt()} of 5"
+    val desc = uiString(R.string.l10n_mind_section_mood_lld_of_5_9a09b833, face.word, face.value.toInt())
     Box(
         modifier = Modifier
             .clip(shape)

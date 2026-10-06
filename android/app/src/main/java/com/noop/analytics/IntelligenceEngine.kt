@@ -2834,6 +2834,32 @@ object IntelligenceEngine {
      * check is the same `LIMIT 1` over the same window the caller already reads. Mirrors the Swift
      * IntelligenceEngine.resolveDayOwner.
      */
+    /**
+     * The single device that owns [day], for a caller OUTSIDE the scoring loop — the skin-temp absolute
+     * backfill's per-night owner resolution.
+     *
+     * A thin wrapper over the SAME private [resolveDayOwner] the scoring pass uses, with the SAME
+     * `candidatePriorities()` construction, deliberately: a night's raw streams must be read from the device
+     * that actually wrote them, and a second precedence rule in the backfill could name a different owner
+     * for the same day than the score did (the "assert the single resolver" rule).
+     */
+    suspend fun resolveDayOwnerForBackfill(
+        repo: WhoopRepository,
+        ownerSource: DayOwnerSource?,
+        day: String,
+        from: Long,
+        to: Long,
+        importedDeviceId: String,
+    ): String = resolveDayOwner(
+        repo = repo,
+        ownerSource = ownerSource,
+        candidatePriorities = ownerSource?.candidatePriorities().orEmpty(),
+        day = day,
+        from = from,
+        to = to,
+        importedDeviceId = importedDeviceId,
+    )
+
     private suspend fun resolveDayOwner(
         repo: WhoopRepository,
         ownerSource: DayOwnerSource?,

@@ -66,7 +66,7 @@ internal data class Vital(
     private val baseCaption: String = when {
         // #103: when the Blood O₂ tile is showing the spo2_candidate_82 strap estimate (not a
         // calibrated spo2Pct), label it "estimate" so the user knows this is an unverified value.
-        isEstimate && banding.band != VitalBands.Band.NO_DATA -> "Estimate (unverified)"
+        isEstimate && banding.band != VitalBands.Band.NO_DATA -> uiString(R.string.spo2_strap_estimate_caption)
         // Raw SpO₂ is a device-dependent ADC, not a clinical value — never claim an in/out-of-range
         // judgment. Show a plain "uncalibrated" note when a value decoded. (#93)
         key == "spo2raw" && banding.band != VitalBands.Band.NO_DATA -> "Uncalibrated"
@@ -95,7 +95,7 @@ internal data class Vital(
     val accessibilityText: String =
         formattedValue?.let {
             listOfNotNull("$label: $it", asOfLabel, stateCaption).joinToString(", ")
-        } ?: "$label: no data"
+        } ?: uiString(R.string.l10n_health_vitals_logic_no_data_8035837c, label)
 }
 
 /**
@@ -233,6 +233,11 @@ internal enum class VitalCaptionMode {
     RANGE,
 }
 
+// Candidate values receive a neutral presentation, without clinical threshold judgement.
+internal fun spo2DisplayBand(calibrated: Double?, candidate: Double?): VitalBands.Result =
+    VitalBands.band(calibrated ?: candidate, emptyList(),
+        if (calibrated == null) 0.0..100.0 else 95.0..100.0, null)
+
 /** Build the vitals, banded against the user's OWN trailing baseline once 14 trusted
  *  nights exist (population ranges before that — VitalBands does the deciding).
  *
@@ -361,8 +366,8 @@ internal fun vitalsFor(
             key = "spo2", label = uiString(R.string.l10n_health_screen_blood_o_9bf5ed9b), unit = "%",
             // #103: fall back to the spo2_candidate_82 strap estimate when no calibrated spo2Pct exists
             // and the experimental display toggle is ON (candidate map is non-empty). The candidate is
-            // an unverified strap-computed value (split cross-device evidence), so it ships behind a
-            // default-off toggle and is labelled "estimate" — never fed into a downstream gate.
+            // an unvalidated candidate, labelled at every display surface and never scored.
+            // This Android fork enables the display by default; a saved off choice is respected.
             // The condition is EXACTLY the Raw SpO₂ tile's own value expression (`d?.let(spo2RawMean)`,
             // below) and must stay that way: the caption's claim is "the tile beside this one is
             // showing a number", so if the two expressions drift, this says the sensor recorded on a
@@ -380,9 +385,9 @@ internal fun vitalsFor(
             readingDay = todayKey,
             asOfLabel = asOfLabel(todayKey),
             rangeCaption = spo2RangeCaption,
-            // Population-only on purpose: an absolute <95% floor is meaningful regardless
-            // of personal baseline (no "spo2" MetricCfg exists).
-            banding = VitalBands.band(d?.spo2Pct ?: d?.day?.let { spo2CandidateByDay[it] }, emptyList(), 95.0..100.0, null),
+            // Only imported percentages receive a population judgement. An unvalidated candidate
+            // must not change to warning amber at a clinical threshold.
+            banding = spo2DisplayBand(d?.spo2Pct, d?.day?.let { spo2CandidateByDay[it] }),
             metricColor = Palette.metricCyan,
             sparkline = trail(d?.spo2Pct) { it.spo2Pct },
             // #103: mark as estimate when the value came from the candidate, not a calibrated spo2Pct.
@@ -532,8 +537,8 @@ private fun latestVital(
 }
 
 internal fun selectedDayLabel(offset: Int): String = when (offset) {
-    0 -> "Today"
-    1 -> "Yesterday"
+    0 -> uiString(R.string.nav_today)
+    1 -> uiString(R.string.today_day_yesterday)
     else -> "2 days ago"
 }
 
@@ -545,7 +550,7 @@ internal fun missingVitalsTitle(offset: Int): String = when (offset) {
 
 internal fun asOfLabel(day: String?): String? {
     if (day.isNullOrBlank()) return null
-    val date = runCatching { LocalDate.parse(day) }.getOrNull() ?: return "as of $day"
+    val date = runCatching { LocalDate.parse(day) }.getOrNull() ?: return uiString(R.string.l10n_health_vitals_logic_as_of_daedbd14, day)
     val today = LocalDate.now()
     return when (date) {
         today -> "as of today"

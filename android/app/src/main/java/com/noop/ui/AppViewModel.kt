@@ -3,6 +3,7 @@ package com.noop.ui
 import android.app.Application
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
+import com.noop.R
 import androidx.lifecycle.viewModelScope
 import com.noop.NoopApplication
 import com.noop.alarm.SmartAlarmScheduler
@@ -132,6 +133,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val ble = noopApp.ble
 
     val repo: WhoopRepository get() = repository
+
+    /** The in-app strength log's reads/writes. Process-wide, like the store it sits over. */
+    val liftLog: com.noop.data.LiftLogRepository get() = noopApp.liftLog
+
+    /**
+     * The live Lift session, owned by the process rather than by a screen: a workout outlives the screen
+     * you happen to be looking at.
+     */
+    val liftSession: LiftSessionController get() = noopApp.liftSession
+
+    /**
+     * A process-lifetime scope for Lift writes that must complete even as the UI that started them goes
+     * away — saving a finished session is the case that needs it (see [NoopApplication.liftScope]).
+     */
+    val liftScope: kotlinx.coroutines.CoroutineScope get() = noopApp.liftScope
 
     /** The registry's active strap id (the same id the read path resolves to). The getter stays source
      * compatible for existing call sites; reactive screens collect [activeStrapIdFlow]. */
@@ -707,10 +723,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // Wind-down nudge (#207) — cross-platform, NON-safety-critical. A gentle evening notification
     // derived from the user's earliest wake time. Inexact daily alarm; no exact-alarm permission.
+    // Strap double-tap "moments" (the log line is kept too; this is the visible list iOS shows).
+    private val momentStore = MomentStore.from(appContext)
+    private val _moments = MutableStateFlow(momentStore.load())
+    /** Marked moments, oldest first, epoch millis. Newest-first display order is the caller's. */
+    val moments: StateFlow<List<Long>> = _moments.asStateFlow()
+
     private val windDownStore = WindDownStore.from(appContext)
     private val _windDownEnabled = MutableStateFlow(windDownStore.enabled)
     /** Whether the evening wind-down nudge is scheduled. */
     val windDownEnabled: StateFlow<Boolean> = _windDownEnabled.asStateFlow()
+    /** The wind-down's own usual wake time, minutes since midnight. iOS's `WindDownNudge.wakeMinutes`. */
+    private val _windDownWakeMinutes = MutableStateFlow(windDownStore.wakeMinutes)
+    val windDownWakeMinutes: StateFlow<Int> = _windDownWakeMinutes.asStateFlow()
 
     // MARK: - Today's cached metrics
 
@@ -2108,7 +2133,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val durMin = ((row.durationS ?: (row.endTs - row.startTs).toDouble()) / 60.0).roundToInt()
         val (title, body) = if (row.strain != null) {
             ScheduledReportPolicy.workoutCopy(
-                sportLabel = WorkoutEditing.displaySport(row.sport),
+                sportLabel = WorkoutEditing.sportCellText(row.sport),
                 effortDisplay = UnitFormatter.effortDisplay(row.strain, scale),
                 effortMaxLabel = UnitFormatter.effortScaleMax(scale),
                 durationLabel = ScheduledReportPolicy.durationLabel(durMin),
@@ -2752,9 +2777,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         phoneAlarmStore.targetMinutes = minutes
         _phoneAlarmTargetMinutes.value = phoneAlarmStore.targetMinutes
         if (phoneAlarmStore.enabled) SmartAlarmScheduler.arm(appContext, phoneAlarmStore)
-        // The wind-down nudge is derived from the wake time, so keep it in step.
+        // The wind-down nudge has its OWN wake time now (iOS's `WindDownNudge.wakeMinutes`), so moving the
+        // phone alarm no longer moves the reminder. It is re-armed here only for the per-day overrides,
+        // which still come from the phone alarm and DO change with this.
         if (windDownStore.enabled) WindDownScheduler.schedule(
-            appContext, windDownStore, phoneAlarmStore.targetMinutes, phoneAlarmStore.targetOverrides,
+            appContext, windDownStore, windDownStore.wakeMinutes, phoneAlarmStore.targetOverrides,
         )
         // #536: re-arm the strap at the new earliest time when "Buzz WHOOP 4" is on. Routed through the
         // single reconciler so it can't clobber a smart-alarm the user still has on (#5).
@@ -2780,12 +2807,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // this reason; omitting it here would leave the strap armed for the old time until some unrelated
         // edit happened to reconcile — a strap buzzing at the wrong hour being worse than one not buzzing.
         reconcileStrapAlarm()
-        // The wind-down nudge is anchored to the wake time this just moved, so it has to move too —
-        // Apple's WindDownNudge has fanned out per-day since #554. Without this the reminder keeps
-        // pointing at the old wake on exactly the day the user changed.
+        // The nudge fans out per-day from these overrides (Apple's WindDownNudge has since #554), so it has
+        // to be re-armed when one moves — otherwise the reminder keeps pointing at the old time on exactly
+        // the day the user changed.
         if (windDownStore.enabled) {
             WindDownScheduler.schedule(
-                appContext, windDownStore, phoneAlarmStore.targetMinutes, phoneAlarmStore.targetOverrides,
+                appContext, windDownStore, windDownStore.wakeMinutes, phoneAlarmStore.targetOverrides,
             )
         }
     }
@@ -2825,6 +2852,39 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Enable/disable the evening wind-down nudge. Schedules the daily inexact reminder from the
      *  current earliest wake time, or cancels it. */
+    /**
+     * Set the wind-down's usual wake time (minutes since midnight). Re-arms while enabled so the reminder
+     * moves immediately rather than at the next fire — the same reason every other alarm edit re-arms.
+     * Mirrors iOS's `wakeBinding.set`, which writes `WindDownNudge.setWakeMinutes` from the card's picker.
+     */
+    fun setWindDownWakeMinutes(minutes: Int) {
+        windDownStore.wakeMinutes = minutes
+        _windDownWakeMinutes.value = windDownStore.wakeMinutes
+        if (windDownStore.enabled) {
+            WindDownScheduler.schedule(
+                appContext, windDownStore, windDownStore.wakeMinutes, phoneAlarmStore.targetOverrides,
+            )
+        }
+    }
+
+    /** The stored sleep need (minutes) the wind-down arithmetic uses, for the card's
+     *  "fires Xh Ym before this" line. Read from the store rather than restated here. */
+    fun windDownSleepNeedMinutes(): Int = windDownStore.sleepNeedMinutes
+
+    /** The stored lead (minutes) the wind-down arithmetic uses. */
+    fun windDownLeadMinutes(): Int = windDownStore.leadMinutes
+
+    /**
+     * The minute-of-day the wind-down nudge fires on [weekday] (Calendar 1=Sun…7=Sat).
+     *
+     * Resolved through the SAME funnel [WindDownScheduler.schedule] uses — the wind-down's own wake time
+     * combined with the per-day overrides — so the card's "You'll be reminded around …" cannot disagree
+     * with the reminder that actually fires. Asserting the single resolver, not counting call sites.
+     */
+    fun windDownNudgeMinuteOfDay(weekday: Int): Int = windDownStore.nudgeMinuteOfDay(
+        windDownStore.effectiveWakeMinutes(weekday, phoneAlarmStore.targetOverrides),
+    )
+
     fun setWindDownEnabled(enabled: Boolean) {
         windDownStore.enabled = enabled
         _windDownEnabled.value = enabled
@@ -3087,9 +3147,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (ev == lastDispatchedEvent) return       // not a fresh event since we last looked
         lastDispatchedEvent = ev
         if (ev == null || !ev.startsWith("DOUBLE_TAP")) return
+        // A running gym session claims the gesture for its LIFETIME (iOS `setStrapHandler`), so the tap
+        // advances the session rather than running the configured automation. Checked BEFORE the action,
+        // and before the NONE check below, because a session must get the tap even when no automation is
+        // configured — which is every install that has never opened Automations.
+        noopApp.liftStrapTap?.let { handler -> handler(); return }
         val action = _doubleTapAction.value
         if (action == DoubleTapAction.NONE) return
-        ble.externalLog("Double-tap -> ${action.label}")
+        ble.externalLog("Double-tap -> ${action.name}")
         runDoubleTapAction(action)
     }
 
@@ -3114,6 +3179,40 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val clock = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date())
         ble.externalLog("Moment marked @ $clock")
         ble.buzz(1)
+        // Keep the list iOS shows under the double-tap card. The log line above stays: it is what a bug
+        // report needs, and the two are different audiences for the same event.
+        val next = MomentStore.append(_moments.value, System.currentTimeMillis())
+        momentStore.save(next)
+        _moments.value = next
+    }
+
+    /** Clear every marked moment — iOS's "Clear" in the "Recent moments" header. */
+    /**
+     * #1853: run the skin-temp absolute backfill and return its diagnostic line.
+     *
+     * Here rather than in the screen because the ViewModel owns the repository, the strap-log sink and the
+     * day-owner source; a composable reaching for `noopApp.deviceRegistry` would duplicate that wiring. The
+     * line is appended to the shareable strap log as well as returned, so a report carries the evidence.
+     */
+    suspend fun runSkinTempBackfill(): String {
+        val nowSeconds = System.currentTimeMillis() / 1_000L
+        val tzOffset = java.time.ZoneId.systemDefault().rules
+            .getOffset(java.time.Instant.ofEpochSecond(nowSeconds)).totalSeconds.toLong()
+        val result = SkinTempBackfillRunner.runBackfill(
+            repo = repo,
+            ownerSource = RegistryDayOwnerSource(noopApp.deviceRegistry),
+            importedDeviceId = activeStrapId,
+            tzOffsetSeconds = tzOffset,
+            nowSeconds = nowSeconds,
+        )
+        val line = SkinTempBackfillRunner.reportLine(result)
+        ble.externalLog(line)
+        return line
+    }
+
+    fun clearMoments() {
+        momentStore.save(emptyList())
+        _moments.value = emptyList()
     }
 
     /** Record a "sleep mark" via the existing [SleepMark] analytics + the shareable strap log, with a
@@ -3229,14 +3328,17 @@ enum class DoubleTapAction {
     SLEEP_MARK,   // log a sleep mark (#461)
     HAPTIC_CLOCK; // buzz the current time out on the strap (#460)
 
-    /** The picker label, mirroring the iOS `MacActionKind.label` wording for the same cases. */
-    val label: String
+    /**
+     * The picker label, mirroring the iOS `MacActionKind.label` wording for the same cases. `internal`
+     * because [DisplayText] is: the type is the app's, not a published API surface.
+     */
+    internal val label: DisplayText
         get() = when (this) {
-            NONE -> "Nothing"
-            BUZZ_BACK -> "Buzz back (confirm)"
-            MARK_MOMENT -> "Mark a moment"
-            SLEEP_MARK -> "Log a sleep mark"
-            HAPTIC_CLOCK -> "Buzz the time"
+            NONE -> DisplayText.Resource(R.string.l10n_app_view_model_nothing_44819483)
+            BUZZ_BACK -> DisplayText.Resource(R.string.l10n_app_view_model_buzz_back_confirm_b42e21fa)
+            MARK_MOMENT -> DisplayText.Resource(R.string.l10n_app_view_model_mark_a_moment_38605609)
+            SLEEP_MARK -> DisplayText.Resource(R.string.l10n_app_view_model_log_a_sleep_mark_ee8cef04)
+            HAPTIC_CLOCK -> DisplayText.Resource(R.string.l10n_app_view_model_buzz_the_time_a5ceb626)
         }
 
     companion object {

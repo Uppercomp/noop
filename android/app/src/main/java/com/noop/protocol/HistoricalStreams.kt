@@ -345,17 +345,20 @@ fun decodeHistorical(frame: ByteArray, family: DeviceFamily = DeviceFamily.WHOOP
  * happened to decode a plausible `unix` and `gravity_x`/`heart_rate` slipping past the archive filter, so
  * its bytes were kept nowhere at all and the strap freed them on the very next trim ack.
  *
- * ⚠️ DELIBERATELY NARROWER THAN THE SWIFT `mappedWhoop5HistoricalVersions`, which is `[18, 20, 21, 26]`.
- * Swift's `decodeWhoop5Historical` dispatches v20 (raw optical block) and v21 (raw 6-axis IMU) through
- * `decodeWhoop5HistoricalV2021`; the Kotlin historical path has no such branch — `Whoop5RawOptical` and
- * `Whoop5RawImu` exist here but are wired to the LIVE deep-buffer route in `WhoopBleClient`, not to the
- * type-47 historical dispatch. Claiming 20/21 here would assert a field map Android does not have, which
- * is precisely the "it holds by accident" class of bug this constant was introduced to close. The archive
- * OUTCOME is unchanged either way today: an unmapped 5/MG version already decodes to null on Android and
- * so was already archived by the decode-outcome route. Add a version here only when a decoder for it
- * lands on this side. Pinned by `UnmappedHistoricalLayoutTest`.
+ * ⚠️ KEPT IDENTICAL TO THE SWIFT `mappedWhoop5HistoricalVersions`, which is also `[18, 20, 21, 22, 26]`.
+ * An earlier warning here claimed this set was DELIBERATELY narrower than Swift's because "the Kotlin
+ * historical path has no such branch" for v20/v21. That stopped being true when
+ * [decodeWhoop5HistoricalV2021] was ported to this side, and the stale text then asserted a
+ * cross-platform divergence that does not exist — the worst kind of doc rot, because both platforms'
+ * tests assert the two sets are EQUAL while the comment told a reader they differ. v20 (raw optical
+ * block) and v21 (raw 6-axis IMU) both dispatch through [decodeWhoop5HistoricalV2021] below.
+ *
+ * The archive OUTCOME is unchanged by that port: [rejectedHistoricalRecords] asks whether a record
+ * yielded a unix AND a named signal, not merely whether it decoded, so a v20/v21 record that decodes
+ * into unread channels is still preserved raw. Add a version here only when a decoder for it lands on
+ * this side, and add the Swift twin in the same change. Pinned by `UnmappedHistoricalLayoutTest`.
  */
-val MAPPED_WHOOP5_HISTORICAL_VERSIONS: Set<Int> = setOf(18, 20, 21, 26)
+val MAPPED_WHOOP5_HISTORICAL_VERSIONS: Set<Int> = setOf(18, 20, 21, 22, 26)
 
 /**
  * WHOOP 5/MG historical layouts v20 (optical) and v21 (raw 6-axis IMU). Port of the Swift
@@ -463,6 +466,7 @@ private fun decodeWhoop5Historical(frame: ByteArray, limit: Int): Map<String, An
     // record gets archived raw, so the two cannot be allowed to drift; `UnmappedHistoricalLayoutTest`
     // pins the lockstep against the decoder's actual behaviour.
     if (version == 20 || version == 21) return decodeWhoop5HistoricalV2021(frame, version, limit)
+    if (version == 22) return decodeWhoop5Research(frame)
     if (version != 18) return null
 
     val out = LinkedHashMap<String, Any?>()
@@ -475,6 +479,12 @@ private fun decodeWhoop5Historical(frame: ByteArray, limit: Int): Map<String, An
     // decode divergence the per-platform fixture-hex tests cannot see (same bytes, each suite asserting
     // its own answer). PR #848 hit the same 32-vs-64-bit split in the storage codec. Pinned on both
     // platforms by the `whoop5_v18_synthetic_record_index_high_bit` fixture in decoder_oracle.json.
+    // OpenStrap protocol ecb512b: header timing; retain bytes without asserting rate / clock units.
+    frame.histU8(10, limit)?.let { out["record_flags"] = it }
+    frame.histU16(19, limit)?.let { out["timestamp_subseconds"] = it }
+    frame.histU16(61, limit)?.let { out["aux_word_61"] = it }
+    frame.histU8(64, limit)?.let { out["aux_byte_64"] = it }
+    frame.histU8(63, limit)?.let { out["activity_class_raw"] = it }
     frame.histU32(11, limit)?.let { out["record_index"] = it }
     // Same unsigned-domain rule, and here it is not merely a wrong number: a narrowed `unix` goes
     // NEGATIVE past 2038-01-19, fails the #547 plausibility floor, and the record is dropped — see
@@ -988,7 +998,8 @@ fun extractHistoricalStreams(
                             // zero samples never banks an empty row (mirrors the Swift `!samples.isEmpty`).
                             if (rec.samples.isNotEmpty()) {
                                 ppgWaveform.add(
-                                    PpgWaveformRow(baseTs, rec.samples, rec.burstIndex, rec.baseCode),
+                                    PpgWaveformRow(baseTs, rec.samples, rec.burstIndex, rec.baseCode,
+                                        frame.map { it.toInt() and 0xFF }),
                                 )
                             }
                         }
@@ -1124,6 +1135,11 @@ fun extractHistoricalStreams(
                         opticalBaselineB = slot(V18AuxSlot.OPTICAL_BASELINE_B),
                         opticalAmpA = slot(V18AuxSlot.OPTICAL_AMP_A),
                         opticalAmpB = slot(V18AuxSlot.OPTICAL_AMP_B),
+                        recordFlags = slot(V18AuxSlot.RECORD_FLAGS),
+                        timestampSubseconds = slot(V18AuxSlot.TIMESTAMP_SUBSECONDS),
+                        auxWord61 = slot(V18AuxSlot.AUX_WORD_61),
+                        auxByte64 = slot(V18AuxSlot.AUX_BYTE_64),
+                        activityClassRaw = slot(V18AuxSlot.ACTIVITY_CLASS_RAW),
                         // Banked as the float's raw 32-bit pattern, not a decoded value — the decoder
                         // gates this field to finite floats, which round-trip Double->Float exactly.
                         // Reads doubleOrNull, so it cannot use slot() either; same rule for the key.

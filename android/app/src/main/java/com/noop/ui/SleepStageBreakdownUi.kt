@@ -73,7 +73,7 @@ private fun StageBreakdownRow(stage: String, minutes: Double, total: Double, col
             .fillMaxWidth()
             .semantics {
                 contentDescription =
-                    uiString(R.string.l10n_sleep_screen_stage_durationtext_minutes_percent_percent_of_477dbf14, stage, durationText(minutes), percent)
+                    uiString(R.string.l10n_sleep_screen_stage_durationtext_minutes_percent_percent_of_477dbf14, stageDisplayLabel(stage).plain(), durationText(minutes).plain(), percent)
             },
     ) {
         Box(
@@ -83,7 +83,7 @@ private fun StageBreakdownRow(stage: String, minutes: Double, total: Double, col
                 .background(color),
         )
         Text(
-            stage.uppercase(Locale.getDefault()),
+            stageDisplayLabel(stage).text().uppercase(Locale.getDefault()),
             style = NoopType.overline,
             color = Palette.textPrimary,
             maxLines = 1,
@@ -109,7 +109,7 @@ private fun StageBreakdownRow(stage: String, minutes: Double, total: Double, col
             modifier = Modifier.weight(1f),
         )
         Text(
-            durationText(minutes),
+            durationText(minutes).text(),
             style = NoopType.captionNumber,
             color = Palette.textPrimary,
             textAlign = TextAlign.End,

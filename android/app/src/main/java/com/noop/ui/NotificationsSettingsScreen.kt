@@ -269,7 +269,7 @@ fun NotificationsSettingsScreen(vm: AppViewModel) {
 
     ScreenScaffold(
         title = uiString(R.string.l10n_notifications_settings_screen_notifications_753a22b2),
-        subtitle = "Buzz your strap when these apps notify you. Everything runs on this device.",
+        subtitle = uiString(R.string.l10n_notifications_settings_screen_buzz_your_strap_when_these_apps_notify_y_0ea42890),
     ) {
         // MARK: Master card
         AlertSection(
@@ -412,11 +412,11 @@ fun NotificationsSettingsScreen(vm: AppViewModel) {
         AlertSection(
             icon = Icons.Filled.Tune,
             title = uiString(R.string.l10n_notifications_settings_screen_behaviour_171ca038),
-            blurb = "Fine-tune when alerts reach your wrist.",
+            blurb = uiString(R.string.l10n_notifications_settings_screen_fine_tune_when_alerts_reach_your_wrist_4f40f12d),
         ) {
             FormToggleRow(
                 label = uiString(R.string.l10n_notifications_settings_screen_only_buzz_when_worn_6211cee3),
-                help = "Skip alerts when the strap is off your wrist.",
+                help = uiString(R.string.l10n_notifications_settings_screen_skip_alerts_when_the_strap_is_off_your_w_d4dc558d),
                 checked = onlyWhenWorn,
                 onChange = {
                     onlyWhenWorn = it
@@ -438,7 +438,7 @@ fun NotificationsSettingsScreen(vm: AppViewModel) {
             RowDivider()
             FormToggleRow(
                 label = uiString(R.string.l10n_notifications_settings_screen_quiet_hours_706b24d0),
-                help = "Mute wrist alerts overnight.",
+                help = uiString(R.string.l10n_notifications_settings_screen_mute_wrist_alerts_overnight_83422b13),
                 checked = quietHoursEnabled,
                 onChange = {
                     quietHoursEnabled = it
@@ -455,7 +455,7 @@ fun NotificationsSettingsScreen(vm: AppViewModel) {
                     Text(uiString(R.string.l10n_notifications_settings_screen_from_3f66052a), style = NoopType.body, color = Palette.textPrimary)
                     TimeChip(
                         minutes = quietStartMinutes,
-                        accessibilityLabel = "Quiet hours start",
+                        accessibilityLabel = uiString(R.string.l10n_notifications_settings_screen_quiet_hours_start_86f693b7),
                         onPicked = {
                             quietStartMinutes = it
                             NotifPrefs.setInt(context, NotifPrefs.QUIET_START, it)
@@ -464,7 +464,7 @@ fun NotificationsSettingsScreen(vm: AppViewModel) {
                     Text("to", style = NoopType.body, color = Palette.textSecondary)
                     TimeChip(
                         minutes = quietEndMinutes,
-                        accessibilityLabel = "Quiet hours end",
+                        accessibilityLabel = uiString(R.string.l10n_notifications_settings_screen_quiet_hours_end_0fed7c73),
                         onPicked = {
                             quietEndMinutes = it
                             NotifPrefs.setInt(context, NotifPrefs.QUIET_END, it)
@@ -526,9 +526,9 @@ fun NotificationsSettingsScreen(vm: AppViewModel) {
 // MARK: - Strap status (mirrors the three-state mapping from the Mac screen)
 
 private fun strapPillTitle(live: com.noop.ble.LiveState): String = when {
-    live.connected -> "Strap connected"
-    live.bonded -> "Strap idle"
-    else -> "Strap not connected"
+    live.connected -> uiString(R.string.l10n_notifications_settings_screen_strap_connected_caa861bd)
+    live.bonded -> uiString(R.string.l10n_notifications_settings_screen_strap_idle_39c52f2a)
+    else -> uiString(R.string.l10n_notifications_settings_screen_strap_not_connected_53c2f497)
 }
 
 private fun strapPillTone(live: com.noop.ble.LiveState): StrandTone = when {
@@ -740,7 +740,7 @@ private fun AppRow(
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(app.name, style = NoopType.body, color = Palette.textPrimary)
             Text(
-                if (enabled) "Buzzes your wrist" else "Off",
+                if (enabled) uiString(R.string.l10n_notifications_settings_screen_buzzes_your_wrist_e2191d00) else uiString(R.string.l10n_data_sources_screen_off_e3de5ab0),
                 style = NoopType.footnote,
                 color = if (enabled) Palette.accent else Palette.textTertiary,
             )

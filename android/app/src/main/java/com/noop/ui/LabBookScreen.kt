@@ -1,6 +1,7 @@
 package com.noop.ui
 
 import com.noop.R
+import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -163,7 +164,7 @@ fun LabBookScreen(vm: AppViewModel) {
     // byte-identical; the sheets below the scaffold are untouched.
     LazyScreenScaffold(
         title = uiString(R.string.l10n_lab_book_screen_lab_book_f966c140),
-        subtitle = "Your bloods, BP and body numbers. Kept private, on this phone.",
+        subtitle = uiString(R.string.l10n_lab_book_screen_your_bloods_bp_and_body_numbers_kept_pri_876cc868),
     ) {
         // Header card: count + scope + add action.
         item {
@@ -180,7 +181,7 @@ fun LabBookScreen(vm: AppViewModel) {
                         Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, tint = Palette.metricCyan, modifier = Modifier.size(16.dp))
                     }
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(countLine(markers), style = NoopType.headline, color = Palette.textPrimary)
+                        Text(countLine(markers).text(), style = NoopType.headline, color = Palette.textPrimary)
                         Text(
                             uiString(R.string.l10n_lab_book_screen_all_stays_on_this_phone_nothing_9a966c1c),
                             style = NoopType.footnote,
@@ -203,7 +204,7 @@ fun LabBookScreen(vm: AppViewModel) {
                     style = NoopType.subhead,
                     color = Palette.textSecondary,
                 )
-                PrimaryActionButton("Add a reading", Icons.Filled.Add) { showEditor = true }
+                PrimaryActionButton(uiString(R.string.l10n_marker_editor_screen_add_a_reading_ed7708ee), Icons.Filled.Add) { showEditor = true }
             }
         }
         }
@@ -227,12 +228,12 @@ fun LabBookScreen(vm: AppViewModel) {
                     Text(uiString(R.string.l10n_lab_book_screen_import_readings_7ad0d28f), style = NoopType.headline, color = Palette.textPrimary, modifier = Modifier.weight(1f))
                 }
                 Text(
-                    uiString(R.string.l10n_lab_book_screen_bring_in_a_markers_csv_date_1090bec2),
+                    uiString(R.string.l10n_lab_book_screen_bring_in_a_markers_csv_date_1090bec2, deviceNounPhrase()),
                     style = NoopType.subhead,
                     color = Palette.textSecondary,
                 )
                 PrimaryActionButton(
-                    if (csvImporting) "Importing…" else "Choose CSV…",
+                    if (csvImporting) uiString(R.string.onboarding_importing) else "Choose CSV…",
                     Icons.Filled.FileUpload,
                     enabled = !csvImporting,
                 ) { csvImportLauncher.launch(arrayOf("*/*")) }
@@ -257,7 +258,7 @@ fun LabBookScreen(vm: AppViewModel) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(uiString(R.string.l10n_lab_book_screen_keep_your_own_numbers_here_1ca6c8ed), style = NoopType.headline, color = Palette.textPrimary)
                         Text(
-                            uiString(R.string.l10n_lab_book_screen_type_in_a_blood_pressure_reading_c276d418),
+                            uiString(R.string.l10n_lab_book_screen_type_in_a_blood_pressure_reading_c276d418, deviceNounPhrase()),
                             style = NoopType.subhead,
                             color = Palette.textSecondary,
                         )
@@ -269,7 +270,7 @@ fun LabBookScreen(vm: AppViewModel) {
                     val keys = markerKeys(markers, category)
                     SectionHeader(
                         title = category.displayName,
-                        overline = if (keys.size == 1) "1 marker" else "${keys.size} markers",
+                        overline = if (keys.size == 1) uiString(R.string.l10n_lab_book_screen_s_1_marker_25aeefca) else uiString(R.string.l10n_lab_book_screen_lld_markers_df84a564, keys.size),
                     )
                     for (key in keys) {
                         MarkerRow(key = key, readings = readingsFor(markers, key)) { detailKey = key }
@@ -373,6 +374,7 @@ private fun MarkerDetailSheet(
     var pairs by remember { mutableStateOf<List<WindowedPair>>(emptyList()) }
     var correlation by remember { mutableStateOf<LabCorrelation?>(null) }
     var computing by remember { mutableStateOf(false) }
+    val windowLabels = LabWindow.entries.map { stringResource(it.labelRes) }
 
     LaunchedEffect(signal, window) {
         val s = signal
@@ -405,7 +407,7 @@ private fun MarkerDetailSheet(
             )
 
             // Trend (descriptive arithmetic, never interpretation).
-            SectionHeader("Trend", overline = "your readings over time")
+            SectionHeader(uiString(R.string.trends_trend), overline = uiString(R.string.l10n_lab_book_screen_your_readings_over_time_40e2de13))
             NoopCard(tint = Palette.metricCyan) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     val nums = numeric.mapNotNull { it.value }
@@ -415,7 +417,7 @@ private fun MarkerDetailSheet(
                     Text(trendSentence(markerKey, numeric, unit), style = NoopType.subhead, color = Palette.textSecondary)
                     latestReferenceText(readings)?.let { ref ->
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            SourceBadge("from your report", tint = Palette.textTertiary)
+                            SourceBadge(uiString(R.string.l10n_lab_book_screen_from_your_report_450bb244), tint = Palette.textTertiary)
                             Text(ref, style = NoopType.footnote, color = Palette.textSecondary)
                         }
                     }
@@ -424,7 +426,7 @@ private fun MarkerDetailSheet(
 
             // Compare with a signal (reuses the Pearson idiom + restrained copy).
             if (numeric.isNotEmpty()) {
-                SectionHeader("Compare with a signal", overline = "side by side · ${window.phrase} before each reading")
+                SectionHeader(uiString(R.string.l10n_lab_book_screen_compare_with_a_signal_436791be), overline = uiString(R.string.l10n_lab_book_screen_side_by_side_before_each_reading_b18eb33f, uiString(window.phraseRes)))
                 NoopCard {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -433,7 +435,8 @@ private fun MarkerDetailSheet(
                             SegmentedPillControl(
                                 items = LabWindow.entries.toList(),
                                 selection = window,
-                                label = { it.label },
+                                // Resolved OUTSIDE the lambda: `SegmentedPillControl` takes a `(T) -> String`.
+                                label = { windowLabels[it.ordinal] },
                                 onSelect = { window = it },
                             )
                         }
@@ -450,7 +453,7 @@ private fun MarkerDetailSheet(
             }
 
             // History table.
-            SectionHeader("History", overline = "every reading you've entered")
+            SectionHeader(uiString(R.string.l10n_stress_screen_history_90ccd649), overline = uiString(R.string.l10n_lab_book_screen_every_reading_you_ve_entered_839fa23b))
             NoopCard {
                 Column {
                     val reversed = readings.reversed()
@@ -484,14 +487,14 @@ private fun CorrelationResult(
     val n = pairs.size
     when {
         signal == null -> Text(
-            uiString(R.string.l10n_lab_book_screen_pick_a_wearable_signal_resting_hr_8d8b01a2, window.phrase),
+            uiString(R.string.l10n_lab_book_screen_pick_a_wearable_signal_resting_hr_8d8b01a2, uiString(window.phraseRes)),
             style = NoopType.subhead,
             color = Palette.textTertiary,
         )
         computing -> Text(uiString(R.string.l10n_lab_book_screen_lining_them_up_c59ee297), style = NoopType.subhead, color = Palette.textTertiary)
         n < LAB_FLOOR -> Text(
             if (n == 0) {
-                "No overlap yet between this marker and ${signal.title.lowercase()}. Log a few more readings " +
+                "No overlap yet between this marker and ${signal.title.plain().lowercase(Locale.getDefault())}. Log a few more readings " +
                     "(and keep wearing your strap)."
             } else {
                 "$n reading${if (n == 1) "" else "s"} line up so far, not enough to read a trend yet " +
@@ -505,12 +508,12 @@ private fun CorrelationResult(
             val tint = correlationColor(r)
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(uiString(R.string.l10n_lab_book_screen_markername_signal_title_e9c07909, markerName, signal.title), style = NoopType.headline, color = Palette.textPrimary, modifier = Modifier.weight(1f), maxLines = 2)
+                    Text(uiString(R.string.l10n_lab_book_screen_markername_signal_title_e9c07909, markerName, signal.title.plain()), style = NoopType.headline, color = Palette.textPrimary, modifier = Modifier.weight(1f), maxLines = 2)
                     TrendChip(text = signedR(r), color = tint)
                     Spacer(Modifier.width(8.dp))
                     Text(uiString(R.string.l10n_lab_book_screen_r_signedr_r_fb21be90, signedR(r)), style = NoopType.number(18f), color = tint)
                 }
-                Text(insightSentence(markerName, signal.title, r), style = NoopType.subhead, color = Palette.textSecondary)
+                Text(insightSentence(markerName, signal.title.plain(), r), style = NoopType.subhead, color = Palette.textSecondary)
                 Text(
                     uiString(R.string.l10n_lab_book_screen_n_readings_used_strengthword_r_directionword_298baf9e, n, strengthWord(r), directionWord(r)),
                     style = NoopType.footnote,
@@ -538,7 +541,7 @@ private fun SignalPicker(selected: LabSignal?, onSelect: (LabSignal?) -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Icon(Icons.Filled.Add, contentDescription = null, tint = Palette.accent, modifier = Modifier.size(16.dp))
-            Text(selected?.title ?: "Choose a signal", style = NoopType.subhead, color = Palette.accent)
+            Text(selected?.title?.text() ?: "Choose a signal", style = NoopType.subhead, color = Palette.accent)
         }
         androidx.compose.material3.DropdownMenu(
             expanded = expanded,
@@ -546,7 +549,7 @@ private fun SignalPicker(selected: LabSignal?, onSelect: (LabSignal?) -> Unit) {
         ) {
             LAB_SIGNALS.forEach { s ->
                 androidx.compose.material3.DropdownMenuItem(
-                    text = { Text(s.title, style = NoopType.body, color = Palette.textPrimary) },
+                    text = { Text(s.title.text(), style = NoopType.body, color = Palette.textPrimary) },
                     onClick = { onSelect(s); expanded = false },
                 )
             }
@@ -595,12 +598,12 @@ private fun LabBookDisclaimerSheet(onDismiss: () -> Unit) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(uiString(R.string.l10n_lab_book_screen_about_lab_book_37bf2691), style = NoopType.title2, color = Palette.textPrimary)
             Text(uiString(R.string.l10n_lab_book_screen_a_private_notebook_not_a_medical_f63242cb), style = NoopType.subhead, color = Palette.textSecondary)
-            DisclaimerBullet("NOOP stores and lines up the numbers you enter yourself. It does not test you, read your results, give medical advice, or diagnose anything.")
-            DisclaimerBullet("Anything you see here (including any side-by-side trend) is your own information shown back to you. It's an association, never a cause, and never a medical finding.")
+            DisclaimerBullet(uiString(R.string.l10n_lab_book_screen_noop_stores_and_lines_up_the_numbers_you_a482396e))
+            DisclaimerBullet(uiString(R.string.l10n_lab_book_screen_anything_you_see_here_including_any_side_8561f0fc))
             DisclaimerBullet("NOOP never decides whether a value is \"normal,\" \"high,\" or \"low.\" Any reference range shown is exactly what you typed from your own report.")
             DisclaimerBullet("Your records never leave this phone. There's no account, no cloud, no NOOP server. Because NOOP is an independent app you run yourself (not a healthcare provider), it isn't \"HIPAA-covered,\" and that protection doesn't apply here; the safety comes from the data being local-only and yours.")
-            DisclaimerBullet("Always rely on your doctor, pharmacist, or a qualified professional to interpret results and make decisions. If a number worries you, talk to them, not to an app.")
-            PrimaryActionButton("Got it", Icons.Filled.Check, onClick = onDismiss)
+            DisclaimerBullet(uiString(R.string.l10n_lab_book_screen_always_rely_on_your_doctor_pharmacist_or_953b0ed1))
+            PrimaryActionButton(uiString(R.string.l10n_how_noop_works_screen_got_it_5b8027fa), Icons.Filled.Check, onClick = onDismiss)
         }
     }
 }
@@ -621,36 +624,63 @@ private fun DisclaimerBullet(text: String) {
 
 // MARK: - Trailing window control (7 / 14 / 30 days)
 
-enum class LabWindow(val label: String, val days: Int, val phrase: String) {
-    WEEK("7d", 7, "7 days"),
-    FORTNIGHT("14d", 14, "14 days"),
-    MONTH("30d", 30, "30 days"),
+/**
+ * The trailing-window control. Resources rather than resolved labels: an enum constructor runs at
+ * class-load, before an Application exists, and [phrase] is interpolated into a sentence resource.
+ */
+enum class LabWindow(
+    @StringRes val labelRes: Int,
+    val days: Int,
+    @StringRes val phraseRes: Int,
+) {
+    WEEK(R.string.l10n_insights_screen_s_7d_fd4a4c2d, 7, R.string.l10n_lab_book_screen_s_7_days_0a8dd6ad),
+    FORTNIGHT(R.string.l10n_insights_screen_s_14d_7c3fdb85, 14, R.string.today_workouts_14_days),
+    MONTH(R.string.l10n_lab_book_screen_s_30d_dccf34aa, 30, R.string.l10n_compare_screen_s_30_days_7d4278a8),
 }
 
 // MARK: - Wearable signals offered for correlation
 
-data class LabSignal(val key: String, val title: String, val source: String)
+data class LabSignal(val key: String, val title: DisplayText, val source: String)
 
-/** The pickable wearable metrics, mirroring the Swift LabBookSignals.options list. */
+/**
+ * The pickable wearable metrics, mirroring the Swift LabBookSignals.options list.
+ *
+ * [LabSignal.title] is a [DisplayText] rather than a resolved String because this list is built at
+ * class-load time; [key]/[source] stay the English tokens the repository reads.
+ */
 private val LAB_SIGNALS = listOf(
-    LabSignal("rhr", "Resting Heart Rate", "my-whoop"),
-    LabSignal("hrv", "Heart Rate Variability", "my-whoop"),
-    LabSignal("recovery", "Charge", "my-whoop"),
-    LabSignal("sleep_performance", "Rest", "my-whoop"),
-    LabSignal("sleep_total_min", "Asleep Time", "my-whoop"),
-    LabSignal("strain", "Effort", "my-whoop"),
-    LabSignal("skin_temp", "Skin Temperature", "my-whoop"),
-    LabSignal("steps", "Steps", "apple-health"),
-    LabSignal("weight", "Weight", "apple-health"),
+    LabSignal("rhr", DisplayText.Resource(R.string.l10n_health_screen_resting_heart_rate_9700f4d8), "my-whoop"),
+    LabSignal("hrv", DisplayText.Resource(R.string.l10n_health_screen_heart_rate_variability_20f0069e), "my-whoop"),
+    LabSignal("recovery", DisplayText.Resource(R.string.trends_charge), "my-whoop"),
+    LabSignal("sleep_performance", DisplayText.Resource(R.string.trends_rest), "my-whoop"),
+    LabSignal("sleep_total_min", DisplayText.Resource(R.string.l10n_compare_screen_asleep_time_ccde95a8), "my-whoop"),
+    LabSignal("strain", DisplayText.Resource(R.string.trends_effort), "my-whoop"),
+    LabSignal("skin_temp", DisplayText.Resource(R.string.l10n_health_screen_skin_temperature_f59127f6), "my-whoop"),
+    LabSignal("steps", DisplayText.Resource(R.string.l10n_health_screen_steps_cdde4f20), "apple-health"),
+    LabSignal("weight", DisplayText.Resource(R.string.l10n_onboarding_screen_weight_69c0b815), "apple-health"),
 )
 
 // MARK: - Helpers (display, formatting, trend, correlation)
 
-private fun countLine(markers: List<LabMarkerRow>): String {
+/**
+ * "3 markers tracked · 12 readings" — the four WHOLE-SENTENCE variants iOS ships, not a stitched plural.
+ *
+ * A translated language can put the two counts in either order and inflect both, so the count words cannot
+ * be glued here: `"$keys marker(s)"` bakes English's two plural categories into the layout. Each variant is
+ * its own resource instead, whose translations carry the locale's own number agreement. The singular form of
+ * each count is baked into the variant's text (exactly as the iOS twin does), so one resource needs at most
+ * the OTHER count as an argument.
+ */
+private fun countLine(markers: List<LabMarkerRow>): DisplayText {
     val keys = markers.map { it.markerKey }.toSet().size
-    val markerWord = if (keys == 1) "marker" else "markers"
-    val readingWord = if (markers.size == 1) "reading" else "readings"
-    return "$keys $markerWord tracked · ${markers.size} $readingWord"
+    val oneKey = keys == 1
+    val oneReading = markers.size == 1
+    return when {
+        oneKey && oneReading -> DisplayText.Resource(R.string.l10n_lab_book_screen_s_1_marker_tracked_1_reading_3c9b5862)
+        oneKey -> DisplayText.Resource(R.string.l10n_lab_book_screen_s_1_marker_tracked_lld_readings_be36051e, listOf(markers.size))
+        oneReading -> DisplayText.Resource(R.string.l10n_lab_book_screen_lld_markers_tracked_1_reading_98300894, listOf(keys))
+        else -> DisplayText.Resource(R.string.l10n_lab_book_screen_lld_markers_tracked_lld_readings_f05244e6, listOf(keys, markers.size))
+    }
 }
 
 private fun displayName(key: String): String =
@@ -680,7 +710,7 @@ private fun latestLabel(row: LabMarkerRow?, key: String): String {
 }
 
 private fun lastTakenCaption(row: LabMarkerRow?): String =
-    if (row == null) "no readings yet" else "last taken ${labDayLabel(row.takenAt)}"
+    if (row == null) uiString(R.string.l10n_lab_book_screen_no_readings_yet_7e0fe268) else uiString(R.string.l10n_lab_book_screen_last_taken_a8b44243, labDayLabel(row.takenAt))
 
 private fun formatValue(v: Double, key: String): String = LabValueFormat.value(v, key)
 
@@ -690,9 +720,9 @@ private fun latestReferenceText(readings: List<LabMarkerRow>): String? =
 /** "Your last 3 readings: 3.4 → 3.1 → 2.9 mmol/L, trending down." — descriptive only. */
 private fun trendSentence(key: String, numeric: List<LabMarkerRow>, unit: String): String {
     val last = numeric.lastOrNull()?.value
-        ?: return numeric.lastOrNull()?.valueText?.let { "Latest entry: $it." } ?: "No numeric readings yet."
+        ?: return numeric.lastOrNull()?.valueText?.let { uiString(R.string.l10n_lab_book_screen_latest_entry_036bc6c6, it) } ?: uiString(R.string.l10n_lab_book_screen_no_numeric_readings_yet_b8eea318)
     if (numeric.size < 2) {
-        return "One reading so far: ${formatValue(last, key)} $unit. Log a few more to see a trend."
+        return uiString(R.string.l10n_lab_book_screen_one_reading_so_far_log_a_few_more_to_see_d7144a4f, formatValue(last, key), unit)
     }
     val shown = numeric.takeLast(3).mapNotNull { it.value }
     val arrowed = shown.joinToString(" → ") { formatValue(it, key) }
@@ -708,18 +738,18 @@ private fun trendSentence(key: String, numeric: List<LabMarkerRow>, unit: String
 private fun signedR(r: Double): String = (if (r >= 0) "+" else "−") + java.lang.String.format(Locale.US, "%.2f", abs(r))
 
 private fun strengthWord(r: Double): String = when {
-    abs(r) < 0.1 -> "negligible"
-    abs(r) < 0.3 -> "weak"
-    abs(r) < 0.5 -> "moderate"
-    abs(r) < 0.7 -> "strong"
-    else -> "very strong"
+    abs(r) < 0.1 -> uiString(R.string.l10n_compare_screen_negligible_89891430)
+    abs(r) < 0.3 -> uiString(R.string.l10n_compare_screen_weak_1ded3053)
+    abs(r) < 0.5 -> uiString(R.string.l10n_compare_screen_moderate_78cd1257)
+    abs(r) < 0.7 -> uiString(R.string.l10n_compare_screen_strong_0117691d)
+    else -> uiString(R.string.l10n_compare_screen_very_strong_3e7b4c04)
 }
 
 private fun directionWord(r: Double): String = if (abs(r) < 0.1) "" else if (r >= 0) "positive" else "negative"
 
 private fun insightSentence(markerName: String, signalName: String, r: Double): String {
     if (abs(r) < 0.3) {
-        return "Over your readings, $markerName and ${signalName.lowercase()} move largely independently. No clear relationship."
+        return uiString(R.string.l10n_lab_book_screen_over_your_readings_and_move_largely_inde_b709ded7, markerName, signalName.lowercase())
     }
     val verb = if (r < 0) "tends to be lower" else "tends to be higher"
     return "When $markerName is higher, ${signalName.lowercase()} $verb."

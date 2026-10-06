@@ -23,6 +23,18 @@ class WindDownStore(private val prefs: SharedPreferences) {
         get() = prefs.getInt(KEY_SLEEP_NEED, DEFAULT_SLEEP_NEED).coerceIn(SLEEP_MIN, SLEEP_MAX)
         set(v) = prefs.edit().putInt(KEY_SLEEP_NEED, v.coerceIn(SLEEP_MIN, SLEEP_MAX)).apply()
 
+    /**
+     * The user's usual wake time, minutes since midnight. Default 07:00 (iOS `WindDownNudge.wakeMinutes`).
+     *
+     * Owned HERE rather than read off the phone alarm: iOS's wind-down keeps its own value, and its card
+     * says what the field is for ("This time does not wake you. It only decides when the evening reminder
+     * fires."). Deriving it from the phone alarm moved the reminder whenever an alarm moved, invisibly from
+     * both controls.
+     */
+    var wakeMinutes: Int
+        get() = prefs.getInt(KEY_WAKE, DEFAULT_WAKE).coerceIn(0, MINUTES_PER_DAY - 1)
+        set(v) = prefs.edit().putInt(KEY_WAKE, v.coerceIn(0, MINUTES_PER_DAY - 1)).apply()
+
     /** Lead time (minutes) before bed to nudge, so winding down actually finishes by lights-out. */
     var leadMinutes: Int
         get() = prefs.getInt(KEY_LEAD, DEFAULT_LEAD).coerceIn(LEAD_MIN, LEAD_MAX)
@@ -49,13 +61,33 @@ class WindDownStore(private val prefs: SharedPreferences) {
      *
      * The wrap loses WHICH day that minute belongs to, which is why [nudgeDayShift] exists beside it.
      */
-    fun nudgeMinuteOfDay(wakeMinutes: Int): Int {
-        val raw = wakeMinutes - sleepNeedMinutes - leadMinutes
-        val day = 24 * 60
-        return ((raw % day) + day) % day
-    }
+    /**
+     * The wake minute the nudge uses on [weekday] (Calendar 1=Sun…7=Sat): the phone alarm's own per-day
+     * override when that day has one, else [wakeMinutes].
+     *
+     * ONE funnel — [WindDownScheduler.schedule] and the card's "You'll be reminded around …" line both call
+     * this, so the time the user reads cannot disagree with the time that fires. The overrides still come
+     * from the phone alarm: Android already surfaces a per-day editor for it, and iOS's own per-day map has
+     * no Android UI yet.
+     */
+    fun effectiveWakeMinutes(weekday: Int, phoneAlarmOverrides: Map<Int, Int> = emptyMap()): Int =
+        effectiveWakeMinutes(weekday, wakeMinutes, phoneAlarmOverrides)
+
+    fun nudgeMinuteOfDay(wakeMinutes: Int): Int =
+        nudgeMinuteOfDay(wakeMinutes, sleepNeedMinutes, leadMinutes)
 
     companion object {
+        /** Pure form of [nudgeMinuteOfDay], so the derived time is testable without a Context. */
+        fun nudgeMinuteOfDay(wakeMinutes: Int, sleepNeedMinutes: Int, leadMinutes: Int): Int {
+            val day = 24 * 60
+            val raw = wakeMinutes - sleepNeedMinutes - leadMinutes
+            return ((raw % day) + day) % day
+        }
+
+        /** Pure form of [effectiveWakeMinutes], so the override precedence is testable without a Context. */
+        fun effectiveWakeMinutes(weekday: Int, wakeMinutes: Int, phoneAlarmOverrides: Map<Int, Int>): Int =
+            phoneAlarmOverrides[weekday] ?: wakeMinutes
+
         /** Pure form of [nudgeDayShift], so the day arithmetic is testable without a Context. */
         fun nudgeDayShift(wakeMinutes: Int, sleepNeedMinutes: Int, leadMinutes: Int): Int =
             Math.floorDiv(wakeMinutes - sleepNeedMinutes - leadMinutes, 24 * 60)
@@ -64,7 +96,11 @@ class WindDownStore(private val prefs: SharedPreferences) {
         private const val KEY_ENABLED = "windDown.enabled"
         private const val KEY_SLEEP_NEED = "windDown.sleepNeedMinutes"
         private const val KEY_LEAD = "windDown.leadMinutes"
+        private const val KEY_WAKE = "windDown.wakeMinutes"
 
+        /** iOS's default, and the same key name, so a shared backup would restore it on either platform. */
+        const val DEFAULT_WAKE = 7 * 60
+        const val MINUTES_PER_DAY = 24 * 60
         const val DEFAULT_SLEEP_NEED = 8 * 60
         const val DEFAULT_LEAD = 30
         const val SLEEP_MIN = 5 * 60

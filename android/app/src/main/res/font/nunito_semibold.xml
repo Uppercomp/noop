@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- Nunito at one pinned weight from the bundled variable font.
+     Android's rounded system font is SF Pro Rounded on Apple (StrandFont uses
+     design: .rounded at every level); Android has no rounded system face, so the
+     whole type scale was rendering in Roboto. This pins each weight so NoopType
+     can build one FontFamily with four real weights. -->
+<font-family xmlns:android="http://schemas.android.com/apk/res/android">
+    <font
+        android:font="@font/nunito_variable"
+        android:fontStyle="normal"
+        android:fontWeight="600"
+        android:fontVariationSettings="'wght' 600" />
+</font-family>

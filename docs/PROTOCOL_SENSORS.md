@@ -600,6 +600,16 @@ clinical quality vocabulary. This record does not identify simultaneous red and
 infrared channels, and carries no established R-R interval field. Do not derive
 SpO₂ from unassigned channels.
 
+**Measured relationship between the two summary bytes.** On one real capture (firmware
+50.41.1.0, 680 v26 records) bytes 81 and 82 were near-exact complements of each other:
+byte 81 read 0 while byte 82 read 1 in 581 records, and byte 81 read 1 while byte 82 read 0
+in 83, with only 14 records at (0,0) and 2 at (1,1) — 664/680, or 97.6%. So byte 82 is
+**not** supported as an independent signal-quality reading by that corpus: it mirrors the
+on-wrist-related byte inverted. Both also latched — the mixed values appear only in the
+first four bursts of that capture, after which byte 81 held 0 and byte 82 held 1
+throughout. One strap, one capture; recorded here so a future mapper does not treat byte
+82 as quality data without re-checking.
+
 ### Dedicated IMU stream types 51 and 52
 
 Packet types 51 and 52 share the following documented count/span layout. Valid

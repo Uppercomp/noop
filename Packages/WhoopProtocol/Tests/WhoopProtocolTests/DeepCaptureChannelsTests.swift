@@ -231,10 +231,11 @@ final class DeepCaptureChannelsTests: XCTestCase {
                              heartRateAlt: 14, rrPacked: 15, cardiacStatus: 16, stepCadence: 17,
                              statusWord: 18, statusWord1: 19, statusWord2: 20, auxByte82: 21,
                              opticalBaselineA: 22, opticalBaselineB: 23, opticalAmpA: 24,
-                             opticalAmpB: 25, unknownF32Bits: 26)
+                             opticalAmpB: 25, unknownF32Bits: 26, recordFlags: 27, timestampSubseconds: 28,
+                             auxWord61: 29, auxByte64: 30, activityClassRaw: 31)
         XCTAssertEqual(a.slotValues.count, V18AuxSlot.allCases.count)
         // Slot i must round-trip to position i — this is what makes the persisted bitmap meaningful.
-        XCTAssertEqual(a.slotValues, Array(10...26).map { Optional($0) })
+        XCTAssertEqual(a.slotValues, Array(10...31).map { Optional($0) })
         XCTAssertEqual(V18AuxSample(ts: 1, slotValues: a.slotValues), a)
         // Enum raw values must be a dense 0..<n range in declaration order (bitmap bit positions).
         XCTAssertEqual(V18AuxSlot.allCases.map(\.rawValue), Array(0..<V18AuxSlot.allCases.count))

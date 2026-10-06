@@ -196,7 +196,7 @@ private fun LiveSessionBody(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(uiString(R.string.l10n_live_session_screen_live_session_73c925a5), style = NoopType.title1, color = Palette.textPrimary)
-            StatePill("BETA", tone = StrandTone.Accent, showsDot = false)
+            StatePill(uiString(R.string.today_beta), tone = StrandTone.Accent, showsDot = false)
         }
 
         Spacer(Modifier.weight(1f))
@@ -216,7 +216,7 @@ private fun LiveSessionBody(
         // guarding promise — the whole design is that this screen has nothing to watch.
         Text(
             if (stale) "Signal lost — coaching paused."
-            else "Guarding your session. Silence means you're on track.",
+            else uiString(R.string.l10n_live_session_screen_guarding_your_session_silence_means_you_ecf79fc5),
             style = NoopType.subhead,
             color = if (stale) Palette.textTertiary else Palette.textSecondary,
             textAlign = TextAlign.Center,
@@ -319,7 +319,7 @@ private fun GuardianRing(
         if (revealedBpm != null) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(uiString(R.string.l10n_live_session_screen_revealedbpm_dbe24cbe, revealedBpm), style = NoopType.number(44f), color = Palette.textPrimary)
-                Text("bpm", style = NoopType.caption, color = Palette.textTertiary)
+                Text(uiString(R.string.l10n_workouts_screen_hrr_bpm_516), style = NoopType.caption, color = Palette.textTertiary)
             }
         }
     }
@@ -414,10 +414,10 @@ private fun LiveSessionSummary(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Overline("Live Session", color = teal)
+                Overline(uiString(R.string.l10n_live_session_screen_live_session_73c925a5), color = teal)
                 Text(uiString(R.string.l10n_live_session_screen_session_summary_f9418e16), style = NoopType.title1, color = Palette.textPrimary)
             }
-            StatePill("BETA", tone = StrandTone.Accent, showsDot = false)
+            StatePill(uiString(R.string.today_beta), tone = StrandTone.Accent, showsDot = false)
         }
 
         // The stale auto-end declares itself — an unexplained early end would read as a bug.

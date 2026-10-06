@@ -595,7 +595,7 @@
     <string name="l10n_how_noop_works_screen_got_it_5b8027fa">Capito</string>
     <string name="l10n_how_noop_works_screen_how_noop_works_3396b27a">Come funziona NOOP</string>
     <string name="l10n_how_noop_works_screen_noop_never_makes_up_a_number_da29aca5">NOOP non inventa mai un numero. Quando non può calcolarne uno in modo onesto ti dice cosa manca e cosa fare, invece di mostrare un valore falso.</string>
-    <string name="l10n_how_noop_works_screen_noop_never_shows_you_a_number_d1db9958">NOOP non ti mostra mai un numero inventato. Se un punteggio non è pronto, it tells you why and what to do next. Everything here runs on your device, from your strap.</string>
+    <string name="l10n_how_noop_works_screen_noop_never_shows_you_a_number_d1db9958">NOOP non ti mostra mai un numero che ha dovuto inventare. Se un punteggio non è pronto, ti dice perché e cosa fare dopo. Tutto qui funziona sul tuo dispositivo, dalla tua fascia.</string>
     <string name="l10n_how_noop_works_screen_section_title_section_body_efb1a999">%1$s. %2$s</string>
     <string name="l10n_how_noop_works_screen_sleep_scores_recording_where_your_numbers_1b3e981f">Sonno · punteggi · registrazione · da dove vengono i tuoi numeri</string>
     <string name="l10n_hrv_snapshot_screen_an_hrv_reading_needs_the_live_11b70bff">Una lettura HRV richiede lo stream R-R in diretta. Apri la schermata In diretta e connetti la tua fascia, poi torna qui.</string>
@@ -718,7 +718,7 @@
     <string name="l10n_lab_book_screen_read_the_full_note_3fd0e4d1">Leggi la nota completa</string>
     <string name="l10n_lab_book_screen_reading_your_logbook_e31992b0">Lettura del tuo diario…</string>
     <string name="l10n_lab_book_screen_these_are_your_own_numbers_shown_7667508d">Questi sono i tuoi stessi numeri riproposti a te. NOOP non decide se un valore sia normale, alto o basso.</string>
-    <string name="l10n_lab_book_screen_type_in_a_blood_pressure_reading_c276d418">Inserisci una misurazione della pressione o un valore del colesterolo dalla tua ultima visita. It stays on this phone, and over time you\'ll see how it lines up with your sleep, heart rate and recovery.</string>
+    <string name="l10n_lab_book_screen_type_in_a_blood_pressure_reading_c276d418">Inserisci una lettura della pressione sanguigna o un valore di colesterolo dalla tua ultima visita. Resta su %1$s, e col tempo vedrai come si allinea con il tuo sonno, la frequenza cardiaca e il recupero.</string>
     <string name="l10n_lab_book_screen_what_lab_book_is_and_isn_f28686df">Cos\'è il Quaderno di laboratorio (e cosa non è)</string>
     <string name="l10n_live_screen_manage_devices_e5c277ff">Gestisci dispositivi</string>
     <string name="l10n_live_screen_max_hr_6acd9e07">FC max</string>
@@ -759,7 +759,7 @@
     <string name="l10n_marker_editor_screen_date_taken_76edfcab">Data della rilevazione</string>
     <string name="l10n_marker_editor_screen_def_displayname_def_canonicalunit_e86ef8de">%1$s, %2$s</string>
     <string name="l10n_marker_editor_screen_entered_together_stored_as_two_markers_af8f3ba0">Inseriti insieme; memorizzati come due marcatori, così ciascuno si allinea con precisione ai tuoi segnali.</string>
-    <string name="l10n_marker_editor_screen_lab_book_keeps_your_own_numbers_9085ce2c">Il Quaderno di laboratorio conserva i tuoi numeri - non li analizza, legge o giudica, e non è un consiglio advice. Everything stays on this phone.</string>
+    <string name="l10n_marker_editor_screen_lab_book_keeps_your_own_numbers_9085ce2c">Il Quaderno di laboratorio conserva i tuoi numeri, non li analizza, legge o giudica, e non è un consiglio medico. Tutto resta su %1$s.</string>
     <string name="l10n_marker_editor_screen_no_match_add_it_as_a_ad5c59ec">Nessuna corrispondenza. Aggiungilo come marcatore personalizzato qui sotto.</string>
     <string name="l10n_marker_editor_screen_noop_never_fills_this_in_it_7be9653b">NOOP non compila mai questo campo - mostra soltanto esattamente ciò che digiti dal tuo referto.</string>
     <string name="l10n_marker_editor_screen_search_markers_103981e0">Cerca marcatori</string>
@@ -810,7 +810,7 @@
     <string name="l10n_notifications_settings_screen_uses_the_same_quiet_hours_and_03badcac">Usa le stesse regole per ore di silenzio e solo quando indossata.</string>
     <string name="l10n_notifications_settings_screen_voip_calls_96c5a102">Chiamate VoIP</string>
     <string name="l10n_notifications_settings_screen_wrist_alerts_75581d51">Avvisi al polso</string>
-    <string name="l10n_notifications_settings_screen_wrist_delivery_needs_notification_access_so_2a14e784">L\'invio al polso richiede l\'Accesso alle notifiche, così NOOP può sapere quali app inviano notifiche you. Nothing leaves this device. Your choices are saved now and apply automatically once access is granted.</string>
+    <string name="l10n_notifications_settings_screen_wrist_delivery_needs_notification_access_so_2a14e784">L\'invio al polso richiede l\'accesso alle notifiche, così NOOP può sapere quali app ti inviano notifiche. Nulla lascia questo dispositivo. Le tue scelte sono già salvate e si applicheranno automaticamente una volta concesso l\'accesso.</string>
     <string name="l10n_onboarding_screen_a_private_window_into_your_recovery_b8dd2ff2">Una finestra privata sul tuo recupero, sonno e carico. Letti direttamente dalla tua fascia, conservati solo su questo telefono.</string>
     <string name="l10n_onboarding_screen_a_quick_word_before_you_connect_5a29015a">Due parole prima di collegarti</string>
     <string name="l10n_onboarding_screen_a_quiet_ongoing_status_97bf2a44">Uno stato discreto e continuo</string>
@@ -883,7 +883,7 @@
     <string name="l10n_settings_screen_note_a2481d6c">· %1$s</string>
     <string name="l10n_settings_screen_repo_note_0a694b50">%1$s, %2$s</string>
     <string name="l10n_skin_temp_cards_screen_cycle_awareness_ffb94783">Consapevolezza del ciclo</string>
-    <string name="l10n_skin_temp_cards_screen_noop_can_read_a_coarse_menstrual_c79e4b85">NOOP può ricavare una fase approssimativa del ciclo mestruale dalla temperatura della pelle notturna, entirely on your device. It is awareness only: not contraception, not a fertility predictor, not a medical service.</string>
+    <string name="l10n_skin_temp_cards_screen_noop_can_read_a_coarse_menstrual_c79e4b85">NOOP può leggere una fase approssimativa del ciclo mestruale dalla tua temperatura cutanea notturna, interamente sul tuo dispositivo. È solo a scopo informativo: non è un metodo contraccettivo, non è un predittore di fertilità, non è un servizio medico.</string>
     <string name="l10n_skin_temp_cards_screen_turn_on_cycle_awareness_7c2d328f">Attiva la consapevolezza del ciclo</string>
     <string name="l10n_sleep_screen_about_this_nap_e2719b9b">Informazioni su questo sonnellino</string>
     <string name="l10n_sleep_screen_about_your_main_sleep_1da8a640">Informazioni sul tuo sonno principale</string>
@@ -973,7 +973,7 @@
     <string name="l10n_steps_calibration_screen_done_e9b450d1">Fatto</string>
     <string name="l10n_steps_calibration_screen_est_18b405fb">Stima</string>
     <string name="l10n_steps_calibration_screen_how_this_works_b895a8c3">Come funziona</string>
-    <string name="l10n_steps_calibration_screen_no_days_yet_where_both_noop_71d6005b">Ancora nessun giorno in cui sia NOOP sia il telefono abbiano contato i passi. Quando il telefono registra un few days alongside the strap, they\'ll appear here so you can see how close the estimate is.</string>
+    <string name="l10n_steps_calibration_screen_no_days_yet_where_both_noop_71d6005b">Ancora nessun giorno in cui sia NOOP che il tuo telefono abbiano contato i passi. Una volta che il tuo telefono registrerà qualche giorno insieme alla fascia, appariranno qui così potrai vedere quanto è precisa la stima.</string>
     <string name="l10n_steps_calibration_screen_no_motion_synced_yet_65106670">Ancora nessun movimento sincronizzato</string>
     <string name="l10n_steps_calibration_screen_noop_estimates_your_steps_from_your_d569bc31">NOOP stima i tuoi passi dal movimento del tuo WHOOP, calibrato sul conteggio dei passi del tuo telefono. È una stima, non un contapassi. Un WHOOP 4.0 non trasmette i passi.</string>
     <string name="l10n_steps_calibration_screen_not_calibrated_yet_30abe0d0">Non ancora calibrato</string>
@@ -1775,7 +1775,6 @@
     <string name="l10n_today_screen_choose_which_tiles_show_on_your_a4e3acfb">Scegli quali riquadri mostrare nel tuo Centro di Controllo e riordinali con le frecce.</string>
     <string name="l10n_today_screen_data_label_data_value_data_unit_27f6fd6b">%1$s %2$s %3$s</string>
     <string name="l10n_today_screen_data_unit_c768ef8c">\" %1$s\"</string>
-    <string name="l10n_today_screen_daytitle_humandate_tap_to_pick_a_7e12ce96">%1$s, %2$s. Tocca per scegliere un giorno, scorri per cambiare giorno.</string>
     <string name="l10n_today_screen_detailed_tiles_0801721b">Riquadri dettagliati</string>
     <string name="l10n_today_screen_dismiss_to_updates_2c7915b8">Ignora e vai agli aggiornamenti</string>
     <string name="l10n_today_screen_each_line_is_how_many_points_dec2c062">Ogni riga indica di quanti punti quel segnale ha spostato la Carica rispetto al restare sulla tua</string>
@@ -1833,7 +1832,7 @@
     <string name="l10n_trends_explore_screen_resting_hr_26677094">FC a riposo</string>
     <string name="l10n_trends_explore_screen_sleep_3cac34e6">Sonno</string>
     <string name="l10n_trends_explore_screen_sleep_efficiency_b4b5c293">Efficienza del sonno</string>
-    <string name="l10n_trends_report_a_clean_shareable_one_page_pdf_a3c4f889">Un PDF di una pagina, pulito e condivisibile, con recupero, sonno, HRV, frequenza cardiaca a riposo and strain over a date range. Built and saved on your phone - nothing leaves the device.</string>
+    <string name="l10n_trends_report_a_clean_shareable_one_page_pdf_a3c4f889">Un PDF di una pagina, ordinato e condivisibile, del tuo recupero, sonno, HRV, frequenza cardiaca a riposo e carico in un intervallo di date. Salvato sul tuo %1$s, niente lascia il dispositivo.</string>
     <string name="l10n_trends_report_export_pdf_3dd7d56a">Esporta PDF</string>
     <string name="l10n_trends_report_the_share_sheet_can_save_the_ecddbca7">Il menu di condivisione può salvare il PDF in File o inviarlo ad altri.</string>
     <string name="l10n_trends_report_trends_report_pdf_481e8a5f">Report degli andamenti (PDF)</string>
@@ -2090,7 +2089,7 @@
     <string name="settings_chart_classic">Classico</string>
     <string name="settings_trend_line">Linea</string>
     <string name="settings_trend_bars">Barre</string>
-    <string name="spo2_strap_estimate_caption">stima della fascia (non verificata)</string>
+    <string name="spo2_strap_estimate_caption">Non validata</string>
     <string name="spo2_toggle_on_no_data">interruttore attivo · nessuna stima</string>
     <string name="l10n_devices_screen_forget_device_d6eb6209">Dimentica dispositivo…</string>
     <string name="l10n_devices_screen_forget_device_926e503d">Dimentica dispositivo</string>
@@ -2824,4 +2823,5 @@
     <string name="raw_diag_ecg_probe_start">Avvia acquisizione ECG</string>
     <string name="raw_diag_ecg_probe_stop">Interrompi acquisizione ECG</string>
     <string name="raw_diag_ecg_probe_running">Una acquisizione potrebbe essere ancora attiva su questo strap. Il verdetto va nello strap log.</string>
+    <string name="spo2_unvalidated_detail">Non validata. Questa stima sperimentale del bracciale può essere imprecisa. Non usarla per decisioni mediche.</string>
 </resources>

@@ -4,6 +4,10 @@
 
 <h1 align="center">NOOP</h1>
 
+> **Uppercomp's Android fork:** preserves the custom UI and adds WHOOP 5.0 input mapping and an
+> explicitly **unvalidated** blood-oxygen candidate display. See [fork notes](FORK.md) and
+> [fork APK releases](https://github.com/Uppercomp/noop/releases). This is independent of upstream NOOP.
+
 <p align="center"><b>Your strap. Your data. Your machine. Offline, on-device, no cloud.</b></p>
 
 <p align="center"><sub>Now in the all-new <b>Liquid Metal</b> design: one living look across iPhone, Android and Mac.</sub></p>

@@ -174,10 +174,10 @@
     <string name="power_saving_hrv_pause">低电量暂停 HRV 监测</string>
     <string name="power_saving_hrv_pause_desc">当手环电量偏低时，自动停止全天候的后台 HRV (心率变异性) 数据流——这是手环最耗电的功能。实时界面依然会显示心率，且手环充电后，HRV 监测会自动恢复。</string>
     <string name="l10n_add_device_wizard_0123456789abcdef0123456789abcdef_b1775a78">0123456789abcdef0123456789abcdef</string>
-    <string name="l10n_add_device_wizard_a_whoop_strap_bonds_to_a_d39bdf4a">WHOOP 手环会与单部手机绑定。要想在这里配对，您需要先在其他设备上解除它的绑定。 to the official WHOOP app, and the other way round. It\'s reversible: pair it in the other app whenever you want it back.</string>
+    <string name="l10n_add_device_wizard_a_whoop_strap_bonds_to_a_d39bdf4a">WHOOP 手环一次只能绑定一台设备。连接到 NOOP 期间，它不会向官方 WHOOP App 传输数据，反之亦然。这是可逆的：想换回去时，在另一个 App 中重新配对即可。</string>
     <string name="l10n_add_device_wizard_add_61cc55aa">添加</string>
     <string name="l10n_add_device_wizard_advanced_i_already_have_my_ring_e87b9b49">高级：我已经有了戒指的密钥 (Key)</string>
-    <string name="l10n_add_device_wizard_beta_is_an_on_device_estimate_128563e0">测试版：这是一项基于本地设备的离线心率估算。开启此项可能会增加耗电，请酌情使用。 are a raw motion count, and HRV needs you to be still. No Oura Readiness or SpO2 percentage comes off the ring (import an Oura file for those).</string>
+    <string name="l10n_add_device_wizard_beta_is_an_on_device_estimate_128563e0">Beta。* 为设备端估算值。皮肤温度是相对于你自身基线的趋势，步数是原始运动计数，HRV 需要你保持静止。戒指不会输出 Oura 的准备度或 SpO2 百分比（如需这些，请导入 Oura 文件）。</string>
     <string name="l10n_add_device_wizard_both_noop_and_the_oura_app_4f219db3">NOOP 和 Oura 官方 App 都需要通过密钥来读取戒指数据。由于同一时间只能有一个 App 掌握控制权，您需要在两者之间做个选择。</string>
     <string name="l10n_add_device_wizard_connect_to_this_ring_02b9442b">连接到这枚戒指</string>
     <string name="l10n_add_device_wizard_continue_2e026239">继续</string>
@@ -202,7 +202,7 @@
     <string name="l10n_add_device_wizard_take_over_this_ring_f199dc22">接管这枚戒指</string>
     <string name="l10n_add_device_wizard_taking_over_your_ring_b64a3852">正在接管您的戒指</string>
     <string name="l10n_add_device_wizard_that_is_not_a_32_character_d42ca20d">这不是一个有效的 32 位十六进制密钥。</string>
-    <string name="l10n_add_device_wizard_the_ring_is_not_bricked_to_5efd1b3d">戒指没有变砖。如果您想恢复到之前的状态，只需再次将其恢复出厂设置并连接官方 App 即可。 up in the Oura app.</string>
+    <string name="l10n_add_device_wizard_the_ring_is_not_bricked_to_5efd1b3d">戒指并未损坏。若要恢复到最初状态，请再次将其恢复出厂设置，并在 Oura App 中重新设置。</string>
     <string name="l10n_add_device_wizard_title_subtitle_8d9004e8">%1$s · %2$s</string>
     <string name="l10n_add_device_wizard_try_again_042c862e">重试</string>
     <string name="l10n_add_device_wizard_use_file_import_0e092cb4">使用文件导入</string>
@@ -267,7 +267,7 @@
     <string name="l10n_backup_sync_screen_roughly_when_the_daily_backup_runs_71de04e1">这是每日自动备份触发的大致时间点（系统会尽力保证，但可能会有微小偏差）。</string>
     <string name="l10n_backup_sync_screen_these_backups_are_unencrypted_too_if_53e70fe8">这些备份同样未加密。如果这个文件夹与 Drive、Dropbox 或 iCloud 同步，可读的文件也会一并上传——只指向你信任的服务。</string>
     <string name="l10n_backup_sync_screen_tip_a_desktop_drive_dropbox_app_2eaff1e3">提示：如果您使用网盘 (Drive / Dropbox 等)，建议将备份文件夹选在云盘自动同步的目录内，实现真正的云端无感备份。 folder a sync app (e.g. FolderSync / Autosync) keeps in your cloud.</string>
-    <string name="l10n_backup_sync_screen_writes_a_fresh_dated_backup_to_bd964fc5">在下方设定的时间点，每天生成一份带日期标记的新备份，并自动清理旧文件。 the latest %1$s. Off by default - flip it on if you want it.</string>
+    <string name="l10n_backup_sync_screen_writes_a_fresh_dated_backup_to_bd964fc5">每天在下方设定的时间向你的文件夹写入一份带日期的新备份，并保留最近 %1$s。默认关闭——需要时打开即可。</string>
     <string name="l10n_breathe_screen_a_relaxation_rhythm_not_cardiac_control_5c2f10a8">这是一种放松节律，而非心脏调控。节奏不会低于安全下限，您也可以随时终止。如果您的心率迟迟没有平复，我们会如实告诉您。</string>
     <string name="l10n_breathe_screen_audio_cues_74430aec">语音提示</string>
     <string name="l10n_breathe_screen_breathcount_breaths_ce036831">%1$s 次呼吸</string>
@@ -432,7 +432,7 @@
     <string name="l10n_devices_screen_pick_a_new_active_strap_edd73542">选择新的主数据手环</string>
     <string name="l10n_devices_screen_rename_device_ee233604">重命名设备</string>
     <string name="l10n_devices_screen_save_efc007a3">保存</string>
-    <string name="l10n_devices_screen_the_whoop_4_0_reboot_frame_690a8ff2">WHOOP 4.0 的重启指令包尚未破译验证 — 目前常规的重启指令可能被它忽略 (#235)。 Send each candidate and watch BOTH the strap log and the strap itself. “no disconnect within 12s” means the strap ignored the frame. A “link dropped” line means the frame reached the strap — but a dropped link alone isn\'t a reboot: a real reboot also switches the strap\'s sensor light off for a few seconds, so if the light stayed on it was just a dropped connection, not a reboot. Non-destructive — your data is kept. Please share the log so we can pin the real frame.</string>
+    <string name="l10n_devices_screen_the_whoop_4_0_reboot_frame_690a8ff2">WHOOP 4.0 的重启帧尚未确认——普通的“重新启动”会被忽略（#235）。请逐个发送候选帧，同时观察手环日志和手环本身。“12 秒内未断开”表示手环忽略了该帧。出现“链路断开”一行表示该帧到达了手环——但仅凭链路断开并不等于重启：真正的重启还会让手环的传感器灯熄灭几秒，所以如果灯一直亮着，那只是连接断开，而非重启。此操作无破坏性——你的数据会保留。请分享日志，以便我们确定真正的帧。</string>
     <string name="l10n_devices_screen_whoop_4_0_reboot_probe_b51fb50f">尝试重启 WHOOP 4.0</string>
     <string name="l10n_devices_screen_whoop_is_noop_s_primary_fully_1c9e67fd">WHOOP 是 NOOP 首要且完全支持的核心手环。其他心率带只能提供早期测试版的... in-development addition: they stream live heart rate and HRV, but not WHOOP\'s deeper sleep and recovery data.</string>
     <string name="l10n_devices_screen_you_removed_your_active_strap_choose_2ac91d48">你移除了你的活跃手环。请选择哪一个已配对的手环来提供你的实时数据，或者不设置任何活跃项，稍后再配对一个。</string>
@@ -481,7 +481,7 @@
     <string name="l10n_how_noop_works_screen_got_it_5b8027fa">明白了</string>
     <string name="l10n_how_noop_works_screen_how_noop_works_3396b27a">NOOP 是如何运作的</string>
     <string name="l10n_how_noop_works_screen_noop_never_makes_up_a_number_da29aca5">NOOP 绝不编造数字。当它无法诚实地计算出一个数字时，它会告诉你缺少什么以及该怎么做，而不是显示一个虚假的数值。</string>
-    <string name="l10n_how_noop_works_screen_noop_never_shows_you_a_number_d1db9958">NOOP 从不会给您看一个为了图表好看而凑出来的数字。如果某项评分还没准备好，那它就是还没准备好。 it tells you why and what to do next. Everything here runs on your device, from your strap.</string>
+    <string name="l10n_how_noop_works_screen_noop_never_shows_you_a_number_d1db9958">NOOP 绝不会向你显示它不得不编造的数字。如果某个评分尚未就绪，它会告诉你原因以及下一步该怎么做。这里的一切都在你的设备上运行，源自你的手环。</string>
     <string name="l10n_how_noop_works_screen_section_title_section_body_efb1a999">%1$s · %2$s</string>
     <string name="l10n_how_noop_works_screen_sleep_scores_recording_where_your_numbers_1b3e981f">睡眠 · 评分 · 记录 · 数据来源详解</string>
     <string name="l10n_hrv_snapshot_screen_an_hrv_reading_needs_the_live_11b70bff">HRV 读数需要实时 R-R 数据流。请打开「实时」界面并连接你的手环，然后再返回。</string>
@@ -512,7 +512,7 @@
     <string name="l10n_hydration_screen_totalml_toint_ml_522b262a">%1$s ml</string>
     <string name="l10n_hydration_screen_undo_last_last_ml_330befc5">撤销上一笔 (%1$s ml)</string>
     <string name="l10n_insights_hub_screen_dose_here_is_timing_later_in_1b1e9326">这里的“剂量 (Dose)”指的是时间效应（越晚摄入，残余剂量越大），而不是指毫克数。</string>
-    <string name="l10n_insights_hub_screen_everything_here_is_a_pattern_in_ed2162a6">这里的每一项都是从您填写的日志中总结出的规律，展示了某个习惯与结果之间的相关性。 effect size and confidence, never a cause or a diagnosis. Population patterns are shown as “typical” and are always overridden by your own data once you have enough of it. Approximations, not WHOOP’s scores; not a medical device.</string>
+    <string name="l10n_insights_hub_screen_everything_here_is_a_pattern_in_ed2162a6">这里的一切都是你自己记录中的模式：带效应量和置信度的关联，绝不是因果或诊断。人群模式标为「典型」，一旦你的数据足够，就会被你自己的数据覆盖。这些是近似值，不是 WHOOP 的分数；也不是医疗设备。</string>
     <string name="l10n_insights_hub_screen_insights_b4510362">深度洞察</string>
     <string name="l10n_insights_hub_screen_log_alcohol_or_late_caffeine_with_dec9dadf">如果在日志中记录了酒精或晚间咖啡因及其摄入量，NOOP 将能为您拟合出专属的剂量反馈曲线： how much each extra unit tends to move your numbers. Until then it shows typical patterns, clearly labelled as not yet yours.</string>
     <string name="l10n_insights_hub_screen_not_enough_overlap_between_your_journal_0ebdd7a2">您的日志答卷与相关结果之间重叠的数据不够，不足以生成洞察。 %1$s yet. Keep logging. Each behaviour needs days both with and without it before NOOP can read its effect.</string>
@@ -536,7 +536,7 @@
     <string name="l10n_insights_screen_next_morning_61d1ea83">次日早晨</string>
     <string name="l10n_insights_screen_not_enough_overlap_between_your_journal_0ebdd7a2">您的日记回答与此项指标之间重叠的数据点不足 %1$s to measure an effect yet. Keep logging. Effects need days both with and without each behaviour.</string>
     <string name="l10n_insights_screen_not_enough_overlapping_history_to_correlate_a552dbd4">暂时还没有足够多的重叠历史数据，无法将您的各项指标进行关联分析。</string>
-    <string name="l10n_insights_screen_pick_one_behaviour_you_log_one_bd34090e">挑选一项您记录的习惯行为、一项期望的指标结果，以及一个短的时间窗口。NOOP 将... compares the days you log the behaviour against your behaviour-free days before the start.</string>
+    <string name="l10n_insights_screen_pick_one_behaviour_you_log_one_bd34090e">选择一项你记录的行为、一个结果和一个短窗口。NOOP 会将你记录该行为的日子与开始之前你没有该行为的日子进行比较。</string>
     <string name="l10n_insights_screen_ranked_lag_aware_which_of_your_e0e91b39">已排名、考虑滞后：你的哪些习惯真正影响你的能量，外加你个人对酒精/咖啡因的剂量反应。</string>
     <string name="l10n_insights_screen_rest_baseline_b3ac52a5">恢复基线</string>
     <string name="l10n_insights_screen_run_a_clean_personal_test_4da69781">运行个人习惯对照测试</string>
@@ -583,7 +583,7 @@
     <string name="l10n_lab_book_screen_a_private_notebook_not_a_medical_f63242cb">这只是一本私人健康记事本，不构成任何医疗服务。</string>
     <string name="l10n_lab_book_screen_about_lab_book_37bf2691">关于实验室记录</string>
     <string name="l10n_lab_book_screen_all_stays_on_this_phone_nothing_9a966c1c">所有数据仅保存在本手机内，绝不会上传至任何地方。</string>
-    <string name="l10n_lab_book_screen_bring_in_a_markers_csv_date_1090bec2">导入医学检测指标的 CSV 文件（格式：日期, 指标名, 数值, 单位）。与内置词典匹配的指标名称将被自动识别。 fold onto your existing markers; anything else comes in as a custom marker. Rows that can\'t be read are skipped and counted, never guessed. Everything you import stays on this phone.</string>
+    <string name="l10n_lab_book_screen_bring_in_a_markers_csv_date_1090bec2">导入标记 CSV（日期、标记、数值、单位）。与目录匹配的名称会并入你已有的标记；其余的作为自定义标记导入。无法读取的行会被跳过并计数，绝不猜测。你导入的一切都保留在 %1$s 上。</string>
     <string name="l10n_lab_book_screen_choose_a_wearable_signal_to_compare_05a4b2bc">选择一个穿戴设备指标进行比对</string>
     <string name="l10n_lab_book_screen_clear_719ea396">清空</string>
     <string name="l10n_lab_book_screen_delete_this_reading_b5c92bda">删除这条记录</string>
@@ -602,7 +602,7 @@
     <string name="l10n_lab_book_screen_read_the_full_note_3fd0e4d1">阅读完整声明</string>
     <string name="l10n_lab_book_screen_reading_your_logbook_e31992b0">正在读取您的实验日志…</string>
     <string name="l10n_lab_book_screen_these_are_your_own_numbers_shown_7667508d">这些是原样呈现给你的、你自己的数字。NOOP 不会判定任何数值是正常、偏高还是偏低。</string>
-    <string name="l10n_lab_book_screen_type_in_a_blood_pressure_reading_c276d418">手动输入您上次体检的血压记录、或者胆固醇指标数值。 It stays on this phone, and over time you\'ll see how it lines up with your sleep, heart rate and recovery.</string>
+    <string name="l10n_lab_book_screen_type_in_a_blood_pressure_reading_c276d418">输入你上次就诊时的一个血压读数或胆固醇数值。它会留在 %1$s 上，随着时间推移，你会看到它如何与你的睡眠、心率和恢复对齐。</string>
     <string name="l10n_lab_book_screen_what_lab_book_is_and_isn_f28686df">实验室是什么（以及不是什么）</string>
     <string name="l10n_live_screen_manage_devices_e5c277ff">管理设备</string>
     <string name="l10n_live_screen_max_hr_6acd9e07">最大心率</string>
@@ -640,7 +640,7 @@
     <string name="l10n_marker_editor_screen_date_taken_76edfcab">化验日期</string>
     <string name="l10n_marker_editor_screen_def_displayname_def_canonicalunit_e86ef8de">%1$s, 单位：%2$s</string>
     <string name="l10n_marker_editor_screen_entered_together_stored_as_two_markers_af8f3ba0">一并录入的数据；在系统中会被拆分为两项指标进行存储，以便分别与您的体征信号对齐比对。</string>
-    <string name="l10n_marker_editor_screen_lab_book_keeps_your_own_numbers_9085ce2c">实验室仅负责保管您的数据 - 它不会进行测试、解读或做任何评判，更不是医疗设备。 advice. Everything stays on this phone.</string>
+    <string name="l10n_marker_editor_screen_lab_book_keeps_your_own_numbers_9085ce2c">实验手记保存你自己的数字，它不检测、不解读、也不评判它们，也不是医疗建议。一切都留在 %1$s 上。</string>
     <string name="l10n_marker_editor_screen_no_match_add_it_as_a_ad5c59ec">未找到匹配项。您可以在下方将其添加为自定义指标。</string>
     <string name="l10n_marker_editor_screen_noop_never_fills_this_in_it_7be9653b">NOOP 绝不会自动填充此项 - 它只会原封不动地展示您从化验单上手动录入的数据。</string>
     <string name="l10n_marker_editor_screen_search_markers_103981e0">搜索检测指标</string>
@@ -690,7 +690,7 @@
     <string name="l10n_notifications_settings_screen_uses_the_same_quiet_hours_and_03badcac">遵循全局的“免打扰时间段”和“仅佩戴时震动”规则。</string>
     <string name="l10n_notifications_settings_screen_voip_calls_96c5a102">网络语音通话 (VoIP)</string>
     <string name="l10n_notifications_settings_screen_wrist_alerts_75581d51">手腕震动提醒</string>
-    <string name="l10n_notifications_settings_screen_wrist_delivery_needs_notification_access_so_2a14e784">手环震动提醒需要系统“通知读取权限”，以便 NOOP 知道是哪个 App 在发通知 you. Nothing leaves this device. Your choices are saved now and apply automatically once access is granted.</string>
+    <string name="l10n_notifications_settings_screen_wrist_delivery_needs_notification_access_so_2a14e784">手腕提醒需要「通知使用权」，NOOP 才能得知哪些 App 在给你发通知。任何数据都不会离开此设备。你的选择已经保存，授权后会自动生效。</string>
     <string name="l10n_onboarding_screen_a_private_window_into_your_recovery_b8dd2ff2">这是了解您身体恢复、睡眠和压力的专属窗口。数据直接从您的手环读取，并严格保留在本机。</string>
     <string name="l10n_onboarding_screen_a_quick_word_before_you_connect_5a29015a">连接手环前的一点小说明</string>
     <string name="l10n_onboarding_screen_a_quiet_ongoing_status_97bf2a44">安静持续地关注你的状态</string>
@@ -763,7 +763,7 @@
     <string name="l10n_settings_screen_note_a2481d6c">· %1$s</string>
     <string name="l10n_settings_screen_repo_note_0a694b50">%1$s, %2$s</string>
     <string name="l10n_skin_temp_cards_screen_cycle_awareness_ffb94783">生理周期推断</string>
-    <string name="l10n_skin_temp_cards_screen_noop_can_read_a_coarse_menstrual_c79e4b85">NOOP 可以通过您夜间的皮肤体温趋势，粗略地推断您的生理周期所处阶段。 entirely on your device. It is awareness only: not contraception, not a fertility predictor, not a medical service.</string>
+    <string name="l10n_skin_temp_cards_screen_noop_can_read_a_coarse_menstrual_c79e4b85">NOOP 可以从你的夜间皮肤温度中读取粗略的月经周期阶段，完全在你的设备上。它仅供了解参考：不是避孕手段，不是生育力预测工具，也不是医疗服务。</string>
     <string name="l10n_skin_temp_cards_screen_turn_on_cycle_awareness_7c2d328f">开启生理周期推断</string>
     <string name="l10n_sleep_screen_about_this_nap_e2719b9b">关于本次小睡</string>
     <string name="l10n_sleep_screen_about_your_main_sleep_1da8a640">关于您的主睡眠</string>
@@ -853,20 +853,20 @@
     <string name="l10n_steps_calibration_screen_done_e9b450d1">完成</string>
     <string name="l10n_steps_calibration_screen_est_18b405fb">预估值</string>
     <string name="l10n_steps_calibration_screen_how_this_works_b895a8c3">工作原理</string>
-    <string name="l10n_steps_calibration_screen_no_days_yet_where_both_noop_71d6005b">尚未收集到 NOOP 和手机同时记录步数的日期。一旦您的手机记录了... few days alongside the strap, they\'ll appear here so you can see how close the estimate is.</string>
+    <string name="l10n_steps_calibration_screen_no_days_yet_where_both_noop_71d6005b">还没有 NOOP 和你手机同时统计步数的日期。一旦你的手机与手环一起记录了几天，它们就会出现在这里，让你看到估算有多接近。</string>
     <string name="l10n_steps_calibration_screen_no_motion_synced_yet_65106670">暂未同步到体动数据</string>
     <string name="l10n_steps_calibration_screen_noop_estimates_your_steps_from_your_d569bc31">NOOP 会根据你 WHOOP 的运动来估算步数，并以你手机的步数进行校准。这是一个估算值，而非计步器，WHOOP 4.0 不传输步数。</string>
     <string name="l10n_steps_calibration_screen_not_calibrated_yet_30abe0d0">尚未完成校准</string>
-    <string name="l10n_steps_calibration_screen_on_the_days_your_phone_also_2f65a14c">在手机也计步的日子里，NOOP 会学习体动数据应该如何映射到实际步数，从而越来越精准。 steps, then applies that to the strap-only days. The more matching days it has, the more it trusts the estimate.</string>
+    <string name="l10n_steps_calibration_screen_on_the_days_your_phone_also_2f65a14c">在你手机也统计步数的那些日子里，NOOP 会学习你的运动对应多少步数，然后将其应用到仅有手环的日子。匹配的日子越多，它对估算就越信任。</string>
     <string name="l10n_steps_calibration_screen_open_noop_near_your_strap_and_e08ddd6d">请在手环附近打开 NOOP 并等待数据同步完成 (如果是全量历史数据同步，可能会花点时间)。 first run). Once a day or two of motion lands, your step estimate and the calibration below will start to fill in.</string>
-    <string name="l10n_steps_calibration_screen_override_the_automatic_fit_with_your_36a7b6fa">覆盖自动计算出的步数映射系数，改用您自己设定的“每单位体动对应的步数”。这在手机计步不准时很有用。 has no step history to learn from, or the estimate runs consistently high or low. Step all the way down to return to auto.</string>
+    <string name="l10n_steps_calibration_screen_override_the_automatic_fit_with_your_36a7b6fa">用你自己的每运动步数值覆盖自动拟合。当你的手机没有可供学习的步数历史，或估算持续偏高或偏低时会很有用。将滑块拖到最左端即可恢复为自动。</string>
     <string name="l10n_steps_calibration_screen_phone_77064d52">手机</string>
     <string name="l10n_steps_calibration_screen_shortday_row_day_estimated_row_estimated_f2d71597">%1$s: 预估 %2$s 步，手机记录 %3$s 步 steps, %4$s percent difference</string>
     <string name="l10n_steps_calibration_screen_steps_per_motion_unit_a2c2ac56">每单位体动对应步数</string>
     <string name="l10n_steps_calibration_screen_takes_effect_on_the_next_analytics_13205327">将在下一次数据分析（同步后）生效。</string>
     <string name="l10n_steps_calibration_screen_these_are_the_days_where_your_ae5c9c2c">这些是你手机也统计了步数的日子，因此 NOOP 可以学习你的运动如何对应步数。或者在下方手动设置系数。</string>
     <string name="l10n_steps_calibration_screen_these_days_are_excluded_from_the_6bedabbf">这些日子被排除在估算之外（改为显示你手机的真实计数）， 它们出现在这里只是为了让你判断估算的准确性。</string>
-    <string name="l10n_steps_calibration_screen_we_re_not_seeing_any_motion_6ac8e092">我们暂未接收到手环的体动数据。步数是根据 WHOOP 传来的体动信号推算的。 banked motion history, so your strap needs to sync that history before NOOP has anything to count.</string>
+    <string name="l10n_steps_calibration_screen_we_re_not_seeing_any_motion_6ac8e092">我们还没有看到你手环的任何运动数据。步数是根据你 WHOOP 存储的运动历史估算的，因此你的手环需要先同步该历史，NOOP 才有可供统计的内容。</string>
     <string name="l10n_steps_calibration_screen_whoop_4_0_motion_steps_a63239dc">WHOOP 4.0 · 体动 → 步数换算</string>
     <string name="l10n_strand_components_next_day_38f859dd">下一天</string>
     <string name="l10n_strand_components_previous_day_e2b6b0a1">前一天</string>
@@ -979,7 +979,7 @@
     <string name="l10n_whoop_model_comparison_screen_close_bbfa773e">关闭</string>
     <string name="l10n_whoop_model_comparison_screen_done_e9b450d1">完成</string>
     <string name="l10n_whoop_model_comparison_screen_feature_ad565d9d">功能特性</string>
-    <string name="l10n_whoop_model_comparison_screen_noop_pairs_with_the_whoop_4_599b088c">NOOP 支持连接 WHOOP 4.0 和 WHOOP 5.0 (含)。它们在绝大多数核心功能上表现一致... heart rate, your scores, buzzing the strap), but a few firmware features differ. Here\'s what each can do, and why.</string>
+    <string name="l10n_whoop_model_comparison_screen_noop_pairs_with_the_whoop_4_599b088c">NOOP 支持连接 WHOOP 4.0 和 WHOOP 5.0/MG。它们在绝大多数核心功能上一致（实时心率、你的各项评分、手环震动），但部分固件功能有所不同。下面说明各自能做什么，以及原因。</string>
     <string name="l10n_whoop_model_comparison_screen_on_a_whoop_4_0_32a5968d">使用的是 WHOOP 4.0？</string>
     <string name="l10n_whoop_model_comparison_screen_what_each_can_read_and_why_4348bd67">各型号能读取哪些数据，以及为什么</string>
     <string name="l10n_whoop_model_comparison_screen_you_re_not_missing_the_broadcast_1d2fa907">您并没有错过心率广播功能。若想将您的心率共享给健身房器材，...</string>
@@ -1484,7 +1484,7 @@
     <string name="l10n_settings_screen_icon_716f63b9">图标</string>
     <string name="l10n_settings_screen_illness_heads_up_97e10035">生病预警提醒</string>
     <string name="l10n_settings_screen_import_4834caf8">导入…</string>
-    <string name="l10n_settings_screen_importing_overwrites_everything_currently_on_this_297b76ae">导入操作将覆盖此手机上当前存在的所有数据！以防万一，您的旧数据将被备份保存在一个独立文件中。导入完成后，NOOP 需要重新启动才能生效。 Export CSV writes a WHOOP-format zip of your days, sleeps, workouts and journal that re-imports into NOOP on Android or Mac. On-device computed rows are marked APPROXIMATE in its Source column; the .noopbak backup stays the lossless restore path.</string>
+    <string name="l10n_settings_screen_importing_overwrites_everything_currently_on_this_297b76ae">导入会覆盖 %1$s 上当前的所有内容。以防万一，你的旧数据会保存在一个备用文件中。导入生效需要重新启动 NOOP。导出 CSV 会写出一个 WHOOP 格式的 zip，包含你的每日数据、睡眠、锻炼和日志，可重新导入到 Mac、iPhone 或 Android 上的 NOOP 中，设备端计算的行会在其「来源」列中标为 APPROXIMATE（近似）；完整备份仍是无损的还原路径。</string>
     <string name="l10n_settings_screen_keep_connected_in_the_background_44499d45">允许后台保持连接</string>
     <string name="l10n_settings_screen_keep_noop_alive_overnight_e43b2fba">允许 NOOP 彻夜运行</string>
     <string name="l10n_settings_screen_allow_3ad0e369">允许</string>
@@ -1517,7 +1517,7 @@
     <string name="l10n_settings_screen_records_the_raw_frames_of_each_98a284df">将每次 5.0/MG 历史数据同步的原始数据帧保存到手机文件中，您可以分享这些文件，帮助 NOOP 学习如何解码 5.0/MG 的睡眠、恢复及负荷数据。文件内包含原始生物识别数据帧（心率、R-R间期、皮肤体温、运动信息）以及手环自身的诊断文本。除非您主动分享，否则这些数据绝不会离开您的手机。默认处于关闭状态。</string>
     <string name="l10n_settings_screen_remove_photo_c8f5eda8">移除头像</string>
     <string name="l10n_settings_screen_rename_d3f4cb89">重命名</string>
-    <string name="l10n_settings_screen_rename_your_strap_s_bluetooth_name_6032668b">重命名您手环的蓝牙广播名称，这对于使用二手手环的用户非常实用。修改直接写入... reboots to apply, then reconnects with the new name.</string>
+    <string name="l10n_settings_screen_rename_your_strap_s_bluetooth_name_6032668b">重命名手环的蓝牙广播名称，适合二手手环使用。手环会重启以应用更改，随后以新名称重新连接。</string>
     <string name="l10n_settings_screen_restarts_the_roughly_4_night_build_84f9f8d0">从今晚开始，重新启动大约需要 4 个晚上的充能(Charge)基准与 HRV 基准建立过程。如果因为您第一周佩戴时状态不佳（如生病）导致基线严重偏离，请使用此功能。您的所有历史数据都将被保留。</string>
     <string name="l10n_settings_screen_reviews_each_scored_wake_block_for_537924ea">审查每个被判定为“清醒”的睡眠片段，寻找您确实已经起床活动的真实证据（例如走路步频，或... change in body position) instead of just a heart-rate rise. A wake block with no locomotion and a stable posture -- a hot night, a brief turn-over -- is folded back into light sleep; a real get-up is left alone. Self-checks how much motion detail your strap actually recorded and stays off on a night that\'s too sparse to trust (older WHOOP 4.0 firmware, mainly). Off by default; takes effect on the next nights staged.</string>
     <string name="l10n_settings_screen_rhythm_experimental_12d357da">心律 Rhythm (实验性功能)</string>
@@ -1640,7 +1640,6 @@
     <string name="l10n_today_screen_choose_which_tiles_show_on_your_a4e3acfb">选择要在控制台中显示的磁贴，并通过箭头图标上下调整它们的顺序。</string>
     <string name="l10n_today_screen_data_label_data_value_data_unit_27f6fd6b">%1$s %2$s %3$s</string>
     <string name="l10n_today_screen_data_unit_c768ef8c">%1$s</string>
-    <string name="l10n_today_screen_daytitle_humandate_tap_to_pick_a_7e12ce96">%1$s, %2$s。点击选择日期，左右滑动切换前/后一天。</string>
     <string name="l10n_today_screen_detailed_tiles_0801721b">详情数据面板</string>
     <string name="l10n_today_screen_dismiss_to_updates_2c7915b8">将此卡片收起至“更新”中</string>
     <string name="l10n_today_screen_each_line_is_how_many_points_dec2c062">每一条线都代表该项体征导致您的充能(Charge)总分偏离了多少分（与</string>
@@ -1697,7 +1696,7 @@
     <string name="l10n_trends_explore_screen_resting_hr_26677094">静息心率</string>
     <string name="l10n_trends_explore_screen_sleep_3cac34e6">睡眠</string>
     <string name="l10n_trends_explore_screen_sleep_efficiency_b4b5c293">睡眠效率</string>
-    <string name="l10n_trends_report_a_clean_shareable_one_page_pdf_a3c4f889">生成一份简洁清爽且方便分享的一页纸 PDF 报告，包含您的恢复情况、睡眠、HRV 以及静息心率数据。 and strain over a date range. Built and saved on your phone - nothing leaves the device.</string>
+    <string name="l10n_trends_report_a_clean_shareable_one_page_pdf_a3c4f889">一份简洁、可分享的单页 PDF，涵盖某个日期范围内你的恢复、睡眠、HRV、静息心率和强度。保存在你的 %1$s 上，没有任何内容离开设备。</string>
     <string name="l10n_trends_report_export_pdf_3dd7d56a">导出 PDF</string>
     <string name="l10n_trends_report_the_share_sheet_can_save_the_ecddbca7">通过分享面板，您可以将 PDF 保存到文件中，或直接发送给他人。</string>
     <string name="l10n_trends_report_trends_report_pdf_481e8a5f">趋势报告 (PDF)</string>
@@ -1924,7 +1923,7 @@
     <string name="settings_chart_classic">经典</string>
     <string name="settings_trend_line">折线</string>
     <string name="settings_trend_bars">柱形</string>
-    <string name="spo2_strap_estimate_caption">腕带估算（未验证）</string>
+    <string name="spo2_strap_estimate_caption">未经验证</string>
     <string name="spo2_toggle_on_no_data">已开启 · 无 @82 数据</string>
     <string name="l10n_devices_screen_forget_device_d6eb6209">忘记设备…</string>
     <string name="l10n_devices_screen_forget_device_926e503d">忘记设备</string>
@@ -2826,4 +2825,5 @@
     <string name="raw_diag_ecg_probe_start">开始心电图采集</string>
     <string name="raw_diag_ecg_probe_stop">停止心电图采集</string>
     <string name="raw_diag_ecg_probe_running">此腕带上可能仍在采集。结论会写入 strap log。</string>
+    <string name="spo2_unvalidated_detail">未经验证。此实验性手环估算可能不准确。请勿用于医疗决策。</string>
 </resources>

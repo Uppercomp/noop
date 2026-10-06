@@ -118,7 +118,7 @@ class PpgWaveformMigrationTest {
 
         WhoopRepository(dao).insert(
             StreamBatch(ppgWaveform = listOf(
-                PpgWaveformRow(ts = 1_780_917_232L, samples = realSamples, burstIndex = 7),
+                PpgWaveformRow(ts = 1_780_917_232L, samples = realSamples, burstIndex = 7, baseCode = 378307L, rawFrame = listOf(170, 0, 255)),
             )),
             deviceId = "my-whoop",
         )
@@ -128,10 +128,30 @@ class PpgWaveformMigrationTest {
         assertEquals("my-whoop", rows[0].deviceId)
         assertEquals(1_780_917_232L, rows[0].ts)
         assertEquals(7, rows[0].burstIndex)
+        assertEquals(378307L, rows[0].baseCode)
+        assertArrayEquals(byteArrayOf(170.toByte(), 0, 255.toByte()), rows[0].rawFrame)
         // The stored BLOB is exactly packPpgSamples(samples) — the byte-identical contract vs GRDB.
         assertArrayEquals(StreamPersistence.packPpgSamples(realSamples), rows[0].samples)
         // And it unpacks back to the original samples.
         assertEquals(realSamples, StreamPersistence.unpackPpgSamples(rows[0].samples))
+    }
+
+    @Test
+    fun repositoryReadRetainsBaseBurstAndFrame(): Unit = runBlocking {
+        val frame = byteArrayOf(0xAA.toByte(), 0, 0xFF.toByte())
+        val entity = PpgWaveformSampleEntity("dev", 123, StreamPersistence.packPpgSamples(listOf(-1, 2)),
+            7, 0xFFFF_FFFFL, frame)
+        val dao = Proxy.newProxyInstance(WhoopDao::class.java.classLoader, arrayOf(WhoopDao::class.java)) {
+            _, method, _ ->
+            when (method.name) {
+                "ppgWaveformSamples" -> listOf(entity)
+                else -> throw UnsupportedOperationException(method.name)
+            }
+        } as WhoopDao
+        assertEquals(listOf(PpgWaveformRow(123, listOf(-1, 2), 7, 0xFFFF_FFFFL, listOf(170, 0, 255))),
+            WhoopRepository(dao).ppgWaveformSamples("dev", 0, 200))
+        assertEquals(entity, entity.copy(rawFrame = frame.copyOf()))
+        assertEquals(entity.hashCode(), entity.copy(rawFrame = frame.copyOf()).hashCode())
     }
 
     // MARK: - #1911 rolling retention (twin of Swift PpgWaveformSampleTests' retention block)

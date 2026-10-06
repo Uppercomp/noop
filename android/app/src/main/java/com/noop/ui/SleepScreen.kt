@@ -529,7 +529,7 @@ fun SleepScreen(
     // overline and the nav header so both name the SAME calendar night.
     val nightLabel = nightRelativeLabel(
         calendarNightsAgo(navDays, nightOffset, java.util.TimeZone.getDefault())
-    )
+    ).text()
 
     // The HERO follows the selected night (its stage breakdown comes from that day's row); the
     // at-a-glance TILES, the debt ledger, the personal need and the trend stay full-history /
@@ -604,7 +604,7 @@ fun SleepScreen(
 
     LazyScreenScaffold(
         title = uiString(R.string.l10n_sleep_screen_sleep_3cac34e6),
-        subtitle = "Last night, read in two seconds.",
+        subtitle = uiString(R.string.l10n_sleep_screen_last_night_read_in_two_seconds_4c9b785b),
         listState = sleepListState,   // #sleep-layout: the hold-to-drag frame loop drives this list state
         // LIQUID SKY BACKDROP (the pilot pattern — LiquidScreenSky.kt): the static time-of-day liquid sky
         // settles into the theme canvas behind the header + hero, bled full-width up behind the status bar
@@ -719,7 +719,7 @@ fun SleepScreen(
                     score = if (night != null) heroPerformanceScore(night, days, imported)
                             else tilesModel?.performance?.latest,
                     asleepMin = model?.stages?.asleep,
-                    source = restHeroSource(imported, night?.dayKey ?: days.lastOrNull()?.day, activeIsOura),
+                    source = restHeroSource(imported, night?.dayKey ?: days.lastOrNull()?.day, activeIsOura).text(),
                     overline = nightLabel,
                 )
             }
@@ -1031,7 +1031,7 @@ private fun SleepAlarmsEntry(onOpenAlarms: () -> Unit) {
 @Composable
 internal fun SleepMarkCard(onMark: (SleepMarkType) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
-        SectionHeader(title = uiString(R.string.l10n_sleep_screen_sleep_marks_8e9b86f0), overline = "Tap to log", trailing = "Phase 1")
+        SectionHeader(title = uiString(R.string.l10n_sleep_screen_sleep_marks_8e9b86f0), overline = uiString(R.string.l10n_sleep_screen_tap_to_log_e55225d9), trailing = uiString(R.string.l10n_sleep_screen_phase_1_8e086fa3))
         NoopCard(tint = Palette.restColor) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
@@ -1241,7 +1241,7 @@ private val LIQUID_HERO_RADIUS: Dp = 26.dp
 @Composable
 private fun RestHero(score: Double?, asleepMin: Double?, source: String, overline: String) {
     Column(verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
-        SectionHeader("Sleep performance", overline = overline, trailing = "Rest")
+        SectionHeader(uiString(R.string.l10n_sleep_screen_sleep_performance_e8a233b6), overline = overline, trailing = uiString(R.string.trends_rest))
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1269,7 +1269,7 @@ private fun RestHero(score: Double?, asleepMin: Double?, source: String, overlin
                         tint = Palette.restColor,
                         diameter = 184.dp,
                     )
-                    Text(sleepScoreWord(score), style = NoopType.subhead, color = Palette.textSecondary)
+                    Text(sleepScoreWord(score).text(), style = NoopType.subhead, color = Palette.textSecondary)
                 } else {
                     // No 0–100 score for the night — lead with hours slept as a big rounded headline
                     // whose minutes tick up on appear (the same count-up the scored hero rolls). Mirrors the
@@ -1281,7 +1281,7 @@ private fun RestHero(score: Double?, asleepMin: Double?, source: String, overlin
                     ) {
                         CountUpText(
                             value = asleepMin ?: 0.0,
-                            format = { durationText(it) },
+                            format = { durationText(it).plain() },
                             style = NoopType.number(46f),
                             color = Palette.restBright,
                         )
@@ -1412,7 +1412,7 @@ private fun Hero(
             // 0x49 phase stream), NOT a NOOP approximation — so it gets its own honest caption instead of the
             // "approx. stages (on-device)" one that describes NOOP's own sparse-motion staging.
             val stageCaption = if (activeIsOura) " · raw on-device stages" else " · approx. stages (on-device)"
-            val subtitle = "${durationText(inBedMin)} in bed · ${display.efficiencyText} efficiency" +
+            val subtitle = uiString(R.string.l10n_sleep_screen_in_bed_efficiency_665fdcef, durationText(inBedMin).text(), display.efficiencyText) +
                 (if (display.realSegments != null) stageCaption else "")
             // iOS #988 port: true per-epoch segments (≥ 2 — a single run has no transitions to lay
             // out) get the per-stage timeline rows; the rows ARE the legend, so no footer. Anything
@@ -1428,7 +1428,7 @@ private fun Hero(
                     SleepChartCard(
                         title = uiString(R.string.l10n_sleep_screen_stage_breakdown_e9b714f9),
                         subtitle = subtitle,
-                        trailing = durationText(s.asleep),
+                        trailing = durationText(s.asleep).text(),
                         tint = Palette.restColor,
                         // #1536: the stage LEGEND that used to sit here is gone, and the rows below now
                         // take the chart's ramp. Those two go together. The legend decoded the hypnogram
@@ -1451,7 +1451,7 @@ private fun Hero(
                     SleepChartCard(
                         title = uiString(R.string.l10n_sleep_screen_stage_breakdown_e9b714f9),
                         subtitle = subtitle,
-                        trailing = durationText(s.asleep),
+                        trailing = durationText(s.asleep).text(),
                         tint = Palette.restColor,
                         footer = {},
                     ) {
@@ -1471,7 +1471,7 @@ private fun Hero(
                 SleepChartCard(
                     title = uiString(R.string.l10n_sleep_screen_stage_breakdown_e9b714f9),
                     subtitle = subtitle,
-                    trailing = durationText(s.asleep),
+                    trailing = durationText(s.asleep).text(),
                     tint = Palette.restColor,
                     footer = { StageBreakdownRows(s) },
                 ) {
@@ -1494,7 +1494,7 @@ private fun Hero(
                             color = Palette.metricRose,
                             fill = false,
                             timestamps = nightHr.map { it.bucket },
-                            formatValue = { "${Math.round(it)} bpm" },
+                            formatValue = { uiString(R.string.today_driver_value_bpm, Math.round(it)) },
                         )
                     }
                     val segments = stageSegments(s)
@@ -1623,9 +1623,9 @@ private fun NapsCard(
             if (naps.isNotEmpty()) {
                 // Main / Nap(s) / Total split — only meaningful once a nap exists. Total = main + naps.
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    NapSummaryCell("Main sleep", durationText(mainMin), Modifier.weight(1f))
-                    NapSummaryCell("Nap(s)", durationText(napMin), Modifier.weight(1f))
-                    NapSummaryCell("Total", durationText(mainMin + napMin), Modifier.weight(1f))
+                    NapSummaryCell(uiString(R.string.settings_day_cycle_sleep), durationText(mainMin).text(), Modifier.weight(1f))
+                    NapSummaryCell(uiString(R.string.l10n_sleep_screen_nap_s_d0d9deaf), durationText(napMin).text(), Modifier.weight(1f))
+                    NapSummaryCell(uiString(R.string.l10n_sleep_screen_total_b25928c6), durationText(mainMin + napMin).text(), Modifier.weight(1f))
                 }
             }
             if (naps.isEmpty()) {
@@ -1665,11 +1665,9 @@ private fun OuraRawStagesNote() {
         verticalAlignment = Alignment.Top,
         modifier = Modifier.padding(horizontal = 2.dp),
     ) {
-        SourceBadge(text = "Raw on-device stages", tint = Palette.restColor)
+        SourceBadge(text = uiString(R.string.l10n_sleep_screen_raw_on_device_stages_a1b7287f), tint = Palette.restColor)
         Text(
-            "This split is the ring's raw on-device classification read over Bluetooth, not the adjusted " +
-                "stages the Oura app shows. Expect more Awake and less Deep/REM here than in the Oura app " +
-                "for the same night.",
+            uiString(R.string.l10n_sleep_screen_this_split_is_the_ring_s_raw_on_device_c_cb0c077f),
             style = NoopType.caption,
             color = Palette.textTertiary,
         )
@@ -1867,12 +1865,18 @@ private fun MainSleepFooter(
     // (→ "Oura" from daySourceBadge); a night that merely COMPUTED under a live Oura strap reads "On-device"
     // there, so flip it to "Oura" too, matching iOS SleepView.nightSource (WHOOP/Apple imports still win).
     val base = daySourceBadge(main.deviceId)
+    // Compared as a RESOURCE, not as words: `== "On-device"` stopped matching the moment the badge was
+    // translated, which silently dropped the Oura correction in every non-English locale.
     val (sourceText, sourceTint) =
-        if (base.first == "On-device" && activeIsOura) "Oura" to Palette.restColor else base
+        if (base.first == DisplayText.Resource(R.string.today_source_on_device) && activeIsOura) {
+            DisplayText.Dynamic("Oura") to Palette.restColor
+        } else {
+            base
+        }
     var showWhy by remember(main.startTs) { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(Metrics.space10)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            SourceBadge(text = sourceText, tint = sourceTint)
+            SourceBadge(text = sourceText.text(), tint = sourceTint)
             Spacer(Modifier.weight(1f))
             if (reason != null) {
                 Row(
@@ -1894,7 +1898,7 @@ private fun MainSleepFooter(
         }
         if (showWhy && reason != null) {
             Text(uiString(R.string.l10n_sleep_screen_about_your_main_sleep_1da8a640), style = NoopType.subhead, color = Palette.textPrimary)
-            Text(reason, style = NoopType.footnote, color = Palette.textSecondary)
+            Text(reason.text(), style = NoopType.footnote, color = Palette.textSecondary)
         }
     }
 }
@@ -1907,23 +1911,33 @@ private fun MainSleepFooter(
  * the hero used, so the words match the block the hero shows. null only when the day has no blocks. The
  * copy is byte-identical to iOS SleepView.mainSleepReasonText. (spec 2026-06-20 C1)
  */
-internal fun mainSleepReasonText(blocks: List<SleepSession>, habitualMidsleepSec: Long?): String? {
+internal fun mainSleepReasonText(blocks: List<SleepSession>, habitualMidsleepSec: Long?): DisplayText? {
     val sel = SleepStageTotals.mainNightSelection(
         blocks.map { SleepStageTotals.NightBlock(it.effectiveStartTs, it.endTs) },
         uiTzOffsetSec(),
         habitualMidsleepSec,
     ) ?: return null
-    // Round to whole minutes for "Xh Ym", matching Swift durationText(sel.asleepMinutes).
+    // Round to whole minutes for "Xh Ym", matching Swift. Kept as a DisplayText and passed as a NESTED
+    // argument: resolving it here would need an Application, which the copy test does not have.
     val dur = durationText(sel.asleepSec / 60.0)
+    // RESOURCES rather than resolved strings: the test that pins this copy runs with no Application
+    // attached, so a resolved String here would throw (see [DisplayText]). The English wording stays the
+    // cross-platform contract, and MainSleepReasonCopyTest asserts it against `values/strings.xml`.
     return when (sel.reason) {
         SleepStageTotals.MainNightReason.onlyBlock ->
-            "This is your only sleep block today."
+            DisplayText.Resource(R.string.l10n_sleep_screen_this_is_your_only_sleep_block_today_fa7e6772)
         SleepStageTotals.MainNightReason.longest ->
-            "Picked as your main sleep because it was your longest block ($dur)."
+            DisplayText.Resource(
+                R.string.l10n_sleep_screen_picked_as_your_main_sleep_because_it_was_a93dabf2,
+                listOf(dur),
+            )
         SleepStageTotals.MainNightReason.longestNearUsual ->
-            "Picked as your main sleep because it was your longest block ($dur), near your usual bedtime."
+            DisplayText.Resource(
+                R.string.l10n_sleep_screen_picked_as_your_main_sleep_because_it_was_393f2937,
+                listOf(dur),
+            )
         SleepStageTotals.MainNightReason.alignedToUsual ->
-            "Picked as your main sleep because it started near your usual sleep time."
+            DisplayText.Resource(R.string.l10n_sleep_screen_picked_as_your_main_sleep_because_it_sta_9de516d3)
     }
 }
 
@@ -1969,7 +1983,7 @@ private fun NapRow(
                 modifier = Modifier
                     .weight(1f)
                     .semantics(mergeDescendants = true) {
-                        contentDescription = uiString(R.string.l10n_sleep_screen_nap_window_durationtext_durmin_bbc35167, window, durationText(durMin))
+                        contentDescription = uiString(R.string.l10n_sleep_screen_nap_window_durationtext_durmin_bbc35167, window, durationText(durMin).plain())
                     },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -1977,7 +1991,7 @@ private fun NapRow(
                 Spacer(Modifier.width(Metrics.space10))
                 Column {
                     Text(window, style = NoopType.body, color = Palette.textPrimary)
-                    Text(durationText(durMin), style = NoopType.overline, color = Palette.textTertiary)
+                    Text(durationText(durMin).text(), style = NoopType.overline, color = Palette.textTertiary)
                 }
             }
             // Each action gets a 48dp IconButton touch target and keeps its own contentDescription.
@@ -1992,7 +2006,7 @@ private fun NapRow(
             IconButton(onClick = { editingStart = true }) {
                 Icon(
                     Icons.Filled.Edit,
-                    contentDescription = if (nap.userEdited) "Edit nap times (edited)" else "Edit nap times",
+                    contentDescription = if (nap.userEdited) uiString(R.string.l10n_sleep_screen_edit_nap_times_edited_dfc0ea78) else uiString(R.string.l10n_sleep_screen_edit_nap_times_230d6595),
                     tint = Palette.restColor,
                     modifier = Modifier.size(18.dp),
                 )
@@ -2043,7 +2057,7 @@ private fun NapRow(
                     editingEnd = true
                 },
                 startCal.get(Calendar.HOUR_OF_DAY), startCal.get(Calendar.MINUTE), true,
-            ).apply { setTitle("Nap started") }
+            ).apply { setTitle(uiString(R.string.l10n_sleep_screen_nap_started_d5b588bb)) }
             dialog.setOnDismissListener { editingStart = false }
             dialog.show()
             onDispose { runCatching { dialog.dismiss() } }
@@ -2069,7 +2083,7 @@ private fun NapRow(
                     pendingStart = 0L
                 },
                 endCal.get(Calendar.HOUR_OF_DAY), endCal.get(Calendar.MINUTE), true,
-            ).apply { setTitle("Nap ended") }
+            ).apply { setTitle(uiString(R.string.l10n_sleep_screen_nap_ended_f5b406ea)) }
             dialog.setOnDismissListener { editingEnd = false }
             dialog.show()
             onDispose { runCatching { dialog.dismiss() } }
@@ -2171,12 +2185,12 @@ private fun StageTimelineRow(
             .clickable(onClickLabel = "Highlights this stage on the sleep chart", onClick = onTap)
             .padding(horizontal = Metrics.stageRowPadH, vertical = Metrics.stageRowPadV)
             .semantics(mergeDescendants = true) {
-                contentDescription = uiString(R.string.l10n_sleep_screen_label_durationtext_minutes_percent_percent_of_6ab7ae87, label, durationText(minutes), percent)
+                contentDescription = uiString(R.string.l10n_sleep_screen_label_durationtext_minutes_percent_percent_of_6ab7ae87, stageDisplayLabel(label).plain(), durationText(minutes).plain(), percent)
             },
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                label.uppercase(Locale.getDefault()),
+                stageDisplayLabel(label).text().uppercase(Locale.getDefault()),
                 style = NoopType.overline,
                 color = Palette.textPrimary,
                 maxLines = 1,
@@ -2185,7 +2199,7 @@ private fun StageTimelineRow(
             Text(uiString(R.string.l10n_sleep_screen_percent_2281d326, percent), style = NoopType.captionNumber, color = pctColor, maxLines = 1)
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                durationText(minutes),
+                durationText(minutes).text(),
                 style = NoopType.captionNumber,
                 color = Palette.textPrimary,
                 maxLines = 1,
@@ -2264,8 +2278,15 @@ private fun StageInsight(selectedStage: String?, s: Stages) {
     }
 }
 
-private fun stageInsightLine(label: String, minutes: Double, percent: Int): String =
-    "$label tonight: ${durationText(minutes)} — $percent% of the night."
+/**
+ * The line under the stage rows: the selected stage tonight, or the quiet "tap a row" hint.
+ *
+ * The stage name is resolved through [stageDisplayLabel] rather than translated at the call sites, so the
+ * sentence, the row above it and the breakdown table all name the stage the same way.
+ */
+@Composable
+private fun stageInsightLine(stage: String, minutes: Double, percent: Int): String =
+    "${stageDisplayLabel(stage).text()} tonight: ${durationText(minutes).text()} — $percent% of the night."
 
 /**
  * The night's four stages as whole percentages that sum to exactly 100 (largest-remainder), keyed by

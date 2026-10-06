@@ -1,15 +1,16 @@
 package com.noop.ui
 
+import com.noop.R
 import com.noop.analytics.RestScorer
 import com.noop.data.DailyMetric
 import com.noop.data.SleepSession
 
 /** A short Rest state word for the hero gauge — same banding the synthesis hero uses. */
-internal fun sleepScoreWord(score: Double): String = when {
-    score < 50.0 -> "Poor"
-    score < 70.0 -> "Fair"
-    score < 85.0 -> "Good"
-    else -> "Optimal"
+internal fun sleepScoreWord(score: Double): DisplayText = when {
+    score < 50.0 -> DisplayText.Resource(R.string.l10n_sleep_hero_logic_poor_4e0fa437)
+    score < 70.0 -> DisplayText.Resource(R.string.l10n_sleep_hero_logic_fair_64b98589)
+    score < 85.0 -> DisplayText.Resource(R.string.l10n_sleep_hero_logic_good_61dedcf0)
+    else -> DisplayText.Resource(R.string.l10n_sleep_hero_logic_optimal_5193a461)
 }
 
 /**
@@ -48,10 +49,13 @@ internal fun navHeaderClockLabel(
  * night. Shared by the Rest hero overline and the hypnogram nav header so both name the SAME night
  * the hero's score is resolved for. Mirrors iOS SleepView.nightRelativeLabel.
  */
-internal fun nightRelativeLabel(offset: Int): String = when (offset) {
-    0 -> "Last night"
-    1 -> "1 night ago"
-    else -> "$offset nights ago"
+internal fun nightRelativeLabel(offset: Int): DisplayText = when (offset) {
+    0 -> DisplayText.Resource(R.string.l10n_sleep_hero_logic_last_night_6eaba4dd)
+    1 -> DisplayText.Resource(R.string.l10n_sleep_hero_logic_s_1_night_ago_f1d70098)
+    else -> DisplayText.Resource(
+        R.string.l10n_sleep_hero_logic_lld_nights_ago_067e84fe,
+        listOf(offset),
+    )
 }
 
 /**
@@ -121,8 +125,8 @@ internal fun heroPerformanceScore(
  */
 internal fun restHeroSource(
     imported: ImportedSleepSeries, wakeDay: String?, activeIsOura: Boolean = false,
-): String = when {
-    wakeDay != null && imported.performance[wakeDay] != null -> "Whoop"
-    activeIsOura -> "Oura"
-    else -> "On-device"
+): DisplayText = when {
+    wakeDay != null && imported.performance[wakeDay] != null -> DisplayText.Resource(R.string.today_source_whoop)
+    activeIsOura -> DisplayText.Dynamic("Oura")
+    else -> DisplayText.Resource(R.string.today_source_on_device)
 }

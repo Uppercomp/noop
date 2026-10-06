@@ -1,6 +1,7 @@
 package com.noop.ui
 
 import com.noop.R
+import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import android.content.Context
 import androidx.compose.foundation.Canvas
@@ -89,7 +90,7 @@ import kotlin.math.sqrt
 /** One interrogable metric: how to fetch it (key+source), how to label/format it. */
 data class CompareMetric(
     val key: String,
-    val title: String,
+    @StringRes val titleRes: Int,
     val category: String,
     val unit: String,
     val source: String,      // "my-whoop" or "apple-health"
@@ -150,54 +151,70 @@ data class CompareMetric(
 private object CompareCatalog {
     val categories = listOf("Heart", "Charge", "Rest", "Effort", "Health", "Nutrition", "Mind")
 
+    /**
+     * The picker's GROUP HEADER text for a category token. The tokens above stay stable English keys
+     * (they group the catalog and are compared as strings); only this display mapping is localised, the
+     * same split the iOS twin has between `MetricCatalog.categories` and `categoryDisplayName(_:)`.
+     */
+    @StringRes
+    fun categoryDisplayRes(category: String): Int = when (category) {
+        "Heart" -> R.string.explore_category_heart
+        "Charge" -> R.string.trends_charge
+        "Rest" -> R.string.trends_rest
+        "Effort" -> R.string.trends_effort
+        "Health" -> R.string.nav_health
+        "Nutrition" -> R.string.explore_category_nutrition
+        "Mind" -> R.string.explore_category_mind
+        else -> R.string.explore_category_mind
+    }
+
     val all: List<CompareMetric> = listOf(
         // Heart
-        CompareMetric("avg_hr", "Average Heart Rate", "Heart", "bpm", "my-whoop", 0),
-        CompareMetric("max_hr", "Max Heart Rate", "Heart", "bpm", "my-whoop", 0),
-        CompareMetric("energy_kcal", "Calories", "Heart", "kcal", "my-whoop", 0),
-        CompareMetric("vo2max", "VO₂ Max", "Heart", "", "apple-health", 1),
-        CompareMetric("fitness_age", "Fitness Age", "Heart", "yrs", "my-whoop", 0),
-        CompareMetric("vo2max_est", "VO₂ Max (estimated)", "Heart", "", "my-whoop", 1),
-        CompareMetric("vitality", "Vitality", "Heart", "", "my-whoop", 0),
-        CompareMetric("body_age", "Body Age", "Heart", "yrs", "my-whoop", 0),
+        CompareMetric("avg_hr", R.string.explore_metric_average_heart_rate, "Heart", "bpm", "my-whoop", 0),
+        CompareMetric("max_hr", R.string.explore_metric_max_heart_rate, "Heart", "bpm", "my-whoop", 0),
+        CompareMetric("energy_kcal", R.string.l10n_today_screen_calories_3e62ecfe, "Heart", "kcal", "my-whoop", 0),
+        CompareMetric("vo2max", R.string.l10n_health_screen_vo2max_21214fb6, "Heart", "", "apple-health", 1),
+        CompareMetric("fitness_age", R.string.l10n_health_screen_fitness_age_12383b4a, "Heart", "yrs", "my-whoop", 0),
+        CompareMetric("vo2max_est", R.string.l10n_compare_screen_vo_max_estimated_01930b53, "Heart", "", "my-whoop", 1),
+        CompareMetric("vitality", R.string.l10n_health_screen_vitality_be320b06, "Heart", "", "my-whoop", 0),
+        CompareMetric("body_age", R.string.l10n_health_screen_body_age_8a2512e6, "Heart", "yrs", "my-whoop", 0),
         // Charge (was Recovery)
-        CompareMetric("recovery", "Charge", "Charge", "%", "my-whoop", 0),
-        CompareMetric("hrv", "Heart Rate Variability", "Charge", "ms", "my-whoop", 0),
-        CompareMetric("rhr", "Resting Heart Rate", "Charge", "bpm", "my-whoop", 0),
-        CompareMetric("resp_rate", "Respiratory Rate", "Charge", "rpm", "my-whoop", 1),
-        CompareMetric("spo2", "Blood Oxygen", "Charge", "%", "my-whoop", 0),
-        CompareMetric("skin_temp", "Skin Temperature", "Charge", "°C", "my-whoop", 1),
+        CompareMetric("recovery", R.string.trends_charge, "Charge", "%", "my-whoop", 0),
+        CompareMetric("hrv", R.string.l10n_health_screen_heart_rate_variability_20f0069e, "Charge", "ms", "my-whoop", 0),
+        CompareMetric("rhr", R.string.l10n_health_screen_resting_heart_rate_9700f4d8, "Charge", "bpm", "my-whoop", 0),
+        CompareMetric("resp_rate", R.string.l10n_health_screen_respiratory_rate_3fbb532f, "Charge", "rpm", "my-whoop", 1),
+        CompareMetric("spo2", R.string.l10n_health_screen_blood_oxygen_a8ad9ff5, "Charge", "%", "my-whoop", 0),
+        CompareMetric("skin_temp", R.string.l10n_health_screen_skin_temperature_f59127f6, "Charge", "°C", "my-whoop", 1),
         // Rest (was Sleep)
-        CompareMetric("sleep_performance", "Rest", "Rest", "%", "my-whoop", 0),
-        CompareMetric("sleep_total_min", "Asleep Time", "Rest", "min", "my-whoop", 0),
-        CompareMetric("sleep_efficiency", "Sleep Efficiency", "Rest", "%", "my-whoop", 0),
-        CompareMetric("sleep_deep_min", "Deep (SWS) Sleep", "Rest", "min", "my-whoop", 0),
-        CompareMetric("sleep_rem_min", "REM Sleep", "Rest", "min", "my-whoop", 0),
-        CompareMetric("sleep_light_min", "Light Sleep", "Rest", "min", "my-whoop", 0),
+        CompareMetric("sleep_performance", R.string.trends_rest, "Rest", "%", "my-whoop", 0),
+        CompareMetric("sleep_total_min", R.string.l10n_compare_screen_asleep_time_ccde95a8, "Rest", "min", "my-whoop", 0),
+        CompareMetric("sleep_efficiency", R.string.l10n_trends_explore_screen_sleep_efficiency_b4b5c293, "Rest", "%", "my-whoop", 0),
+        CompareMetric("sleep_deep_min", R.string.l10n_compare_screen_deep_sws_sleep_4ec27b34, "Rest", "min", "my-whoop", 0),
+        CompareMetric("sleep_rem_min", R.string.l10n_compare_screen_rem_sleep_77605e30, "Rest", "min", "my-whoop", 0),
+        CompareMetric("sleep_light_min", R.string.l10n_compare_screen_light_sleep_d4bbaf3a, "Rest", "min", "my-whoop", 0),
         // Effort (was Strain)
-        CompareMetric("strain", "Effort", "Effort", "/100", "my-whoop", 1),
-        CompareMetric("steps", "Steps", "Effort", "", "apple-health", 0),
+        CompareMetric("strain", R.string.trends_effort, "Effort", "/100", "my-whoop", 1),
+        CompareMetric("steps", R.string.l10n_health_screen_steps_cdde4f20, "Effort", "", "apple-health", 0),
         // On-device steps ESTIMATE for a WHOOP 4.0 (no real step count over BLE): the strap's daily
         // motion volume scaled by a personal calibration, stored under the computed "-noop" source.
         // Distinct from the real "steps" above — labelled "(estimated)" so it never reads as measured.
-        CompareMetric("steps_est", "Steps (estimated)", "Effort", "steps", "my-whoop", 0),
-        CompareMetric("active_kcal", "Active Energy", "Effort", "kcal", "apple-health", 0),
+        CompareMetric("steps_est", R.string.l10n_compare_screen_steps_estimated_7e9cc534, "Effort", "steps", "my-whoop", 0),
+        CompareMetric("active_kcal", R.string.l10n_health_screen_active_energy_2d3288f9, "Effort", "kcal", "apple-health", 0),
         // Health / Body
-        CompareMetric("weight", "Weight", "Health", "kg", "apple-health", 1),
-        CompareMetric("body_fat", "Body Fat", "Health", "%", "apple-health", 1),
-        CompareMetric("lean_mass", "Lean Body Mass", "Health", "kg", "apple-health", 1),
-        CompareMetric(
-            "bmi", "BMI", "Health", "", "apple-health", 1,
+        CompareMetric("weight", R.string.l10n_onboarding_screen_weight_69c0b815, "Health", "kg", "apple-health", 1),
+        CompareMetric("body_fat", R.string.l10n_apple_health_screen_body_fat_13aeec7b, "Health", "%", "apple-health", 1),
+        CompareMetric("lean_mass", R.string.l10n_compare_screen_lean_body_mass_bf9a784a, "Health", "kg", "apple-health", 1),
+        CompareMetric("bmi", R.string.l10n_apple_health_screen_bmi_aa26664f, "Health", "", "apple-health", 1,
             note = "From Health Connect this is derived from your weight and profile height.",
         ),
         // Nutrition (imported from a food-tracker CSV — calories-in next to calories-out).
         // Mirrors the macOS MetricCatalog entries exactly (same keys + sources, v2.2.0 parity).
-        CompareMetric("calories_in", "Calories In", "Nutrition", "kcal", NutritionCsvImporter.SOURCE_ID, 0),
-        CompareMetric("protein_g", "Protein", "Nutrition", "g", NutritionCsvImporter.SOURCE_ID, 0),
-        CompareMetric("carbs_g", "Carbs", "Nutrition", "g", NutritionCsvImporter.SOURCE_ID, 0),
-        CompareMetric("fat_g", "Fat", "Nutrition", "g", NutritionCsvImporter.SOURCE_ID, 0),
+        CompareMetric("calories_in", R.string.explore_metric_calories_in, "Nutrition", "kcal", NutritionCsvImporter.SOURCE_ID, 0),
+        CompareMetric("protein_g", R.string.explore_metric_protein, "Nutrition", "g", NutritionCsvImporter.SOURCE_ID, 0),
+        CompareMetric("carbs_g", R.string.explore_metric_carbs, "Nutrition", "g", NutritionCsvImporter.SOURCE_ID, 0),
+        CompareMetric("fat_g", R.string.explore_metric_fat, "Nutrition", "g", NutritionCsvImporter.SOURCE_ID, 0),
         // Mind (daily mood check-in, 1–5; non-clinical self-tracking).
-        CompareMetric("mood", "Mood", "Mind", "/5", MoodStore.MOOD_DEVICE_ID, 0),
+        CompareMetric("mood", R.string.explore_metric_mood, "Mind", "/5", MoodStore.MOOD_DEVICE_ID, 0),
     )
 
     fun inCategory(c: String): List<CompareMetric> = all.filter { it.category == c }
@@ -227,13 +244,17 @@ private object CompareCatalog {
 // MARK: - Range control (shared spec — W / M / 3M / 6M / 1Y / ALL)
 
 /** The canonical Strand range window. [days] == null means ALL of history. */
-private enum class CompareRange(val label: String, val days: Int?, val phrase: String) {
-    Week("W", 7, "the last 7 days"),
-    Month("M", 30, "30 days"),
-    Quarter("3M", 90, "3 months"),
-    Half("6M", 180, "6 months"),
-    Year("1Y", 365, "1 year"),
-    All("ALL", null, "all history");
+internal enum class CompareRange(
+    @StringRes val labelRes: Int,
+    val days: Int?,
+    @StringRes val phraseRes: Int,
+) {
+    Week(R.string.l10n_lift_w_e2415cb7, 7, R.string.l10n_compare_screen_the_last_7_days_02bc1e5f),
+    Month(R.string.l10n_apple_health_screen_m_c63ae6dd, 30, R.string.l10n_compare_screen_s_30_days_7d4278a8),
+    Quarter(R.string.l10n_apple_health_screen_s_3m_6dce1630, 90, R.string.l10n_apple_health_screen_s_3_months_b9e4e6ff),
+    Half(R.string.l10n_apple_health_screen_s_6m_b78ebb44, 180, R.string.l10n_apple_health_screen_s_6_months_cd75b86f),
+    Year(R.string.l10n_apple_health_screen_s_1y_28234cf2, 365, R.string.l10n_compare_screen_s_1_year_afe36da6),
+    All(R.string.l10n_apple_health_screen_all_6b42874e, null, R.string.explore_all_history);
 
     /** This range plus every LARGER range, ascending — the auto-expand search order. */
     val widening: List<CompareRange>
@@ -404,6 +425,9 @@ fun CompareScreen(vm: AppViewModel) {
     val minSelection = 2
 
     var range by remember { mutableStateOf(ComparePrefs.readRange(context)) }
+    // Resolved in the composition and indexed by ordinal: the pill control's label lambda is not
+    // @Composable.
+    val rangeLabels = CompareRange.entries.map { stringResource(it.labelRes) }
     // Ordered selection (max 4). Drives both the legend order and color mapping.
     val selected = remember {
         mutableStateListOf<CompareMetric>().apply {
@@ -467,16 +491,18 @@ fun CompareScreen(vm: AppViewModel) {
         full.isNotEmpty() && effectiveRange(full) != range
     }
 
-    val rangeCaption: String = run {
-        val total = activeSeries.sumOf { it.rows.size }
-        val unit = if (total == 1) "reading" else "readings"
-        val base = "$total $unit across ${activeSeries.size} · ${range.phrase}"
-        if (anyWidened) "$base · sparse widened" else base
-    }
+    // iOS `rangeCaption`: "N readings across M · <phrase>", whole-phrase variants per count and a
+    // trailing " · sparse widened" when a series had to widen.
+    val rangeCaption: String = compareRangeCaption(
+        total = activeSeries.sumOf { it.rows.size },
+        seriesCount = activeSeries.size,
+        widened = anyWidened,
+        range = range,
+    ).text()
 
     LazyScreenScaffold(
         title = uiString(R.string.l10n_compare_screen_compare_8d105cf4),
-        subtitle = "Overlay signals, draw conclusions.",
+        subtitle = uiString(R.string.l10n_compare_screen_overlay_signals_draw_conclusions_d4fb7bee),
         // Liquid sky backdrop (LiquidScreenSky.kt) in the scaffold's topBackground slot, gated on the
         // day-cycle preference — the same pilot plumbing the liquid Today uses.
         topBackground = screenBackdropSlot(showDayCycleBackground, skyBehindCards),
@@ -488,13 +514,13 @@ fun CompareScreen(vm: AppViewModel) {
         // ── Metric picker section (chips + range control)
         item {
         Column(verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
-            SectionHeader("Metrics", overline = "Overlay 2-4 signals")
+            SectionHeader(uiString(R.string.l10n_compare_screen_metrics_ddf6a1f0), overline = "Overlay 2-4 signals")
             NoopCard {
                 Column(verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
                     SegmentedPillControl(
                         items = CompareRange.entries.toList(),
                         selection = range,
-                        label = { it.label },
+                        label = { rangeLabels[it.ordinal] },
                         onSelect = {
                             range = it
                             ComparePrefs.writeRange(context, it)
@@ -568,12 +594,11 @@ fun CompareScreen(vm: AppViewModel) {
                     item {
                         DataPendingNote(
                             title = uiString(R.string.l10n_compare_screen_compare_needs_at_least_two_metrics_2bfe1fad),
-                            body = "Compare needs at least two metrics with history. Import your " +
-                                "WHOOP export in Data Sources first.",
+                            body = uiString(R.string.l10n_compare_screen_compare_needs_at_least_two_metrics_with_44ec15c9),
                         )
                     }
                 } else {
-                    item { EmptyNote("Reading your history…") }
+                    item { EmptyNote(uiString(R.string.l10n_compare_screen_reading_your_history_cdde0088)) }
                 }
             } else {
                 item { OverlaySection(nonEmpty, range, anyWidened) }
@@ -645,7 +670,7 @@ private fun AddMetricMenu(
                 modifier = Modifier.size(16.dp),
             )
             Text(
-                if (atMax) "Max 4" else "Add metric",
+                if (atMax) uiString(R.string.l10n_compare_screen_max_4_2e3d8d84) else uiString(R.string.l10n_compare_screen_add_metric_0a6b5a85),
                 style = NoopType.subhead,
                 color = tint,
                 maxLines = 1,
@@ -661,7 +686,10 @@ private fun AddMetricMenu(
                 val metrics = CompareCatalog.inCategory(category)
                 if (metrics.isNotEmpty()) {
                     Text(
-                        category.uppercase(),
+                        // The token groups the catalog; its DISPLAY name is localised — the same split the
+                        // iOS twin keeps between `MetricCatalog.categories` and `categoryDisplayName(_:)`.
+                        // The overline casing is applied to the resolved words.
+                        uiString(CompareCatalog.categoryDisplayRes(category)).uppercase(),
                         style = NoopType.overline,
                         color = Palette.textTertiary,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -687,7 +715,7 @@ private fun AddMetricMenu(
                             text = {
                                 Column {
                                     Text(
-                                        metric.title,
+                                        uiString(metric.titleRes),
                                         style = NoopType.body,
                                         color = if (enabled) Palette.textPrimary else Palette.textTertiary,
                                     )
@@ -724,7 +752,7 @@ private fun FlowChips(
                 rowChips.forEach { metric ->
                     MetricChip(
                         modifier = Modifier.weight(1f),
-                        title = metric.title,
+                        title = uiString(metric.titleRes),
                         color = colorFor(metric),
                         onRemove = { onRemove(metric) },
                     )
@@ -797,18 +825,14 @@ private fun OverlaySection(
     anyWidened: Boolean,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
-        SectionHeader("Overlay", overline = range.phrase, trailing = "${series.size} series")
+        SectionHeader(uiString(R.string.l10n_compare_screen_overlay_249450cb), overline = uiString(range.phraseRes), trailing = uiString(R.string.l10n_compare_screen_lld_series_77e7ae0b, series.size))
         // Anchor the overlay card to the brand-green chrome world; each line keeps its own categorical
         // series colour so the overlaid lines stay distinguishable against the wash.
         NoopCard(tint = Palette.accent) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Overline("Normalized overlay")
+                Overline(uiString(R.string.l10n_compare_screen_normalized_overlay_8c6cf2ef))
                 Text(
-                    if (anyWidened) {
-                        "Each line min-max normalized · sparse series widened past ${range.phrase}"
-                    } else {
-                        "Each line min-max normalized within ${range.phrase}"
-                    },
+                    compareOverlaySubtitle(anyWidened, range).text(),
                     style = NoopType.footnote,
                     color = Palette.textTertiary,
                 )
@@ -822,9 +846,9 @@ private fun OverlaySection(
 
                 // Endpoint axis labels (low / high), mirroring the normalized macOS y-axis.
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    Text("low", style = NoopType.footnote, color = Palette.textTertiary)
+                    Text(uiString(R.string.today_steps_confidence_low), style = NoopType.footnote, color = Palette.textTertiary)
                     Spacer(Modifier.weight(1f))
-                    Text("high", style = NoopType.footnote, color = Palette.textTertiary)
+                    Text(uiString(R.string.today_steps_confidence_high), style = NoopType.footnote, color = Palette.textTertiary)
                 }
 
                 HorizontalDivider(color = Palette.hairline)
@@ -1147,7 +1171,7 @@ private fun CompareChartTooltip(
                         .background(preparedSeries.color),
                 )
                 Text(
-                    source.metric.title,
+                    uiString(source.metric.titleRes),
                     style = NoopType.caption,
                     color = Palette.textSecondary,
                     maxLines = 1,
@@ -1199,7 +1223,7 @@ private fun Legend(series: List<CompareSeries>) {
                         .background(s.color),
                 )
                 Text(
-                    s.metric.title,
+                    uiString(s.metric.titleRes),
                     style = NoopType.subhead,
                     color = Palette.textPrimary,
                     maxLines = 1,
@@ -1256,15 +1280,15 @@ private fun CorrelationSection(series: List<CompareSeries>, range: CompareRange)
 
     Column(verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
         SectionHeader(
-            "How They Move Together",
-            overline = "Pearson r · ${range.phrase}",
-            trailing = if (pairs.isEmpty()) null else "${pairs.size} pairs",
+            uiString(R.string.l10n_compare_screen_how_they_move_together_7c123543),
+            overline = uiString(R.string.l10n_compare_screen_pearson_r_dafcede1, uiString(range.phraseRes)),
+            trailing = if (pairs.isEmpty()) null else uiString(R.string.l10n_compare_screen_lld_pairs_c6a4b0b9, pairs.size),
         )
 
         if (pairs.isEmpty()) {
             NoopCard {
                 Text(
-                    uiString(R.string.l10n_compare_screen_not_enough_overlapping_days_between_these_44563110, range.phrase),
+                    uiString(R.string.l10n_compare_screen_not_enough_overlapping_days_between_these_44563110, uiString(range.phraseRes)),
                     style = NoopType.subhead,
                     color = Palette.textTertiary,
                 )
@@ -1291,7 +1315,7 @@ private fun PairCard(p: PairResult) {
                     Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(p.b.color))
                 }
                 Text(
-                    uiString(R.string.l10n_compare_screen_p_a_metric_title_p_b_06c36e56, p.a.metric.title, p.b.metric.title),
+                    uiString(R.string.l10n_compare_screen_p_a_metric_title_p_b_06c36e56, uiString(p.a.metric.titleRes), uiString(p.b.metric.titleRes)),
                     style = NoopType.headline,
                     color = Palette.textPrimary,
                     maxLines = 2,
@@ -1337,14 +1361,14 @@ private fun PairCard(p: PairResult) {
 // MARK: - Insight language (ported from CompareView)
 
 private fun insightSentence(p: PairResult): String {
-    val head = ("${p.a.metric.title} ↔ ${p.b.metric.title}: r = ${signedR(p.r)} " +
+    val head = ("${uiString(p.a.metric.titleRes)} ↔ ${uiString(p.b.metric.titleRes)}: r = ${signedR(p.r)} " +
         "(${strengthWord(p.r)} ${directionWord(p.r)}) over ${p.n} shared days.")
         .replace("  ", " ").replace(" )", ")")
     if (abs(p.r) < 0.3) {
         return "$head No clear relationship - they move largely independently."
     }
-    val aT = p.a.metric.title.lowercase()
-    val bT = p.b.metric.title.lowercase()
+    val aT = uiString(p.a.metric.titleRes).lowercase()
+    val bT = uiString(p.b.metric.titleRes).lowercase()
     val verb = if (p.r < 0) "tends to fall" else "tends to rise"
     return "$head When $aT rises, $bT $verb - a ${strengthWord(p.r)} ${directionWord(p.r)} link."
 }
@@ -1357,11 +1381,11 @@ private fun signedR(r: Double): String {
 private fun strengthWord(r: Double): String {
     val a = abs(r)
     return when {
-        a < 0.1 -> "negligible"
-        a < 0.3 -> "weak"
-        a < 0.5 -> "moderate"
-        a < 0.7 -> "strong"
-        else -> "very strong"
+        a < 0.1 -> uiString(R.string.l10n_compare_screen_negligible_89891430)
+        a < 0.3 -> uiString(R.string.l10n_compare_screen_weak_1ded3053)
+        a < 0.5 -> uiString(R.string.l10n_compare_screen_moderate_78cd1257)
+        a < 0.7 -> uiString(R.string.l10n_compare_screen_strong_0117691d)
+        else -> uiString(R.string.l10n_compare_screen_very_strong_3e7b4c04)
     }
 }
 

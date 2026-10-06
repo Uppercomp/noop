@@ -3,7 +3,7 @@ import WhoopProtocol
 
 /// Storage codec for the 5/MG v18 auxiliary-field stream (`v18AuxSample.fields`).
 ///
-/// WHY A BLOB AND NOT COLUMNS. There are seventeen slots and they arrive once per strap-second. Seventeen
+/// WHY A BLOB AND NOT COLUMNS. There are twenty-two slots and they arrive once per strap-second. Twenty-two
 /// nullable columns on a hot per-second table costs a header byte per column per row even when the value
 /// is NULL, makes every future slot a migration, and spends schema surface on bytes whose meaning nobody
 /// has pinned yet. One compact blob costs a 5-byte header plus only the bytes actually present, and a new

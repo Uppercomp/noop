@@ -1,6 +1,8 @@
 package com.noop.ui
 
+import android.widget.Toast
 import com.noop.R
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,19 +13,30 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Autorenew
+import androidx.compose.material.icons.filled.BatteryFull
+import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.SettingsInputAntenna
+import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -39,8 +52,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.AnnotatedString
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.noop.BuildConfig
 import com.noop.analytics.Baselines
@@ -51,11 +68,13 @@ import com.noop.ble.LiveState
 import com.noop.ble.PuffinExperiment
 import com.noop.ble.WhoopBleClient
 import com.noop.ble.WhoopModel
+import com.noop.ble.resolveStrapClockTs
 import com.noop.data.DailyMetric
 import com.noop.data.GravitySample
 import com.noop.data.HrSample
 import com.noop.polar.PolarModel
 import com.noop.testcentre.CaptureAccumulator
+import com.noop.data.DeviceStatus
 import com.noop.testcentre.CaptureKind
 import com.noop.testcentre.DisplayPerformanceMonitor
 import com.noop.testcentre.ReportReviewGate
@@ -151,13 +170,13 @@ fun TestCentreScreen(vm: AppViewModel, onOpenGroundTruthCollector: () -> Unit = 
 
     ScreenScaffold(
         title = uiString(R.string.l10n_test_centre_screen_test_centre_37b36828),
-        subtitle = "Turn on a test for the thing that's wrong, wear the strap, then tap Report. Everything stays on this phone.",
+        subtitle = uiString(R.string.l10n_test_centre_screen_turn_on_a_test_for_the_thing_that_s_wron_83c44ae1),
     ) {
         // --- Section 1: Domain test modes ---
         SettingsSectionTC(
             icon = Icons.Filled.BugReport,
             title = uiString(R.string.l10n_test_centre_screen_test_modes_e21f1d3c),
-            blurb = "Each test logs extra detail for one part of the app while you wear the strap, then bundles it for a bug report.",
+            blurb = uiString(R.string.l10n_test_centre_screen_each_test_logs_extra_detail_for_one_part_fd4aaebe),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 val modes = TestCentreLayout.visibleModes(is5MG)
@@ -539,6 +558,7 @@ private val MASTER_REPORT_MODE = TestMode(
     capture = com.noop.testcentre.CaptureKind.Toggle, includesScreenshot = false, requires5MG = false,
 )
 
+
 /** Assemble the redacted, capped bundle for a profile and wrap it in the review gate. Suspend (#1002):
  *  the storage probe reads the store, so the callers launch it on the UI scope; the dialog presents off
  *  the same `pendingReport` state a beat after the tap. */
@@ -635,6 +655,18 @@ private fun TestModeRow(
         }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            // iOS leads the row with `mode.icon`, accent-tinted, in a fixed 24-wide slot so every title
+            // starts at the same x. Decorative: the title beside it carries the meaning, so the glyph is
+            // hidden from the accessibility tree rather than read out as an unnamed image.
+            testModeIcon(mode.icon)?.let { glyph ->
+                Icon(
+                    glyph,
+                    contentDescription = null,
+                    tint = Palette.accent,
+                    modifier = Modifier.width(24.dp).size(18.dp),
+                )
+                Spacer(Modifier.width(12.dp))
+            }
             Column(Modifier.weight(1f)) {
                 Text(mode.title, style = NoopType.body, color = Palette.textPrimary)
                 Text(
@@ -687,6 +719,7 @@ private fun TestCentreLiveReadoutPanel(
     activeStrapId: String,
     vm: AppViewModel,
 ) {
+    val context = LocalContext.current
     var hrSamples by remember(mode.id) { mutableStateOf(emptyList<HrSample>()) }
     var gravitySamples by remember(mode.id) { mutableStateOf(emptyList<GravitySample>()) }
     var batteryEstimate by remember(mode.id) { mutableStateOf<BatteryEstimator.Estimate?>(null) }
@@ -731,6 +764,26 @@ private fun TestCentreLiveReadoutPanel(
         batteryEstimate = BatteryEstimator.estimate(samples, rated)
     }
 
+    // The strap's newest banked-record timestamp and the install-lifetime drained-row tally, both only
+    // for the Connection panel. The registry accessors suspend, so they load here beside the other
+    // per-mode state; `resolveStrapClockTs` attributes the reading to the ACTIVE strap through the ONE
+    // shared resolver rather than re-deriving per-device/legacy precedence in the UI.
+    var strapNewestUnix by remember(mode.id) { mutableStateOf<Long?>(null) }
+    var cumulativeDrainedRows by remember(mode.id) { mutableStateOf(0L) }
+    LaunchedEffect(mode.domain, activeStrapId) {
+        if (mode.domain != TestDomain.CONNECTION) return@LaunchedEffect
+        cumulativeDrainedRows = TestCentre.from(context).cumulativeDrainedRows()
+        val paired = runCatching { vm.pairedDevices() }.getOrDefault(emptyList())
+        strapNewestUnix = resolveStrapClockTs(
+            perDevice = NoopPrefs.strapNewestRecordTsFor(
+                context,
+                paired.firstOrNull { it.status == DeviceStatus.active.name }?.peripheralId,
+            ),
+            legacyGlobal = NoopPrefs.of(context).getLong("strap.newestRecordTs", 0L),
+            pairedCount = paired.size,
+        )
+    }
+
     // Only Connection uptime needs wall-clock movement. Other modes create no timer.
     LaunchedEffect(sources.connectionClockEveryMs) {
         val everyMs = sources.connectionClockEveryMs ?: return@LaunchedEffect
@@ -754,14 +807,46 @@ private fun TestCentreLiveReadoutPanel(
             gravitySamples = gravitySamples,
         ),
     )
+    // iOS's Connection panel carries four rows beyond the registry spec, so they are appended here for
+    // that domain alone. `nowUnix` drives the 1 Hz uptime tick, so recomputing these with it keeps the
+    // whole panel on one clock instead of a second reading taken in a different frame.
+    val extras = if (mode.domain == TestDomain.CONNECTION) {
+        TestCentreLiveReadouts.connectionExtras(
+            tail = domainLogLines ?: TestCentreLiveReadouts.tagLinesByDomain(logLines)[mode.id].orEmpty(),
+            logLines = logLines,
+            strapNewestUnix = strapNewestUnix,
+            batteryPct = live.batteryPct,
+            cumulativeDrainedRows = cumulativeDrainedRows,
+        )
+    } else {
+        null
+    }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 2.dp)) {
-        rows.forEach { row ->
-            Row(Modifier.fillMaxWidth()) {
-                Text(row.label, style = NoopType.footnote, color = Palette.textTertiary)
-                Spacer(Modifier.weight(1f))
-                Text(row.value, style = NoopType.mono, color = Palette.textSecondary)
-            }
+        rows.forEach { row -> ReadoutRowLine(row) }
+        extras?.rows?.forEach { row -> ReadoutRowLine(row) }
+        extras?.rtcWarning?.let { warning ->
+            Text(
+                warning.text(),
+                style = NoopType.caption,
+                color = Palette.statusWarning,
+                // iOS gives the sentence its own accessibility label (it is the plain-words remedy, so it
+                // must be reachable by a reader who never looks at the panel).
+                modifier = Modifier
+                    .padding(top = 4.dp)
+                    .semantics { contentDescription = warning.plain() },
+            )
         }
+    }
+}
+
+/** One label/value line of a live-readout panel. Extracted so the Connection extras and the spec rows are
+ *  the same line, not two look-alikes that can drift. */
+@Composable
+private fun ReadoutRowLine(row: LiveReadoutRow) {
+    Row(Modifier.fillMaxWidth()) {
+        Text(row.label.text(), style = NoopType.footnote, color = Palette.textTertiary)
+        Spacer(Modifier.weight(1f))
+        Text(row.value.text(), style = NoopType.mono, color = Palette.textSecondary)
     }
 }
 
@@ -809,6 +894,10 @@ private fun DiagnosticToolsCard(vm: AppViewModel) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var showRecalibrate by remember { mutableStateOf(false) }
+    // #1853: the skin-temp absolute backfill. Running is a real pass over the store (up to ten pages, three
+    // stream reads per night), so the button disables while it runs and the result is reported, as iOS does.
+    var skinTempBackfillRunning by remember { mutableStateOf(false) }
+    var skinTempBackfillStatus by remember { mutableStateOf<String?>(null) }
     // "Debug logging" moved here from Settings: dev-only, mirrors the strap log to logcat over adb.
     var debugLogging by remember { mutableStateOf(NoopPrefs.debugLogging(context)) }
     // #polar-debug: the model NOOP auto-detects for a PAIRED Polar strap, from its stored advertised name
@@ -868,6 +957,46 @@ private fun DiagnosticToolsCard(vm: AppViewModel) {
                 fullWidth = true,
                 onClick = { showRecalibrate = true },
             )
+            // #1853: skin-temp absolute backfill, on-demand and diagnostic-first. Fills `skinTempC` for
+            // nights outside the 21-night rescore window that never got an absolute. Fill-only: it can only
+            // fill a NULL, never overwrite a measured value or touch the deviation. Mirrors
+            // `TestCentreView.runSkinTempBackfill`.
+            NoopButton(
+                text = uiString(R.string.test_centre_backfill_skin_temp),
+                leadingIcon = Icons.Filled.Thermostat,
+                kind = NoopButtonKind.Secondary,
+                fullWidth = true,
+                enabled = !skinTempBackfillRunning,
+                onClick = {
+                    if (!skinTempBackfillRunning) {
+                        skinTempBackfillRunning = true
+                        skinTempBackfillStatus = uiString(R.string.test_centre_backfilling)
+                        scope.launch {
+                            try {
+                                // The ViewModel owns the repository and the day-owner source; the same
+                                // report line it returns also goes to the strap log.
+                                skinTempBackfillStatus = vm.runSkinTempBackfill()
+                            } catch (e: Exception) {
+                                skinTempBackfillStatus = "skin-temp backfill failed: ${e.message ?: "unknown"}"
+                            } finally {
+                                skinTempBackfillRunning = false
+                            }
+                        }
+                    }
+                },
+            )
+            Text(
+                uiString(R.string.test_centre_backfill_skin_temp_caption),
+                style = NoopType.caption,
+                color = Palette.textTertiary,
+            )
+            if (skinTempBackfillRunning) {
+                NoopBusyRow()
+            }
+            skinTempBackfillStatus?.let { status ->
+                Text(status, style = NoopType.caption, color = Palette.textSecondary)
+            }
+
             // Debug logging (moved here from Settings): mirror the strap log to logcat for adb
             // development. Dev-only, off by default; the in-app log and "Share strap log" above work either way.
             Row(
@@ -1003,6 +1132,8 @@ private fun ExportCard(vm: AppViewModel, onReport: () -> Unit) {
     var keep by remember { mutableStateOf(settings.keepCount) }
     var keepMenu by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
+    // "Run now" needs a scope: the write is suspend (the worker runs it on a CoroutineWorker).
+    val runNowScope = rememberCoroutineScope()
     SettingsSectionTC(
         icon = Icons.Filled.Upload,
         title = uiString(R.string.l10n_test_centre_screen_export_f3e4fadb),
@@ -1088,6 +1219,40 @@ private fun ExportCard(vm: AppViewModel, onReport: () -> Unit) {
                     }
                 }
             }
+            // iOS's "Run now" (#510): prove the daily export works without waiting for the schedule. The
+            // caption is deliberately about TIMING being best-effort, not about the export being partial —
+            // a manual run writes exactly what a scheduled one writes.
+            NoopButton(
+                text = uiString(R.string.test_centre_run_export_now),
+                leadingIcon = Icons.Filled.FileDownload,
+                kind = NoopButtonKind.Secondary,
+                fullWidth = true,
+                onClick = {
+                    runNowScope.launch {
+                        // The SAME call and the SAME empty logText the worker makes, so the two cannot
+                        // produce different files. `runCatching` because a failed write must report, not
+                        // crash the diagnostics screen.
+                        val written = runCatching {
+                            LogExport.writeScheduledExport(context, logText = "")
+                        }.getOrNull()
+                        val message = when {
+                            written == null -> uiString(R.string.test_centre_export_failed)
+                            written.isEmpty() -> uiString(R.string.test_centre_export_wrote_nothing)
+                            else -> uiString(
+                                R.string.test_centre_export_wrote,
+                                written.joinToString(", ") { it.name },
+                            )
+                        }
+                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                    }
+                },
+            )
+            Text(
+                uiString(R.string.test_centre_run_export_caption),
+                style = NoopType.caption,
+                color = Palette.textTertiary,
+            )
+
             // Manual clear (#642): always available, even with the toggle off, since files written
             // while it was on can outlive that toggle flip.
             NoopButton(
@@ -1155,24 +1320,18 @@ private fun ExperimentalAlgorithmsCard(vm: AppViewModel) {
     SettingsSectionTC(
         icon = Icons.Filled.Science,
         title = uiString(R.string.l10n_test_centre_screen_experimental_algorithms_e09581e2),
-        blurb = "Research-grade alternatives / precision tweaks. Opt-in, off by default, non-clinical.",
+        blurb = uiString(R.string.l10n_test_centre_screen_research_grade_alternatives_precision_tw_c29b0105),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             ToggleRowTC(
                 title = uiString(R.string.l10n_test_centre_screen_hr_from_ppg_sub_lag_interpolation_a3ed1536),
-                description = "When NOOP reconstructs heart rate from the WHOOP 5/MG v26 optical waveform (the " +
-                    "seconds the strap stored no HR), refine the autocorrelation peak with a parabolic sub-lag " +
-                    "fit so the estimate is not quantized to roughly 16 bpm steps near a high HR. It only fills " +
-                    "seconds the strap never reported; it never overrides a stored HR. 5/MG only, off by default.",
+                description = uiString(R.string.l10n_test_centre_screen_when_noop_reconstructs_heart_rate_from_t_d2e46ef7),
                 checked = ppgHrSubLag,
                 onCheckedChange = { ppgHrSubLag = it; puffin.ppgHrSubLagInterp = it },
             )
             ToggleRowTC(
                 title = uiString(R.string.l10n_test_centre_screen_hrv_readiness_plews_altini_bce6578f),
-                description = "A read-only Plews/Altini smallest-worthwhile-change reading of your nightly HRV: " +
-                    "it shows whether your 7-night HRV baseline sits above, inside, or below your personal " +
-                    "normal band. It changes nothing else - the Charge ring is identical whether this is on or " +
-                    "off. This is rough / early testing, not yet validated against varying real data (n=1).",
+                description = uiString(R.string.l10n_test_centre_screen_a_read_only_plews_altini_smallest_worthw_7eabbc1f),
                 checked = hrvReadiness,
                 onCheckedChange = { hrvReadiness = it; puffin.hrvReadiness = it },
             )
@@ -1295,7 +1454,17 @@ private fun ReportReviewDialog(
             TextButton(onClick = onShare) { Text(uiString(R.string.l10n_test_centre_screen_share_09ca55ca), style = NoopType.body, color = Palette.accent) }
         },
         dismissButton = {
-            TextButton(onClick = onCancel) { Text(uiString(R.string.l10n_test_centre_screen_cancel_77dfd213), style = NoopType.body, color = Palette.textSecondary) }
+            Row {
+                // iOS's M3 (#812) mobile copy fallback: when the report cannot be attached to an issue,
+                // this puts the redacted text on the clipboard to paste straight in. iOS reveals it on the
+                // SCREEN after a confirmed share; Android shows the text in THIS dialog, so the copy sits
+                // beside the text it copies — same capability, same words, where the reader is looking.
+                val clipboard = LocalClipboardManager.current
+                TextButton(onClick = { clipboard.setText(AnnotatedString(previewText)) }) {
+                    Text(uiString(R.string.test_centre_copy_report), style = NoopType.body, color = Palette.accent)
+                }
+                TextButton(onClick = onCancel) { Text(uiString(R.string.l10n_test_centre_screen_cancel_77dfd213), style = NoopType.body, color = Palette.textSecondary) }
+            }
         },
     )
 }
@@ -1313,7 +1482,7 @@ private fun SettingsSectionTC(
     NoopCard(padding = 20.dp, tint = Palette.accent) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Overline("Test Centre")
+                Overline(uiString(R.string.nav_test_centre))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp),

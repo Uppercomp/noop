@@ -33,10 +33,12 @@ enum class HistoricalLayoutSupport {
  * the SECOND half of what it said is true: those records really do carry no heart rate or motion, and a
  * night made only of them really cannot be staged. So the question splits.
  *
- * Note [MAPPED_WHOOP5_HISTORICAL_VERSIONS] is DELIBERATELY narrower here than Swift's: Android has no
- * v20/v21 historical branch, so a v20 record genuinely does not decode on this side and genuinely is
- * UNMAPPED, where Swift answers DECODES_WITHOUT_NAMED_SIGNAL for the same version. The platforms differing
- * there is the divergence itself, not a bug in this function, and both sides pin their own answer.
+ * [MAPPED_WHOOP5_HISTORICAL_VERSIONS] is the same set on both platforms, and this function answers the
+ * same way on both. An earlier note here claimed Android was deliberately narrower with no v20/v21
+ * historical branch, so that a v20 record was genuinely UNMAPPED on this side while Swift answered
+ * DECODES_WITHOUT_NAMED_SIGNAL. That stopped being true when the v20/v21 historical dispatch was ported
+ * to Kotlin, and the note then documented a divergence that no longer existed. A mapped layout that
+ * carries no scoreable signal is DECODES_WITHOUT_NAMED_SIGNAL on both platforms.
  */
 fun historicalLayoutSupport(
     version: Int,

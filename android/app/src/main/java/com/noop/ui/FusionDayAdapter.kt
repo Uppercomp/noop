@@ -1,5 +1,6 @@
 package com.noop.ui
 
+import com.noop.R
 import com.noop.analytics.DayOwnerResolver
 import com.noop.analytics.FusionInput
 import com.noop.analytics.FusionResolver
@@ -22,18 +23,23 @@ import com.noop.data.WhoopRepository
 object FusionDayAdapter {
 
     /** The fusion metrics shown on the record, in display order, each with its label + resolver key. */
-    private data class MetricSpec(val key: String, val label: String)
+    private data class MetricSpec(val key: String, val label: DisplayText)
 
+    // The labels are DisplayText rather than resolved Strings because this list is built at class-load
+    // time: a `uiString(...)` here would read the Application before it exists. A DisplayText.Resource is
+    // just an id + args, so it is safe to construct statically and resolve at the render site. "Asleep
+    // time" stays a Dynamic: the iOS String Catalog carries no translation for it, so both platforms show
+    // English there and inventing a key would ship an untranslated translation.
     private val METRICS: List<MetricSpec> = listOf(
-        MetricSpec("rhr", "Resting HR"),
-        MetricSpec("hrv", "HRV"),
-        MetricSpec("skin_temp", "Skin temperature"),
-        MetricSpec("spo2", "Blood O₂"),
-        MetricSpec("steps", "Steps"),
-        MetricSpec("active_kcal", "Active energy"),
-        MetricSpec("sleep_total_min", "Asleep time"),
-        MetricSpec("sleep_deep_min", "Deep sleep"),
-        MetricSpec("sleep_rem_min", "REM sleep"),
+        MetricSpec("rhr", DisplayText.Resource(R.string.l10n_health_screen_resting_hr_26677094)),
+        MetricSpec("hrv", DisplayText.Resource(R.string.today_card_hrv)),
+        MetricSpec("skin_temp", DisplayText.Resource(R.string.today_card_skin_temp_subtitle)),
+        MetricSpec("spo2", DisplayText.Resource(R.string.l10n_health_screen_blood_o_9bf5ed9b)),
+        MetricSpec("steps", DisplayText.Resource(R.string.l10n_health_screen_steps_cdde4f20)),
+        MetricSpec("active_kcal", DisplayText.Resource(R.string.today_card_calories_subtitle)),
+        MetricSpec("sleep_total_min", DisplayText.Dynamic("Asleep time")),
+        MetricSpec("sleep_deep_min", DisplayText.Resource(R.string.l10n_xiaomi_band_screen_deep_sleep_865e5887)),
+        MetricSpec("sleep_rem_min", DisplayText.Resource(R.string.l10n_xiaomi_band_screen_rem_sleep_d0c12b6b)),
     )
 
     /**

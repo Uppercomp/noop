@@ -255,10 +255,10 @@
     <string name="power_saving_kick_in">Включать при (заряде браслета)</string>
     <string name="power_saving_hrv_pause">Приостановить сбор ВСР</string>
     <string name="power_saving_hrv_pause_desc">Пока заряд браслета низкий, останавливать постоянный фоновый поток ВСР — самый большой непрерывный расход для браслета. Живой экран по-прежнему показывает пульс, а поток включится сам, как только браслет зарядится.</string>
-    <string name="l10n_add_device_wizard_a_whoop_strap_bonds_to_a_d39bdf4a">Браслет WHOOP сопрягается только с одним устройством. Пока он подключён к NOOP, он не будет передавать to the official WHOOP app, and the other way round. It\'s reversible: pair it in the other app whenever you want it back.</string>
+    <string name="l10n_add_device_wizard_a_whoop_strap_bonds_to_a_d39bdf4a">Браслет WHOOP подключается только к одному устройству. Пока он подключён к NOOP, он не передаёт данные в официальное приложение WHOOP — и наоборот. Это обратимо: снова спарьте его в другом приложении, когда захотите вернуть.</string>
     <string name="l10n_add_device_wizard_add_61cc55aa">Добавить</string>
     <string name="l10n_add_device_wizard_advanced_i_already_have_my_ring_e87b9b49">Дополнительно: у меня уже есть ключ моего кольца</string>
-    <string name="l10n_add_device_wizard_beta_is_an_on_device_estimate_128563e0">Бета. * — оценка на устройстве. Температура кожи — это тренд относительно вашей нормы, шаги are a raw motion count, and HRV needs you to be still. No Oura Readiness or SpO2 percentage comes off the ring (import an Oura file for those).</string>
+    <string name="l10n_add_device_wizard_beta_is_an_on_device_estimate_128563e0">Бета. * — оценка на устройстве. Температура кожи — это тренд относительно вашей нормы, шаги — необработанный подсчёт движений, а для ВСР нужно сохранять неподвижность. С кольца не поступает ни Готовность Oura, ни процент SpO2 (импортируйте файл Oura, чтобы получить их).</string>
     <string name="l10n_add_device_wizard_both_noop_and_the_oura_app_4f219db3">И NOOP, и приложение Oura могут использовать принадлежащее вам кольцо по ключу, но Bluetooth-соединение может держать только одно приложение одновременно.</string>
     <string name="l10n_add_device_wizard_connect_to_this_ring_02b9442b">Подключиться к этому кольцу</string>
     <string name="l10n_add_device_wizard_continue_2e026239">Продолжить</string>
@@ -283,7 +283,7 @@
     <string name="l10n_add_device_wizard_take_over_this_ring_f199dc22">Взять управление этим кольцом</string>
     <string name="l10n_add_device_wizard_taking_over_your_ring_b64a3852">Переход на локальное управление кольцом</string>
     <string name="l10n_add_device_wizard_that_is_not_a_32_character_d42ca20d">Это не 32-символьный шестнадцатеричный ключ.</string>
-    <string name="l10n_add_device_wizard_the_ring_is_not_bricked_to_5efd1b3d">Кольцо не выведено из строя. Чтобы вернуться к исходному состоянию, снова сбросьте его к заводским настройкам и настройте up in the Oura app.</string>
+    <string name="l10n_add_device_wizard_the_ring_is_not_bricked_to_5efd1b3d">Кольцо не выведено из строя. Чтобы вернуться к исходному состоянию, снова сбросьте его к заводским настройкам и настройте в приложении Oura.</string>
     <string name="l10n_add_device_wizard_try_again_042c862e">Повторить</string>
     <string name="l10n_add_device_wizard_use_file_import_0e092cb4">Использовать импорт файла</string>
     <string name="l10n_add_device_wizard_we_could_not_take_over_this_fec1ce93">Не удалось перехватить управление этим кольцом.</string>
@@ -342,7 +342,7 @@
     <string name="l10n_backup_sync_screen_roughly_when_the_daily_backup_runs_71de04e1">Примерно когда выполняется ежедневное копирование (по возможности — система может немного сдвинуть его).</string>
     <string name="l10n_backup_sync_screen_these_backups_are_unencrypted_too_if_53e70fe8">Эти резервные копии тоже не зашифрованы. Если эта папка синхронизируется с Drive, Dropbox или iCloud, читаемый файл попадёт и туда — указывайте только надёжный сервис.</string>
     <string name="l10n_backup_sync_screen_tip_a_desktop_drive_dropbox_app_2eaff1e3">Совет: настольное приложение Drive / Dropbox само синхронизирует выбранную папку. На телефоне сохраняйте в folder a sync app (e.g. FolderSync / Autosync) keeps in your cloud.</string>
-    <string name="l10n_backup_sync_screen_writes_a_fresh_dated_backup_to_bd964fc5">Записывает новую копию с датой в вашу папку раз в день в указанное ниже время, сохраняя the latest %1$s. Off by default - flip it on if you want it.</string>
+    <string name="l10n_backup_sync_screen_writes_a_fresh_dated_backup_to_bd964fc5">Раз в день в указанное ниже время записывает в вашу папку новую копию с датой и хранит последние %1$s. По умолчанию выключено — включите, если нужно.</string>
     <string name="l10n_breathe_screen_a_relaxation_rhythm_not_cardiac_control_5c2f10a8">Это ритм для расслабления, а не управление сердцем. Темп никогда не опускается ниже безопасного, и вы можете остановиться в любой момент. Если пульс не успокоится, мы прямо об этом скажем.</string>
     <string name="l10n_breathe_screen_audio_cues_74430aec">Звуковые подсказки</string>
     <string name="l10n_breathe_screen_breathcount_breaths_ce036831">%1$s вдохов</string>
@@ -519,7 +519,7 @@
     <string name="l10n_devices_screen_rename_device_ee233604">Переименовать устройство</string>
     <string name="l10n_devices_screen_send_probe_read_only_36b318bc">Отправить пробу (только чтение)</string>
     <string name="l10n_devices_screen_save_efc007a3">Сохранить</string>
-    <string name="l10n_devices_screen_the_whoop_4_0_reboot_frame_690a8ff2">Кадр перезагрузки WHOOP 4.0 не подтверждён — обычный перезапуск игнорируется (#235). Send each candidate and watch BOTH the strap log and the strap itself. “no disconnect within 12s” means the strap ignored the frame. A “link dropped” line means the frame reached the strap — but a dropped link alone isn\'t a reboot: a real reboot also switches the strap\'s sensor light off for a few seconds, so if the light stayed on it was just a dropped connection, not a reboot. Non-destructive — your data is kept. Please share the log so we can pin the real frame.</string>
+    <string name="l10n_devices_screen_the_whoop_4_0_reboot_frame_690a8ff2">Кадр перезагрузки WHOOP 4.0 не подтверждён — обычный перезапуск игнорируется (#235). Отправляйте каждый вариант и следите И за журналом браслета, И за самим браслетом. «нет отключения за 12 с» означает, что браслет проигнорировал кадр. Строка «связь потеряна» означает, что кадр дошёл до браслета, — но одна лишь потеря связи ещё не перезагрузка: при настоящей перезагрузке датчик браслета также гаснет на несколько секунд, поэтому если подсветка не погасла, это был просто обрыв соединения, а не перезагрузка. Ничего не разрушается — ваши данные сохраняются. Пожалуйста, поделитесь журналом, чтобы мы могли определить настоящий кадр.</string>
     <string name="l10n_devices_screen_waiting_for_the_straps_reply_5a06e7ac">Ожидание ответа браслета…</string>
     <string name="l10n_devices_screen_whoop_4_0_reboot_probe_b51fb50f">Проба перезагрузки WHOOP 4.0</string>
     <string name="l10n_devices_screen_whoop_is_noop_s_primary_fully_1c9e67fd">WHOOP — основной, полностью поддерживаемый браслет NOOP. Другие пульсометры находятся на раннем, in-development addition: they stream live heart rate and HRV, but not WHOOP\'s deeper sleep and recovery data.</string>
@@ -562,7 +562,7 @@
     <string name="l10n_how_noop_works_screen_got_it_5b8027fa">Понятно</string>
     <string name="l10n_how_noop_works_screen_how_noop_works_3396b27a">Как работает NOOP</string>
     <string name="l10n_how_noop_works_screen_noop_never_makes_up_a_number_da29aca5">NOOP никогда не выдумывает число. Когда он не может честно его вычислить, он сообщает, чего не хватает и что делать, вместо того чтобы показать поддельное значение.</string>
-    <string name="l10n_how_noop_works_screen_noop_never_shows_you_a_number_d1db9958">NOOP никогда не показывает число, которое пришлось выдумать. Если оценка не готова, it tells you why and what to do next. Everything here runs on your device, from your strap.</string>
+    <string name="l10n_how_noop_works_screen_noop_never_shows_you_a_number_d1db9958">NOOP никогда не показывает придуманное значение. Если показатель ещё не готов, он объясняет почему и что делать дальше. Всё здесь работает на вашем устройстве, на основе данных браслета.</string>
     <string name="l10n_how_noop_works_screen_sleep_scores_recording_where_your_numbers_1b3e981f">Сон · оценки · запись · откуда берутся ваши данные</string>
     <string name="l10n_hrv_snapshot_screen_an_hrv_reading_needs_the_live_11b70bff">Для показания ВСР нужен живой поток R-R. Откройте экран «Прямой эфир», подключите браслет и вернитесь сюда.</string>
     <string name="l10n_hrv_snapshot_screen_beats_12aafda0">Удары</string>
@@ -589,7 +589,7 @@
     <string name="l10n_hydration_screen_totalml_toint_ml_522b262a">%1$s мл</string>
     <string name="l10n_hydration_screen_undo_last_last_ml_330befc5">Отменить последнее (%1$s мл)</string>
     <string name="l10n_insights_hub_screen_dose_here_is_timing_later_in_1b1e9326">«Доза» здесь — это время приёма (чем позже днём, тем сильнее эффект), а не миллиграммы.</string>
-    <string name="l10n_insights_hub_screen_everything_here_is_a_pattern_in_ed2162a6">Всё здесь — закономерность в ваших собственных записанных днях: связь с effect size and confidence, never a cause or a diagnosis. Population patterns are shown as “typical” and are always overridden by your own data once you have enough of it. Approximations, not WHOOP’s scores; not a medical device.</string>
+    <string name="l10n_insights_hub_screen_everything_here_is_a_pattern_in_ed2162a6">Всё здесь — закономерность в ваших собственных зафиксированных днях: связь с величиной эффекта и уровнем доверия, но никогда не причина и не диагноз. Популяционные закономерности показаны как «типичные» и всегда уступают вашим собственным данным, как только их накопится достаточно. Это приближения, а не показатели WHOOP; не медицинское устройство.</string>
     <string name="l10n_insights_hub_screen_insights_b4510362">Выводы</string>
     <string name="l10n_insights_hub_screen_log_alcohol_or_late_caffeine_with_dec9dadf">Отмечайте алкоголь или поздний кофеин с количеством, и NOOP построит персональную кривую дозы: how much each extra unit tends to move your numbers. Until then it shows typical patterns, clearly labelled as not yet yours.</string>
     <string name="l10n_insights_hub_screen_not_enough_overlap_between_your_journal_0ebdd7a2">Недостаточно пересечений между вашими ответами в журнале и %1$s yet. Keep logging. Each behaviour needs days both with and without it before NOOP can read its effect.</string>
@@ -613,7 +613,7 @@
     <string name="l10n_insights_screen_next_morning_61d1ea83">Следующее утро</string>
     <string name="l10n_insights_screen_not_enough_overlap_between_your_journal_0ebdd7a2">Недостаточно пересечений между вашими ответами в журнале и %1$s to measure an effect yet. Keep logging. Effects need days both with and without each behaviour.</string>
     <string name="l10n_insights_screen_not_enough_overlapping_history_to_correlate_a552dbd4">Пока недостаточно общей истории, чтобы рассчитать связь между показателями.</string>
-    <string name="l10n_insights_screen_pick_one_behaviour_you_log_one_bd34090e">Выберите одно отслеживаемое поведение, один результат и короткий период. NOOP compares the days you log the behaviour against your behaviour-free days before the start.</string>
+    <string name="l10n_insights_screen_pick_one_behaviour_you_log_one_bd34090e">Выберите одно отслеживаемое поведение, один результат и короткий период. NOOP сравнивает дни с этим поведением с днями до начала, когда его не было.</string>
     <string name="l10n_insights_screen_ranked_lag_aware_which_of_your_e0e91b39">С учётом рейтинга и задержки: какие из ваших привычек действительно влияют на Заряд, плюс ваша личная реакция на дозу алкоголя и кофеина.</string>
     <string name="l10n_insights_screen_rest_baseline_b3ac52a5">Норма Отдыха</string>
     <string name="l10n_insights_screen_run_a_clean_personal_test_4da69781">Провести чистый личный тест</string>
@@ -656,7 +656,7 @@
     <string name="l10n_lab_book_screen_a_private_notebook_not_a_medical_f63242cb">Личный блокнот, а не медицинский сервис.</string>
     <string name="l10n_lab_book_screen_about_lab_book_37bf2691">О разделе «Лабораторный журнал»</string>
     <string name="l10n_lab_book_screen_all_stays_on_this_phone_nothing_9a966c1c">Всё остаётся на этом телефоне. Ничего никуда не отправляется.</string>
-    <string name="l10n_lab_book_screen_bring_in_a_markers_csv_date_1090bec2">Загрузите CSV с маркерами (дата, маркер, значение, единица). Названия, совпадающие с каталогом, fold onto your existing markers; anything else comes in as a custom marker. Rows that can\'t be read are skipped and counted, never guessed. Everything you import stays on this phone.</string>
+    <string name="l10n_lab_book_screen_bring_in_a_markers_csv_date_1090bec2">Загрузите CSV с маркерами (дата, маркер, значение, единица). Названия, совпадающие с каталогом, объединяются с вашими существующими маркерами; всё остальное добавляется как свой маркер. Строки, которые не удалось прочитать, пропускаются и подсчитываются — никогда не угадываются. Всё импортированное остаётся на %1$s.</string>
     <string name="l10n_lab_book_screen_choose_a_wearable_signal_to_compare_05a4b2bc">Выберите сигнал носимого устройства для сравнения</string>
     <string name="l10n_lab_book_screen_clear_719ea396">Сбросить</string>
     <string name="l10n_lab_book_screen_delete_this_reading_b5c92bda">Удалить это измерение</string>
@@ -673,7 +673,7 @@
     <string name="l10n_lab_book_screen_read_the_full_note_3fd0e4d1">Читать запись целиком</string>
     <string name="l10n_lab_book_screen_reading_your_logbook_e31992b0">Считываем ваш Logbook…</string>
     <string name="l10n_lab_book_screen_these_are_your_own_numbers_shown_7667508d">Это ваши собственные числа, показанные вам обратно. NOOP не решает, является ли значение нормальным, высоким или низким.</string>
-    <string name="l10n_lab_book_screen_type_in_a_blood_pressure_reading_c276d418">Введите показатель артериального давления или значение холестерина с последнего приёма. It stays on this phone, and over time you\'ll see how it lines up with your sleep, heart rate and recovery.</string>
+    <string name="l10n_lab_book_screen_type_in_a_blood_pressure_reading_c276d418">Введите показание давления или значение холестерина с последнего приёма. Это остаётся на %1$s, и со временем вы увидите, как это соотносится со сном, пульсом и восстановлением.</string>
     <string name="l10n_lab_book_screen_what_lab_book_is_and_isn_f28686df">Чем является Лабораторный журнал (и чем нет)</string>
     <string name="l10n_live_screen_manage_devices_e5c277ff">Управление устройствами</string>
     <string name="l10n_live_screen_max_hr_6acd9e07">Макс. пульс</string>
@@ -708,7 +708,7 @@
     <string name="l10n_marker_editor_screen_add_a_reading_ed7708ee">Добавить показание</string>
     <string name="l10n_marker_editor_screen_date_taken_76edfcab">Дата съёмки</string>
     <string name="l10n_marker_editor_screen_entered_together_stored_as_two_markers_af8f3ba0">Введены вместе; сохраняются как два маркера, чтобы каждый точно совпадал с вашими сигналами.</string>
-    <string name="l10n_marker_editor_screen_lab_book_keeps_your_own_numbers_9085ce2c">Лабораторный журнал хранит ваши собственные числа — он не проводит анализы, не трактует и не оценивает их, и это не медицинская advice. Everything stays on this phone.</string>
+    <string name="l10n_marker_editor_screen_lab_book_keeps_your_own_numbers_9085ce2c">«Лабораторный журнал» хранит ваши собственные показатели. Он их не анализирует, не считывает и не оценивает, и это не медицинская рекомендация. Всё остаётся на %1$s.</string>
     <string name="l10n_marker_editor_screen_no_match_add_it_as_a_ad5c59ec">Совпадений нет. Добавьте это как собственный маркер ниже.</string>
     <string name="l10n_marker_editor_screen_noop_never_fills_this_in_it_7be9653b">NOOP никогда не заполняет это сам — он лишь показывает ровно то, что вы ввели из своего отчёта.</string>
     <string name="l10n_marker_editor_screen_search_markers_103981e0">Поиск маркеров</string>
@@ -757,7 +757,7 @@
     <string name="l10n_notifications_settings_screen_uses_the_same_quiet_hours_and_03badcac">Использует те же правила тихих часов и ношения.</string>
     <string name="l10n_notifications_settings_screen_voip_calls_96c5a102">VoIP-звонки</string>
     <string name="l10n_notifications_settings_screen_wrist_alerts_75581d51">Уведомления на запястье</string>
-    <string name="l10n_notifications_settings_screen_wrist_delivery_needs_notification_access_so_2a14e784">Для доставки на запястье нужен доступ к уведомлениям, чтобы NOOP мог видеть, какие приложения уведомляют you. Nothing leaves this device. Your choices are saved now and apply automatically once access is granted.</string>
+    <string name="l10n_notifications_settings_screen_wrist_delivery_needs_notification_access_so_2a14e784">Для доставки на запястье нужен доступ к уведомлениям, чтобы NOOP мог видеть, какие приложения вам пишут. Ничего не покидает это устройство. Ваш выбор уже сохранён и вступит в силу автоматически, как только доступ будет предоставлен.</string>
     <string name="l10n_onboarding_screen_a_private_window_into_your_recovery_b8dd2ff2">Личное окно в ваше восстановление, сон и нагрузку. Читается прямо с браслета и хранится только на этом телефоне.</string>
     <string name="l10n_onboarding_screen_a_quick_word_before_you_connect_5a29015a">Пара слов перед подключением</string>
     <string name="l10n_onboarding_screen_a_quiet_ongoing_status_97bf2a44">Тихий постоянный статус</string>
@@ -824,7 +824,7 @@
     <string name="l10n_settings_screen_clock_04f6b3ea">Часы</string>
     <string name="l10n_settings_screen_hide_bar_when_scrolling_b077d9f3">Скрывать панель при прокрутке</string>
     <string name="l10n_skin_temp_cards_screen_cycle_awareness_ffb94783">Осведомлённость о цикле</string>
-    <string name="l10n_skin_temp_cards_screen_noop_can_read_a_coarse_menstrual_c79e4b85">NOOP может определить приблизительную фазу менструального цикла по ночной температуре кожи, entirely on your device. It is awareness only: not contraception, not a fertility predictor, not a medical service.</string>
+    <string name="l10n_skin_temp_cards_screen_noop_can_read_a_coarse_menstrual_c79e4b85">NOOP может определять приблизительную фазу менструального цикла по ночной температуре кожи, полностью на вашем устройстве. Это только информирование: не контрацепция, не предсказание фертильности и не медицинская услуга.</string>
     <string name="l10n_skin_temp_cards_screen_turn_on_cycle_awareness_7c2d328f">Включить учёт цикла</string>
     <string name="l10n_sleep_screen_about_this_nap_e2719b9b">Об этом дневном сне</string>
     <string name="l10n_sleep_screen_about_your_main_sleep_1da8a640">О вашем основном сне</string>
@@ -906,20 +906,20 @@
     <string name="l10n_steps_calibration_screen_done_e9b450d1">Готово</string>
     <string name="l10n_steps_calibration_screen_est_18b405fb">Оценка</string>
     <string name="l10n_steps_calibration_screen_how_this_works_b895a8c3">Как это работает</string>
-    <string name="l10n_steps_calibration_screen_no_days_yet_where_both_noop_71d6005b">Пока нет дней, где шаги считали и NOOP, и ваш телефон. Как только телефон запишет few days alongside the strap, they\'ll appear here so you can see how close the estimate is.</string>
+    <string name="l10n_steps_calibration_screen_no_days_yet_where_both_noop_71d6005b">Пока нет дней, когда шаги считали и NOOP, и телефон. Как только телефон запишет несколько дней вместе с браслетом, они появятся здесь, чтобы вы могли увидеть, насколько точна оценка.</string>
     <string name="l10n_steps_calibration_screen_no_motion_synced_yet_65106670">Данные о движении пока не синхронизированы</string>
     <string name="l10n_steps_calibration_screen_noop_estimates_your_steps_from_your_d569bc31">NOOP оценивает ваши шаги по движению вашего WHOOP, калибруя их по счётчику шагов телефона. Это оценка, а не шагомер. WHOOP 4.0 не передаёт шаги.</string>
     <string name="l10n_steps_calibration_screen_not_calibrated_yet_30abe0d0">Пока не откалибровано</string>
-    <string name="l10n_steps_calibration_screen_on_the_days_your_phone_also_2f65a14c">В дни, когда телефон тоже считал шаги, NOOP выясняет, как ваше движение соотносится с steps, then applies that to the strap-only days. The more matching days it has, the more it trusts the estimate.</string>
+    <string name="l10n_steps_calibration_screen_on_the_days_your_phone_also_2f65a14c">В дни, когда шаги считал и телефон, NOOP выясняет, как ваше движение соотносится с шагами, а затем применяет это к дням, где данные есть только с браслета. Чем больше совпадающих дней, тем больше NOOP доверяет оценке.</string>
     <string name="l10n_steps_calibration_screen_open_noop_near_your_strap_and_e08ddd6d">Откройте NOOP рядом с браслетом и дайте ему догнать (полная синхронизация истории может занять время на first run). Once a day or two of motion lands, your step estimate and the calibration below will start to fill in.</string>
-    <string name="l10n_steps_calibration_screen_override_the_automatic_fit_with_your_36a7b6fa">Переопределите автоматический подбор своим значением шагов на единицу движения. Полезно, если ваш телефон has no step history to learn from, or the estimate runs consistently high or low. Step all the way down to return to auto.</string>
+    <string name="l10n_steps_calibration_screen_override_the_automatic_fit_with_your_36a7b6fa">Замените автоматический расчёт собственным значением шагов на единицу движения. Это полезно, если у телефона нет истории шагов для обучения или оценка стабильно завышена либо занижена. Чтобы вернуть автоматический режим, перетащите ползунок в крайнее левое положение.</string>
     <string name="l10n_steps_calibration_screen_phone_77064d52">Телефон</string>
     <string name="l10n_steps_calibration_screen_shortday_row_day_estimated_row_estimated_f2d71597">%1$s: оценка %2$s шагов, телефон %3$s steps, %4$s percent difference</string>
     <string name="l10n_steps_calibration_screen_steps_per_motion_unit_a2c2ac56">шагов на единицу движения</string>
     <string name="l10n_steps_calibration_screen_takes_effect_on_the_next_analytics_13205327">Вступит в силу при следующем расчёте аналитики (после следующей синхронизации).</string>
     <string name="l10n_steps_calibration_screen_these_are_the_days_where_your_ae5c9c2c">Это дни, когда телефон также считал шаги, поэтому NOOP может понять, как ваше движение соотносится с шагами. Либо задайте коэффициент вручную ниже.</string>
     <string name="l10n_steps_calibration_screen_these_days_are_excluded_from_the_6bedabbf">Эти дни исключены из оценки (вместо неё показан реальный счёт вашего телефона). Они здесь только для того, чтобы вы могли оценить точность.</string>
-    <string name="l10n_steps_calibration_screen_we_re_not_seeing_any_motion_6ac8e092">Мы пока не видим движения с вашего браслета. Шаги оцениваются по движению вашего WHOOP banked motion history, so your strap needs to sync that history before NOOP has anything to count.</string>
+    <string name="l10n_steps_calibration_screen_we_re_not_seeing_any_motion_6ac8e092">Пока не видим движения от вашего браслета. Шаги оцениваются по накопленной истории движения WHOOP, поэтому браслету нужно синхронизировать эту историю, прежде чем NOOP сможет что-то посчитать.</string>
     <string name="l10n_steps_calibration_screen_whoop_4_0_motion_steps_a63239dc">WHOOP 4.0 · движение → шаги</string>
     <string name="l10n_strand_components_next_day_38f859dd">Следующий день</string>
     <string name="l10n_strand_components_previous_day_e2b6b0a1">Предыдущий день</string>
@@ -1019,7 +1019,7 @@
     <string name="l10n_whoop_model_comparison_screen_close_bbfa773e">Закрыть</string>
     <string name="l10n_whoop_model_comparison_screen_done_e9b450d1">Готово</string>
     <string name="l10n_whoop_model_comparison_screen_feature_ad565d9d">Функция</string>
-    <string name="l10n_whoop_model_comparison_screen_noop_pairs_with_the_whoop_4_599b088c">NOOP работает с WHOOP 4.0 и WHOOP 5.0/MG. У них общее почти всё важное (живой heart rate, your scores, buzzing the strap), but a few firmware features differ. Here\'s what each can do, and why.</string>
+    <string name="l10n_whoop_model_comparison_screen_noop_pairs_with_the_whoop_4_599b088c">NOOP работает с WHOOP 4.0 и WHOOP 5.0/MG. У них общее почти всё важное (пульс в реальном времени, ваши оценки, вибрация браслета), но некоторые функции прошивки различаются. Вот что умеет каждый и почему.</string>
     <string name="l10n_whoop_model_comparison_screen_on_a_whoop_4_0_32a5968d">У вас WHOOP 4.0?</string>
     <string name="l10n_whoop_model_comparison_screen_what_each_can_read_and_why_4348bd67">Что может читать каждый и почему</string>
     <string name="l10n_whoop_model_comparison_screen_you_re_not_missing_the_broadcast_1d2fa907">Вы не лишены функции трансляции. Чтобы передать пульс на тренажёр,</string>
@@ -1564,7 +1564,7 @@
     <string name="l10n_settings_screen_icon_716f63b9">Иконка</string>
     <string name="l10n_settings_screen_illness_heads_up_97e10035">Предупреждение о болезни</string>
     <string name="l10n_settings_screen_import_4834caf8">Импортировать…</string>
-    <string name="l10n_settings_screen_importing_overwrites_everything_currently_on_this_297b76ae">Импорт перезаписывает всё, что сейчас на этом телефоне. Ваши старые данные на всякий случай сохраняются в отдельном файле. Чтобы импорт вступил в силу, NOOP нужно перезапустить. Export CSV writes a WHOOP-format zip of your days, sleeps, workouts and journal that re-imports into NOOP on Android or Mac. On-device computed rows are marked APPROXIMATE in its Source column; the .noopbak backup stays the lossless restore path.</string>
+    <string name="l10n_settings_screen_importing_overwrites_everything_currently_on_this_297b76ae">Импорт перезаписывает всё, что сейчас есть на %1$s. Ваши старые данные сохраняются в отдельном файле на всякий случай. Для вступления импорта в силу NOOP нужно перезапустить. Экспорт CSV создаёт zip в формате WHOOP с вашими днями, снами, тренировками и журналом, который можно повторно импортировать в NOOP на Mac, iPhone или Android. Строки, рассчитанные на устройстве, помечены как ПРИБЛИЗИТЕЛЬНО в столбце «Источник»; полная резервная копия остаётся способом восстановления без потерь.</string>
     <string name="l10n_settings_screen_keep_connected_in_the_background_44499d45">Оставаться подключённым в фоне</string>
     <string name="l10n_settings_screen_keep_noop_alive_overnight_e43b2fba">Держать NOOP активным всю ночь</string>
     <string name="l10n_settings_screen_allow_3ad0e369">Разрешить</string>
@@ -1597,7 +1597,7 @@
     <string name="l10n_settings_screen_records_the_raw_frames_of_each_98a284df">Записывает сырые кадры каждой синхронизации истории 5/MG в файл на этом телефоне, чтобы вы могли поделиться ими и помочь NOOP научиться декодировать сон, восстановление и нагрузку 5/MG. Файл содержит сырые биометрические кадры (пульс, R-R, температура кожи, движение) и собственный диагностический текст браслета. Ничего не покидает телефон, пока вы сами не поделитесь. По умолчанию выключено.</string>
     <string name="l10n_settings_screen_remove_photo_c8f5eda8">Удалить фото</string>
     <string name="l10n_settings_screen_rename_d3f4cb89">Переименовать</string>
-    <string name="l10n_settings_screen_rename_your_strap_s_bluetooth_name_6032668b">Переименуйте Bluetooth-имя браслета — полезно для купленного с рук. Браслет reboots to apply, then reconnects with the new name.</string>
+    <string name="l10n_settings_screen_rename_your_strap_s_bluetooth_name_6032668b">Переименуйте Bluetooth-имя браслета — пригодится для купленного с рук. Браслет перезагрузится, чтобы применить изменение, а затем подключится с новым именем.</string>
     <string name="l10n_settings_screen_restarts_the_roughly_4_night_build_84f9f8d0">Перезапускает примерно 4-дневное накопление данных для Заряда и вашей нормы ВСР начиная с сегодняшней ночи. Используйте, если неудачная первая неделя сбила вашу норму. История сохраняется.</string>
     <string name="l10n_settings_screen_reviews_each_scored_wake_block_for_537924ea">Проверяет каждый оценённый блок бодрствования на реальные признаки подъёма (ритм шагов, change in body position) instead of just a heart-rate rise. A wake block with no locomotion and a stable posture -- a hot night, a brief turn-over -- is folded back into light sleep; a real get-up is left alone. Self-checks how much motion detail your strap actually recorded and stays off on a night that\'s too sparse to trust (older WHOOP 4.0 firmware, mainly). Off by default; takes effect on the next nights staged.</string>
     <string name="l10n_settings_screen_rhythm_experimental_12d357da">Ритм (эксперимент)</string>
@@ -1716,7 +1716,6 @@
     <string name="l10n_today_screen_breaths_per_minute_2b197c54">Вдохов в минуту</string>
     <string name="l10n_today_screen_calories_3e62ecfe">Калории</string>
     <string name="l10n_today_screen_choose_which_tiles_show_on_your_a4e3acfb">Выберите, какие плитки отображать в Пульте управления, и измените их порядок с помощью стрелок.</string>
-    <string name="l10n_today_screen_daytitle_humandate_tap_to_pick_a_7e12ce96">%1$s, %2$s. Нажмите, чтобы выбрать день, смахните, чтобы сменить день.</string>
     <string name="l10n_today_screen_detailed_tiles_0801721b">Подробные плитки</string>
     <string name="l10n_today_screen_dismiss_to_updates_2c7915b8">Отклонить в «Обновления»</string>
     <string name="l10n_today_screen_each_line_is_how_many_points_dec2c062">Каждая строка показывает, на сколько пунктов этот сигнал сдвинул Заряд относительно вашей</string>
@@ -1774,7 +1773,7 @@
     <string name="l10n_trends_explore_screen_resting_hr_26677094">Пульс в покое</string>
     <string name="l10n_trends_explore_screen_sleep_3cac34e6">Сон</string>
     <string name="l10n_trends_explore_screen_sleep_efficiency_b4b5c293">Эффективность сна</string>
-    <string name="l10n_trends_report_a_clean_shareable_one_page_pdf_a3c4f889">Аккуратный одностраничный PDF, которым можно поделиться: восстановление, сон, ВСР, пульс в покое and strain over a date range. Built and saved on your phone - nothing leaves the device.</string>
+    <string name="l10n_trends_report_a_clean_shareable_one_page_pdf_a3c4f889">Аккуратный, готовый для отправки одностраничный PDF с вашим восстановлением, сном, ВСР, пульсом в покое и нагрузкой за выбранный период. Сохраняется на вашем %1$s. Ничего не покидает устройство.</string>
     <string name="l10n_trends_report_export_pdf_3dd7d56a">Экспортировать PDF</string>
     <string name="l10n_trends_report_the_share_sheet_can_save_the_ecddbca7">Через меню «Поделиться» PDF можно сохранить в Файлы или отправить дальше.</string>
     <string name="l10n_trends_report_trends_report_pdf_481e8a5f">Отчёт по трендам (PDF)</string>
@@ -1993,7 +1992,7 @@
     <string name="settings_chart_classic">Классические</string>
     <string name="settings_trend_line">Линия</string>
     <string name="settings_trend_bars">Столбцы</string>
-    <string name="spo2_strap_estimate_caption">оценка браслета (не проверена)</string>
+    <string name="spo2_strap_estimate_caption">Не проверена</string>
     <string name="spo2_toggle_on_no_data">переключатель ВКЛ · оценки пока нет</string>
     <string name="l10n_devices_screen_forget_device_d6eb6209">Забыть устройство…</string>
     <string name="l10n_devices_screen_forget_device_926e503d">Забыть устройство</string>
@@ -2751,4 +2750,5 @@
     <string name="raw_diag_ecg_probe_start">Начать запись ЭКГ</string>
     <string name="raw_diag_ecg_probe_stop">Остановить запись ЭКГ</string>
     <string name="raw_diag_ecg_probe_running">На этом ремешке запись может всё ещё идти. Результат попадёт в strap log.</string>
+    <string name="spo2_unvalidated_detail">Не проверена. Эта экспериментальная оценка браслета может быть неточной. Не используйте её для медицинских решений.</string>
 </resources>
