@@ -42,3 +42,7 @@ The oxygen/vital test selection passed 71 tests with no failures, including fres
 saved choices, all 31 in-band candidate values, imported-value precedence and absent data.
 The whole-tree translation gate also finds existing untranslated UI/Lift Log strings and format
 mismatches. The new oxygen notes have translations in all nine shipped resource locales.
+
+On 2026-10-07, the published APK passed emulator upgrade and fresh-install checks and was installed
+and launched on the owner's Samsung phone. A corrupted Downloads copy reproduced the earlier
+installer rejection; replacing it resolved that artifact failure. See [install verification](docs/ANDROID_INSTALL_VERIFICATION.md).
