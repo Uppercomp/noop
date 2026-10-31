@@ -145,6 +145,7 @@ internal enum class Destination(
     val icon: ImageVector,
 ) {
     // Group: Today
+    EnergyBody("energy_body", R.string.feature_energy_body, Icons.Filled.FitnessCenter),
     Today("today", R.string.nav_today, Icons.Filled.Home),
     Intelligence("intelligence", R.string.nav_intelligence, Icons.Filled.Psychology),
     // Optional, default-OFF (task #43): the Coupled view (WHOOP-style day read). Reached ONLY via the
@@ -255,19 +256,18 @@ internal val drawerGroups: List<DrawerGroup> = listOf(
         // promoted to a top-level tab — no longer listed under More." Leaving it would have put the
         // same destination in two places at once, which is the duplication the note above says this
         // list exists to avoid. (#2218)
-        Destination.InsightsHub, Destination.Intelligence,
-        Destination.Insights, Destination.Explore, Destination.Compare,
+        Destination.InsightsHub, Destination.Explore, Destination.Compare,
     ), defaultExpanded = true),
     DrawerGroup("Body", R.string.more_group_body, listOf(
-        Destination.Live, Destination.Workouts, Destination.LiftLog, Destination.Health,
-        Destination.VitalSigns, Destination.LabBook, Destination.Stress, Destination.Breathe,
+        Destination.Live, Destination.Workouts, Destination.LiftLog, Destination.Health, Destination.EnergyBody,
+        Destination.LabBook, Destination.Stress, Destination.Breathe,
         Destination.Intervals, Destination.Rhythm,
     ), defaultExpanded = true),
     DrawerGroup("Data", R.string.more_group_data, listOf(
         // iOS order, one for one: Your Data Fused, Apple Health, Mi Band, Data Sources, Backup & Sync,
         // then its iOS-only Shortcuts Export, where Android's own extra — Devices, which iOS reaches from
         // Live's "Manage devices" instead — takes the same slot ahead of NOOP Limitations.
-        Destination.FusedRecord, Destination.AppleHealth, Destination.XiaomiBand, Destination.DataSources,
+        Destination.FusedRecord, Destination.DataSources,
         Destination.BackupSync, Destination.Devices, Destination.NoopLimitations,
     ), defaultExpanded = false),
     DrawerGroup("App", R.string.more_group_app, listOf(
@@ -963,6 +963,9 @@ fun AppRoot(viewModel: AppViewModel = viewModel()) {
                 composable(Destination.Trends.route) { TrendsScreen(viewModel) }
                 composable(Destination.Insights.route) { InsightsScreen(viewModel, onOpenInsightsHub = { nav.navigateTopLevel(Destination.InsightsHub.route) }) }
                 composable(Destination.Compare.route) { CompareScreen(viewModel) }
+                composable(Destination.EnergyBody.route) {
+                    EnergyBodyScreen(viewModel, onImport = { nav.navigate(Destination.DataSources.route) }, onCompare = { nav.navigate(Destination.Compare.route) })
+                }
                 composable(Destination.Health.route) {
                     HealthScreen(
                         vm = viewModel,

@@ -83,11 +83,11 @@ class StressGlanceWidget : GlanceAppWidget() {
 
 // Local widget colours, mirroring the siblings rather than reading Palette: Glance composes outside the
 // app theme, so every widget in this package carries its own copy on purpose.
-private fun stressSurfaceColor(dark: Boolean) = if (dark) Color(0xFF0A1322) else Color(0xFFF4F1EA)
+private fun stressSurfaceColor(dark: Boolean) = widgetTokens(dark).surfaceRaised
 
 private fun stressSurface(dark: Boolean) = ColorProvider(stressSurfaceColor(dark))
-private fun stressTextPrimary(dark: Boolean) = ColorProvider(if (dark) Color(0xFFF4F6F8) else Color(0xFF1A2230))
-private fun stressTextSecondary(dark: Boolean) = ColorProvider(if (dark) Color(0xFF8A94A4) else Color(0xFF7C8696))
+private fun stressTextPrimary(dark: Boolean) = ColorProvider(widgetTokens(dark).textPrimary)
+private fun stressTextSecondary(dark: Boolean) = ColorProvider(widgetTokens(dark).textSecondary)
 
 /**
  * The screen's three-stop ramp, as raw colours the renderer can paint with.
@@ -127,7 +127,7 @@ private fun StressWidgetContent(snap: WidgetSnapshot, dark: Boolean) {
         modifier = GlanceModifier
             .fillMaxSize()
             .background(stressSurface(dark))
-            .cornerRadius(16.dp)
+            .cornerRadius(com.noop.ui.Metrics.cardRadius)
             .padding(14.dp)
             .clickable(actionStartActivity<MainActivity>()),
     ) {

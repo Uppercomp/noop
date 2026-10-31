@@ -1,5 +1,7 @@
 package com.noop.ui
 
+import android.content.Intent
+
 import com.noop.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
@@ -173,7 +175,7 @@ private fun CoachSetup(vm: CoachViewModel) {
                         placeholder = { Text("http://localhost:11434/v1", style = NoopType.body, color = Palette.textTertiary) },
                         textStyle = NoopType.mono(13f),
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrect = false),
                         colors = coachFieldColors(),
                         shape = RoundedCornerShape(14.dp),
                     )
@@ -481,6 +483,7 @@ private fun CoachChat(vm: CoachViewModel, onOpenSettings: () -> Unit) {
         // Input row + Send, a frosted overlay surface so the composer reads as a docked input bar.
         // K4: the mic button (on-device voice input) sits between the text field and Send.
         MicComposerRow(
+            vm = vm,
             input = input,
             onInputChange = {
                 input = it
@@ -586,7 +589,9 @@ private fun ChatBubble(msg: ChatMsg, vm: CoachViewModel) {
                     Text(msg.text, style = NoopType.body, color = Palette.textPrimary)
                 } else {
                     // Render the Coach's Markdown (bold/lists/headings) instead of raw symbols (#149).
-                    CoachMarkdown(msg.text, color = Palette.textPrimary)
+                    CoachMarkdown(com.noop.ai.CoachLogAction.visibleText(msg.text), color = Palette.textPrimary)
+                    CoachLogActionCard(msg, vm.sending.collectAsStateWithLifecycle().value)
+                    CoachReadAloudButton(msg.text)
                 }
             }
             // K8: dropdown popup anchored to the bubble.
@@ -918,118 +923,105 @@ internal fun CoachPrimaryButton(label: String, enabled: Boolean, onClick: () -> 
  * server, where the `EXTRA_PREFER_OFFLINE` this line used to name was a hint the platform could ignore.
  */
 @Composable
-private fun MicComposerRow(
-    input: String,
-    onInputChange: (String) -> Unit,
-    sending: Boolean,
-    onSend: () -> Unit,
-) {
+private fun MicComposerRow(vm: CoachViewModel, input: String, onInputChange: (String) -> Unit, sending: Boolean, onSend: () -> Unit) {
     val context = LocalContext.current
-    var isRecording by remember { mutableStateOf(false) }
-    var voiceStatus by remember { mutableStateOf<String?>(null) }
-
-    // The voice controller is remembered for the lifetime of the composer; destroyed on leave.
-    val voiceInput = remember {
-        CoachVoiceInput(
-            context = context,
-            onPartial = { partial -> onInputChange(partial) },
-            onFinal = { final ->
-                val trimmed = final.trim()
-                if (trimmed.isNotEmpty()) {
-                    // Append to the draft (not replace) so voice composes with typed text.
-                    val merged = if (input.isBlank()) trimmed else "$input $trimmed"
-                    onInputChange(merged)
+    val messages by vm.messages.collectAsStateWithLifecycle()
+    var conversation by remember { mutableStateOf(false) }
+    var speakReplies by remember { mutableStateOf(false) }
+    var recording by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf<String?>(null) }
+    var base by remember { mutableStateOf("") }
+    var waiting by remember { mutableStateOf(false) }
+    var resume by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val latestConversation = androidx.compose.runtime.rememberUpdatedState(conversation)
+    val latestInput = androidx.compose.runtime.rememberUpdatedState(input)
+    val change = androidx.compose.runtime.rememberUpdatedState(onInputChange)
+    val output = remember { CoachSpeechOutput(context) { status = it; conversation = false } }
+    val voice = remember {
+        CoachVoiceInput(context,
+            onPartial = { partial -> if (!latestConversation.value) change.value(listOf(base, partial).filter { it.isNotBlank() }.joinToString(" ")) },
+            onFinal = { text ->
+                recording = false
+                if (text.isNotBlank()) {
+                    if (latestConversation.value) { waiting = true; vm.send(context, text.trim()) }
+                    else change.value(listOf(base, text.trim()).filter { it.isNotBlank() }.joinToString(" "))
                 }
             },
-            onError = { msg -> voiceStatus = msg },
+            onError = { status = it; recording = false; conversation = false },
         )
     }
-    // Release the recognizer when the composer leaves composition.
-    androidx.compose.runtime.DisposableEffect(voiceInput) {
-        onDispose { voiceInput.destroy() }
+    fun begin() {
+        if (sending) return
+        output.stop()
+        status = null
+        base = latestInput.value
+        voice.start()
+        recording = voice.recording()
     }
-
-    // Runtime RECORD_AUDIO permission launcher — raised on the first mic tap if not yet granted.
-    val permLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
-    ) { granted ->
-        if (granted) {
-            voiceInput.start()
-            isRecording = true
-        } else {
-            voiceStatus = context.getString(R.string.coach_voice_permission_denied)
+    val permission = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) {
+        if (it) begin() else { status = "Microphone permission denied"; conversation = false }
+    }
+    androidx.compose.runtime.SideEffect { resume = { if (latestConversation.value && voice.isPermissionGranted()) begin() } }
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(voice, output, lifecycle) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) { conversation = false; recording = false; waiting = false; voice.destroy(); output.stop() }
+        }
+        lifecycle.lifecycle.addObserver(observer)
+        onDispose { lifecycle.lifecycle.removeObserver(observer); voice.destroy(); output.close() }
+    }
+    LaunchedEffect(sending, waiting) {
+        if (!sending && waiting) {
+            waiting = false
+            val answer = messages.lastOrNull()?.takeIf { it.role == "assistant" }?.text
+            if (!answer.isNullOrBlank() && (speakReplies || conversation)) output.speak(answer) { if (latestConversation.value) resume?.invoke() }
+            else if (conversation) resume?.invoke()
         }
     }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(Palette.surfaceOverlay)
-            .border(1.dp, Palette.hairline, RoundedCornerShape(18.dp))
-            .padding(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        OutlinedTextField(
-            value = input,
-            onValueChange = onInputChange,
-            modifier = Modifier.weight(1f),
-            placeholder = {
-                Text(
-                    if (isRecording) stringResource(R.string.coach_listening) else uiString(R.string.l10n_coach_screen_ask_your_coach_b1577d4c),
-                    style = NoopType.body,
-                    color = Palette.textTertiary,
-                )
-            },
-            textStyle = NoopType.body,
-            singleLine = false,
-            maxLines = 4,
-            enabled = !sending,
-            colors = coachFieldColors(),
-            shape = RoundedCornerShape(14.dp),
-        )
-
-        // K4: mic button — on-device voice input. Hidden entirely when on-device recognition
-        // is not available (API < 31 or locale without an offline model), matching iOS which
-        // disables voice when `supportsOnDeviceRecognition` is false.
-        if (voiceInput.isAvailable()) {
-            MicButton(
-                isRecording = isRecording,
-                enabled = !sending,
-                statusMessage = voiceStatus,
-                onClick = {
-                    voiceStatus = null
-                    if (isRecording) {
-                        voiceInput.stop()
-                        isRecording = false
-                    } else {
-                        if (voiceInput.isPermissionGranted()) {
-                            voiceInput.start()
-                            isRecording = true
-                        } else {
-                            permLauncher.launch(voiceInput.requiredPermission)
-                        }
-                    }
-                },
-            )
-        }
-
-        SendButton(
-            enabled = input.isNotBlank() && !sending,
-            sending = sending,
-            onClick = onSend,
-        )
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("Speak replies", style = NoopType.caption, color = Palette.textSecondary, modifier = Modifier.weight(1f))
+        androidx.compose.material3.Switch(checked = speakReplies, onCheckedChange = { speakReplies = it; if (!it) output.stop() })
+        Text("Conversation", style = NoopType.caption, color = Palette.textSecondary)
+        androidx.compose.material3.Switch(checked = conversation, enabled = voice.isAvailable(), onCheckedChange = {
+            conversation = it
+            if (it) { if (voice.isPermissionGranted()) begin() else permission.launch(voice.requiredPermission) }
+            else { voice.destroy(); output.stop(); recording = false }
+        })
     }
-
-    // Voice status / error line (e.g. "Microphone permission denied" or locale-not-supported).
-    if (voiceStatus != null) {
-        Text(
-            voiceStatus!!,
-            style = NoopType.footnote,
-            color = Palette.textTertiary,
-        )
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Metrics.space8)) {
+        OutlinedTextField(value = input, onValueChange = onInputChange, modifier = Modifier.weight(1f),
+            placeholder = { Text("Ask Coach or dictate a message") }, textStyle = NoopType.body, enabled = !sending && !conversation)
+        TextButton(enabled = !sending && voice.isAvailable(), onClick = {
+            if (recording) { voice.stop(); recording = false }
+            else if (voice.isPermissionGranted()) begin() else permission.launch(voice.requiredPermission)
+        }) { Text(if (recording) "Stop" else "Mic") }
+        TextButton(onClick = { waiting = true; onSend() }, enabled = !sending && input.isNotBlank() && !conversation) { Text("Send") }
     }
+    if (conversation) Text("Offline dictation sends the recognized text automatically, then reads replies using an offline Android voice. Logging still requires the Confirm button. Stop conversation to stop the microphone and speech.", style = NoopType.footnote, color = Palette.textSecondary)
+    if (!voice.isAvailable()) Text("On-device dictation is unavailable. Install an offline speech language/model in Android voice settings. Typing and offline read-aloud can still be used.", style = NoopType.footnote, color = Palette.textSecondary)
+    Row {
+        TextButton(onClick = { runCatching { context.startActivity(Intent("android.settings.VOICE_INPUT_SETTINGS")) } }) { Text("Speech settings") }
+        TextButton(onClick = { runCatching { context.startActivity(Intent("com.android.settings.TTS_SETTINGS")) } }) { Text("TTS voices") }
+    }
+    status?.let { Text(it, style = NoopType.footnote, color = Palette.statusWarning) }
+}
+
+@Composable
+private fun CoachReadAloudButton(text: String) {
+    val context = LocalContext.current
+    var error by remember { mutableStateOf<String?>(null) }
+    var speech by remember { mutableStateOf<CoachSpeechOutput?>(null) }
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycle) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event -> if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) speech?.stop() }
+        lifecycle.lifecycle.addObserver(observer)
+        onDispose { lifecycle.lifecycle.removeObserver(observer); speech?.close() }
+    }
+    Row {
+        TextButton(onClick = { if (speech == null) speech = CoachSpeechOutput(context) { error = it }; speech?.speak(text) }) { Text("Read aloud") }
+        TextButton(onClick = { speech?.stop() }) { Text("Stop") }
+    }
+    error?.let { Text(it, style = NoopType.footnote, color = Palette.statusWarning) }
 }
 
 @Composable
@@ -1119,8 +1111,7 @@ private fun PrivacyNote(local: Boolean = false) {
                 "The coach talks only to the server URL you set. Point it at a local model to " +
                     "keep everything on your device. Nothing is sent until you ask."
             else
-                "Private by default: only your question and a short metrics summary are sent, " +
-                    "and only after you set a key.",
+                "Private by default. When enabled, Coach sends your question, conversation and selected health data to your chosen endpoint. Review categories and Full access in Coach settings.",
             style = NoopType.footnote,
             color = Palette.textTertiary,
         )

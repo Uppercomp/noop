@@ -83,11 +83,11 @@ class HrGlanceWidget : GlanceAppWidget() {
 // Local widget colours, mirroring the siblings rather than reading Palette: Glance composes outside the
 // app theme, so every widget in this package carries its own copy on purpose.
 /** The card colour as a raw Color, so the renderer can paint it as the bitmap's ground. */
-private fun hrSurfaceColor(dark: Boolean) = if (dark) Color(0xFF0A1322) else Color(0xFFF4F1EA)
+private fun hrSurfaceColor(dark: Boolean) = widgetTokens(dark).surfaceRaised
 
 private fun hrSurface(dark: Boolean) = ColorProvider(hrSurfaceColor(dark))
-private fun hrTextPrimary(dark: Boolean) = ColorProvider(if (dark) Color(0xFFF4F6F8) else Color(0xFF1A2230))
-private fun hrTextSecondary(dark: Boolean) = ColorProvider(if (dark) Color(0xFF8A94A4) else Color(0xFF7C8696))
+private fun hrTextPrimary(dark: Boolean) = ColorProvider(widgetTokens(dark).textPrimary)
+private fun hrTextSecondary(dark: Boolean) = ColorProvider(widgetTokens(dark).textSecondary)
 
 /** Card padding, both sides. The chart and the axis under it must subtract the SAME figure or the
  *  labels drift out of line with the trace they annotate. */
@@ -117,7 +117,7 @@ private fun hrChartWidthDp(widthDp: Float): Float =
  *  These are the HR ZONE-5 hexes: `StrandPalette.zone5` on the Apple side resolves to exactly this
  *  pair, so the two widgets are one colour rather than two approximations. Kept as a local literal for
  *  the same reason every other colour in this package is — Glance composes outside the app theme. */
-private fun hrAccent(dark: Boolean) = if (dark) Color(0xFFE0662F) else Color(0xFFC84E1E)
+private fun hrAccent(dark: Boolean) = widgetTokens(dark).recovery000
 
 @Composable
 private fun HrWidgetContent(snap: WidgetSnapshot, dark: Boolean) {
@@ -128,7 +128,7 @@ private fun HrWidgetContent(snap: WidgetSnapshot, dark: Boolean) {
         modifier = GlanceModifier
             .fillMaxSize()
             .background(hrSurface(dark))
-            .cornerRadius(16.dp)
+            .cornerRadius(com.noop.ui.Metrics.cardRadius)
             .padding(14.dp)
             .clickable(actionStartActivity<MainActivity>()),
     ) {

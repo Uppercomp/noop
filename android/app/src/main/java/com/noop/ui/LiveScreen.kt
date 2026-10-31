@@ -231,6 +231,8 @@ fun LiveScreen(viewModel: AppViewModel, onManageDevices: () -> Unit = {}) {
         fullBleedBackground = screenBackdropFullBleed(showDayCycleBackground, skyBehindCards),
     ) {
 
+        item(key = "synced_vitals") { SyncedStrapVitals(viewModel) }
+
         // Active band row (MW-6) — names the band the console is reading, with a "Manage devices"
         // affordance that opens the Devices screen. Additive; the connect/disconnect controls below are
         // untouched. Mirrors the iOS Live screen's active-band header + Manage-devices link.

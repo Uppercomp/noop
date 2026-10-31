@@ -85,6 +85,7 @@ internal fun HealthConnectCategorySelector(
 private fun ImportCategory.titleRes(): Int = when (this) {
     ImportCategory.RECOVERY -> R.string.health_connect_category_recovery
     ImportCategory.ACTIVITY -> R.string.health_connect_category_activity
+    ImportCategory.NUTRITION -> R.string.feature_nutrition
     ImportCategory.BODY_COMPOSITION -> R.string.health_connect_category_body_composition
 }
 
@@ -92,5 +93,6 @@ private fun ImportCategory.titleRes(): Int = when (this) {
 private fun ImportCategory.detailRes(): Int = when (this) {
     ImportCategory.RECOVERY -> R.string.health_connect_category_recovery_detail
     ImportCategory.ACTIVITY -> R.string.health_connect_category_activity_detail
+    ImportCategory.NUTRITION -> R.string.feature_nutrition_detail
     ImportCategory.BODY_COMPOSITION -> R.string.health_connect_category_body_composition_detail
 }

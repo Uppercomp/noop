@@ -413,6 +413,7 @@ object Metrics {
     val space10 = 10.dp
     val space12 = 12.dp
     val space14 = 14.dp
+    val widgetRingSize = 58.dp
     val space16 = 16.dp
     val space18 = 18.dp
     val space24 = 24.dp

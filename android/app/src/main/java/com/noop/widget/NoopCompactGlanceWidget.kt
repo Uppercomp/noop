@@ -63,22 +63,22 @@ class NoopCompactGlanceWidget : GlanceAppWidget() {
 }
 
 private fun compactWidgetSurface(dark: Boolean) =
-    ColorProvider(if (dark) Color(0xFF0A1322) else Color(0xFFF4F1EA))
+    ColorProvider(widgetTokens(dark).surfaceRaised)
 private fun compactWidgetTextPrimary(dark: Boolean) =
-    ColorProvider(if (dark) Color(0xFFF4F6F8) else Color(0xFF1A2230))
+    ColorProvider(widgetTokens(dark).textPrimary)
 private fun compactWidgetTextSecondary(dark: Boolean) =
-    ColorProvider(if (dark) Color(0xFF8A94A4) else Color(0xFF7C8696))
+    ColorProvider(widgetTokens(dark).textSecondary)
 
 private fun compactBandColor(recovery: Int, dark: Boolean): ColorProvider = ColorProvider(
     when {
-        recovery >= 67 -> if (dark) Color(0xFFE8B84B) else Color(0xFFB07D17)
-        recovery >= 34 -> if (dark) Color(0xFFD98A3D) else Color(0xFFC2792E)
-        else -> if (dark) Color(0xFFE0662F) else Color(0xFFC84E1E)
+        recovery >= 67 -> widgetTokens(dark).chargeColor
+        recovery >= 34 -> widgetTokens(dark).recovery055
+        else -> widgetTokens(dark).recovery000
     },
 )
 
 private fun compactEffortColor(dark: Boolean): ColorProvider =
-    ColorProvider(if (dark) Color(0xFF4FB6A8) else Color(0xFF2E7D74))
+    ColorProvider(widgetTokens(dark).effortColor)
 
 @Composable
 private fun CompactWidgetContent(snap: WidgetSnapshot, dark: Boolean) {
@@ -89,7 +89,7 @@ private fun CompactWidgetContent(snap: WidgetSnapshot, dark: Boolean) {
         modifier = GlanceModifier
             .fillMaxSize()
             .background(surface)
-            .cornerRadius(16.dp)
+            .cornerRadius(com.noop.ui.Metrics.cardRadius)
             .clickable(actionStartActivity<MainActivity>())
             .padding(horizontal = 10.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -100,13 +100,6 @@ private fun CompactWidgetContent(snap: WidgetSnapshot, dark: Boolean) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalAlignment = Alignment.Bottom,
         ) {
-            CompactScoreCell(
-                label = uiString(R.string.l10n_noop_compact_glance_widget_rest_cbaaa181),
-                iconRes = R.drawable.ic_widget_rest,
-                pct = snap.restPct,
-                color = snap.restPct?.let { compactBandColor(it, dark) } ?: textSecondary,
-                modifier = GlanceModifier.defaultWeight(),
-            )
             CompactScoreCell(
                 label = uiString(R.string.l10n_noop_compact_glance_widget_charge_49a8cb83),
                 iconRes = R.drawable.ic_widget_charge,
@@ -119,6 +112,13 @@ private fun CompactWidgetContent(snap: WidgetSnapshot, dark: Boolean) {
                 iconRes = R.drawable.ic_widget_effort,
                 pct = snap.effortPct,
                 color = snap.effortPct?.let { compactEffortColor(dark) } ?: textSecondary,
+                modifier = GlanceModifier.defaultWeight(),
+            )
+            CompactScoreCell(
+                label = uiString(R.string.l10n_noop_compact_glance_widget_rest_cbaaa181),
+                iconRes = R.drawable.ic_widget_rest,
+                pct = snap.restPct,
+                color = snap.restPct?.let { compactBandColor(it, dark) } ?: textSecondary,
                 modifier = GlanceModifier.defaultWeight(),
             )
         }
@@ -182,6 +182,7 @@ private fun CompactScoreCell(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        Text(label.uppercase(), style = TextStyle(color = color, fontSize = 9.sp, fontWeight = FontWeight.Medium))
         Image(
             provider = ImageProvider(iconRes),
             contentDescription = label,

@@ -20,6 +20,7 @@ import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
+import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -128,6 +129,7 @@ object HealthConnectImporter {
                 DistanceRecord::class,
             ),
         ),
+        NUTRITION("nutrition", setOf(NutritionRecord::class)),
         BODY_COMPOSITION(
             "body-composition",
             setOf(
@@ -372,6 +374,8 @@ object HealthConnectImporter {
             return readAll(client, type, range, selfPackage, onRecord)
         }
 
+        val nutritionFrom = LocalDate.now().minusDays(29)
+        var nutritionComplete = false
         // Per-day accumulators. Keyed by "YYYY-MM-DD" (local).
         val acc = HashMap<String, DayAcc>()
         // #1002: key each record by the offset it was RECORDED in. See [localDayKey] for why the
@@ -416,6 +420,15 @@ object HealthConnectImporter {
                 val b = bucket(dayOf(r.startTime, r.startZoneOffset))
                 val src = r.metadata.dataOrigin.packageName
                 b.stepsBySource[src] = (b.stepsBySource[src] ?: 0L) + r.count
+            }
+            // Nutrition is a separate user-granted category. Sum within an origin, then choose
+            // one origin for the day so relayed meal logs are not counted twice.
+            nutritionComplete = readSelected(NutritionRecord::class, TimeRangeFilter.between(nutritionFrom.atStartOfDay(ZoneId.systemDefault()).toInstant(), end)) { r ->
+                val b = bucket(dayOf(r.startTime, r.startZoneOffset))
+                val src = r.metadata.dataOrigin.packageName
+                r.energy?.inKilocalories?.takeIf { it.isFinite() && it >= 0 }?.let {
+                    b.foodKcalBySource[src] = (b.foodKcalBySource[src] ?: 0.0) + it
+                }
             }
             // --- Total calories burned (basal + active) ---
             // #589: per-SOURCE sums, max-across-sources at write-out (same overlap reasoning as steps).
@@ -767,6 +780,12 @@ object HealthConnectImporter {
             // #589: de-overlap the per-source maps by MAX (sum within a source, max across sources) so a
             // phone+watch pair doesn't double-count the day's steps / calories. Mirrors the iOS/macOS and
             // Android-XML de-overlap (stepsBySource.values.max()).
+            if (nutritionComplete && a.foodKcalBySource.isNotEmpty()) {
+                metricSeriesRows += MetricSeriesRow(HC_DEVICE, day, "calories_in", round1(maxSourceDouble(a.foodKcalBySource)))
+            }
+            if (maxSourceDouble(a.totalKcalBySource) > 0.0) {
+                metricSeriesRows += MetricSeriesRow(HC_DEVICE, day, "total_kcal", round1(maxSourceDouble(a.totalKcalBySource)))
+            }
             val daySteps = maxSourceLong(a.stepsBySource)
             val dayTotalKcal = maxSourceDouble(a.totalKcalBySource)
             val dayActiveKcal = maxSourceDouble(a.activeKcalBySource)
@@ -844,7 +863,10 @@ object HealthConnectImporter {
                 repo.upsertDevice(HC_DEVICE, name = "Health Connect")
                 repo.upsertAppleDaily(appleRows)
             }
-            if (metricSeriesRows.isNotEmpty()) repo.upsertMetricSeries(metricSeriesRows)
+            val foodRows = metricSeriesRows.filter { it.key == "calories_in" && it.day >= nutritionFrom.toString() && it.day <= LocalDate.now().toString() }
+            if (nutritionComplete) repo.replaceImportedMetricWindow(HC_DEVICE, "calories_in", nutritionFrom.toString(), LocalDate.now().toString(), foodRows)
+            val otherRows = metricSeriesRows.filter { it.key != "calories_in" }
+            if (otherRows.isNotEmpty()) repo.upsertMetricSeries(otherRows)
             if (dailyRows.isNotEmpty()) {
                 repo.upsertDevice(WHOOP, name = "WHOOP")
                 repo.upsertDailyMetrics(dailyRows)
@@ -1493,6 +1515,7 @@ object HealthConnectImporter {
         // write-out so a phone+watch pair that both report the same steps/calories doesn't double-count.
         // Mirrors the iOS/macOS + Android-XML de-overlap (sum within a source, max across sources).
         val stepsBySource = HashMap<String, Long>()
+        val foodKcalBySource = mutableMapOf<String, Double>()
         val totalKcalBySource = HashMap<String, Double>()
         val activeKcalBySource = HashMap<String, Double>()
 

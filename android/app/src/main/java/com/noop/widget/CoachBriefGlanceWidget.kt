@@ -54,16 +54,16 @@ class CoachBriefGlanceWidget : GlanceAppWidget() {
 @Composable
 private fun CoachBriefWidgetContent(briefText: String?, briefDateMs: Long, dark: Boolean) {
     val context = LocalContext.current
-    val surface = ColorProvider(if (dark) Color(0xFF0A1322) else Color(0xFFF4F1EA))
-    val textPrimary = ColorProvider(if (dark) Color(0xFFF4F6F8) else Color(0xFF1A2230))
-    val textSecondary = ColorProvider(if (dark) Color(0xFF8A94A4) else Color(0xFF7C8696))
-    val accent = ColorProvider(if (dark) Color(0xFFE8B84B) else Color(0xFFB07D17))
+    val surface = ColorProvider(widgetTokens(dark).surfaceRaised)
+    val textPrimary = ColorProvider(widgetTokens(dark).textPrimary)
+    val textSecondary = ColorProvider(widgetTokens(dark).textSecondary)
+    val accent = ColorProvider(widgetTokens(dark).chargeColor)
 
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(surface)
-            .cornerRadius(16.dp)
+            .cornerRadius(com.noop.ui.Metrics.cardRadius)
             .clickable(actionStartActivity<MainActivity>())
             .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.Start,

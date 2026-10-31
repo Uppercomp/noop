@@ -34,9 +34,9 @@ import java.util.Locale
  * by [AiKeyStore], the key encrypted at rest in the Android Keystore, the provider/model as
  * plain (non-secret) preferences.
  *
- * Privacy posture mirrors the engine: nothing is sent until the user has saved a key and asked
- * a question, and only a compact text summary of their own metrics plus their question leaves
- * the device. Errors never crash, they surface in [error].
+ * Privacy posture mirrors the engine: user-enabled requests share selected summary categories,
+ * or health-record query results under separately approved Full access for that endpoint.
+ * Credentials remain excluded; local endpoints need not require a key. Errors surface in [error].
  */
 class CoachViewModel(app: Application) : AndroidViewModel(app) {
 

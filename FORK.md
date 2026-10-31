@@ -1,5 +1,8 @@
 # Uppercomp's NOOP fork
 
+The Android 11.9 update adds configurable Coach data access, confirmed logging/voice, energy balance,
+daily reports and app-themed widgets. See [feature and verification notes](docs/ANDROID_11_9_FEATURES.md).
+
 This fork preserves the local Android UI, typography, theme and feature work, with additional
 WHOOP 5.0 input mapping based on pinned OpenStrap protocol references. It is independent of
 the upstream NOOP release. Upstream attribution and the PolyForm Noncommercial license remain.

@@ -85,6 +85,7 @@ fun CoachSettingsScreen(vm: CoachViewModel) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             CoachModelCard(vm = vm)
             CoachConsentCard(vm = vm)
+            CoachSharingCard(vm)
             CoachInstructions(vm = vm)
             MorningBriefCard(vm = vm)
         }
@@ -154,7 +155,7 @@ private fun CoachConsentCard(vm: CoachViewModel) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(uiString(R.string.l10n_coach_screen_let_the_coach_use_my_data_405d1188), style = NoopType.subhead, color = Palette.textPrimary)
                 Text(
-                    if (consent) uiString(R.string.coach_consent_on)
+                    if (consent) "Only selected categories are shared, or full health access when enabled below"
                     else uiString(R.string.coach_consent_off),
                     style = NoopType.footnote, color = Palette.textTertiary,
                 )

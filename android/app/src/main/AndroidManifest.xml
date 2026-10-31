@@ -95,6 +95,7 @@
 
     <!-- Health Connect (optional): read-only access to the user's own health data so it can
          be imported on-device. Nothing is uploaded. Granted at runtime, revocable any time. -->
+    <uses-permission android:name="android.permission.health.READ_NUTRITION" />
     <uses-permission android:name="android.permission.health.READ_STEPS" />
     <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED" />
     <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
@@ -139,6 +140,8 @@
 
     <!-- Resolve the Health Connect provider on Android 14+ (platform) and earlier (app). -->
     <queries>
+        <intent><action android:name="android.speech.RecognitionService" /></intent>
+        <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
         <package android:name="com.google.android.apps.healthdata" />
         <!-- So the connection helper can detect the official WHOOP app and deep-link to its
              info screen (a strap only pairs with one app at a time). Android 11+ visibility. -->
@@ -382,6 +385,13 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <receiver android:name="com.noop.notif.DailyReportClockReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

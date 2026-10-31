@@ -1362,10 +1362,11 @@ object NoopPrefs {
     const val KEY_REPORT_LAST_WORKOUT_TS = "noop.report.lastWorkoutTs"
 
     fun morningReportEnabled(context: Context): Boolean =
-        of(context).getBoolean(KEY_REPORT_MORNING, false)
+        of(context).getBoolean(KEY_REPORT_MORNING, true)
 
     fun setMorningReportEnabled(context: Context, enabled: Boolean) {
         of(context).edit().putBoolean(KEY_REPORT_MORNING, enabled).apply()
+        com.noop.notif.DailyReportSchedule.ensure(context, replace = true)
     }
 
     fun postWorkoutReportEnabled(context: Context): Boolean =

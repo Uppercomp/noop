@@ -145,6 +145,7 @@ object ScheduledReportNotifier {
      * policy, so the caller can fire it freely each time the days collector republishes.
      */
     @SuppressLint("MissingPermission") // guarded by areNotificationsEnabled() + runCatching
+    @Synchronized
     fun onMorning(context: Context, reportDay: String, chargePct: Int?, restPct: Int?) {
         // reportDay is the banked night's day (the resolved today-row's `day`), NOT LocalDate.now() — the
         // calendar day rolls at midnight while the row still resolves to last night's until a new night is
@@ -157,6 +158,7 @@ object ScheduledReportNotifier {
                 // The clock the floor compares against. Read here rather than inside the policy, so the policy
                 // stays pure and the test can pin 00:40 and 07:00 without a fake clock.
                 nowMinuteOfDay = java.time.LocalTime.now().let { it.hour * 60 + it.minute },
+                earliestMinuteOfDay = DailyReportSchedule.minute(context, false),
             )
         ) return
         val copy = ScheduledReportPolicy.morningCopy(chargePct, restPct) ?: return

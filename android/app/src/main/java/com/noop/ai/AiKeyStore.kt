@@ -112,6 +112,7 @@ object AiKeyStore {
 
     /** Persist the chosen provider (by enum name). */
     fun saveProvider(ctx: Context, provider: AiProvider) {
+        if (readProvider(ctx) != provider) CoachSharing.setFull(ctx, false)
         prefs(ctx).edit().putString(KEY_PROVIDER, provider.name).apply()
     }
 
@@ -151,6 +152,7 @@ object AiKeyStore {
 
     /** Persist the Custom provider's base URL (e.g. http://localhost:11434/v1). */
     fun saveCustomBaseUrl(ctx: Context, url: String) {
+        if (readCustomBaseUrl(ctx) != url.trim()) CoachSharing.setFull(ctx, false)
         prefs(ctx).edit().putString(KEY_CUSTOM_URL, url.trim()).apply()
     }
 

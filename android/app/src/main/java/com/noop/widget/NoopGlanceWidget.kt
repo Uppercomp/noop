@@ -7,6 +7,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.action.actionStartActivity
@@ -78,24 +80,24 @@ class NoopGlanceWidget : GlanceAppWidget() {
 
 // Per-scheme widget colours (mirror the app palette; deepened gold/amber/orange on light for contrast
 // on the warm-paper card). The widget is a separate surface, so these are local — not Palette reads.
-private fun widgetSurface(dark: Boolean) = ColorProvider(if (dark) Color(0xFF0A1322) else Color(0xFFF4F1EA))
-private fun widgetTextPrimary(dark: Boolean) = ColorProvider(if (dark) Color(0xFFF4F6F8) else Color(0xFF1A2230))
-private fun widgetTextSecondary(dark: Boolean) = ColorProvider(if (dark) Color(0xFF8A94A4) else Color(0xFF7C8696))
+private fun widgetSurface(dark: Boolean) = ColorProvider(widgetTokens(dark).surfaceRaised)
+private fun widgetTextPrimary(dark: Boolean) = ColorProvider(widgetTokens(dark).textPrimary)
+private fun widgetTextSecondary(dark: Boolean) = ColorProvider(widgetTokens(dark).textSecondary)
 
 /** Recovery-band colour, the app-wide 67 / 34 cuts (RecoveryScorer.band); deepened on light. Charge and
  *  Rest both read on the recovery band in the app, so they share this. */
 private fun bandColor(recovery: Int, dark: Boolean): ColorProvider = ColorProvider(
     when {
-        recovery >= 67 -> if (dark) Color(0xFFE8B84B) else Color(0xFFB07D17)
-        recovery >= 34 -> if (dark) Color(0xFFD98A3D) else Color(0xFFC2792E)
-        else -> if (dark) Color(0xFFE0662F) else Color(0xFFC84E1E)
+        recovery >= 67 -> widgetTokens(dark).chargeColor
+        recovery >= 34 -> widgetTokens(dark).recovery055
+        else -> widgetTokens(dark).recovery000
     },
 )
 
 /** Effort tint — the app's strain colour (Palette.strain066), a distinct teal so Effort doesn't read as
  *  another recovery band. Deepened on light for contrast on the warm-paper card. (#516) */
 private fun effortColor(dark: Boolean): ColorProvider =
-    ColorProvider(if (dark) Color(0xFF4FB6A8) else Color(0xFF2E7D74))
+    ColorProvider(widgetTokens(dark).effortColor)
 
 @Composable
 private fun WidgetContent(snap: WidgetSnapshot, dark: Boolean) {
@@ -106,43 +108,20 @@ private fun WidgetContent(snap: WidgetSnapshot, dark: Boolean) {
         modifier = GlanceModifier
             .fillMaxSize()
             .background(surface)
-            .cornerRadius(16.dp)
+            .cornerRadius(com.noop.ui.Metrics.cardRadius)
             .clickable(actionStartActivity<MainActivity>())
             .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        Text("N O O P", style = TextStyle(color = textSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold))
+        Spacer(GlanceModifier.height(com.noop.ui.Metrics.space8))
         // The three top scores in one row, Charge centred + enlarged (the app's hero order Rest · Charge ·
         // Effort). Each cell is honest-null until that score exists — never a fabricated number. (#516)
-        Row(
-            modifier = GlanceModifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalAlignment = Alignment.Bottom,
-        ) {
-            ScoreCell(
-                label = uiString(R.string.l10n_noop_glance_widget_rest_cbaaa181),
-                pct = snap.restPct,
-                color = snap.restPct?.let { bandColor(it, dark) } ?: textSecondary,
-                valueSize = 22.sp,
-                textSecondary = textSecondary,
-                modifier = GlanceModifier.defaultWeight(),
-            )
-            ScoreCell(
-                label = uiString(R.string.l10n_noop_glance_widget_charge_49a8cb83),
-                pct = snap.recoveryPct,
-                color = snap.recoveryPct?.let { bandColor(it, dark) } ?: textSecondary,
-                valueSize = 30.sp,
-                textSecondary = textSecondary,
-                modifier = GlanceModifier.defaultWeight(),
-            )
-            ScoreCell(
-                label = uiString(R.string.l10n_noop_glance_widget_effort_660752e7),
-                pct = snap.effortPct,
-                color = snap.effortPct?.let { effortColor(dark) } ?: textSecondary,
-                valueSize = 22.sp,
-                textSecondary = textSecondary,
-                modifier = GlanceModifier.defaultWeight(),
-            )
+        Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            RingCell(uiString(R.string.l10n_noop_glance_widget_charge_49a8cb83), snap.recoveryPct, widgetTokens(dark).chargeColor, dark, GlanceModifier.defaultWeight())
+            RingCell(uiString(R.string.l10n_noop_glance_widget_effort_660752e7), snap.effortPct, widgetTokens(dark).effortColor, dark, GlanceModifier.defaultWeight())
+            RingCell(uiString(R.string.l10n_noop_glance_widget_rest_cbaaa181), snap.restPct, widgetTokens(dark).restColor, dark, GlanceModifier.defaultWeight())
         }
         Spacer(modifier = GlanceModifier.height(8.dp))
         // The ♥ and ⚡ are characters inside the text, not labelled images, so TalkBack reads whatever
@@ -225,5 +204,16 @@ private fun ScoreCell(
             text = pct?.let { "$it%" } ?: "—",
             style = TextStyle(color = color, fontSize = valueSize, fontWeight = FontWeight.Bold),
         )
+    }
+}
+
+@Composable
+private fun RingCell(label: String, value: Int?, color: Color, dark: Boolean, modifier: GlanceModifier) {
+    val diameter = ((androidx.glance.LocalSize.current.width - com.noop.ui.Metrics.space14 * 2) / 3)
+        .coerceIn(com.noop.ui.Metrics.space24, com.noop.ui.Metrics.widgetRingSize)
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Image(ImageProvider(scoreRing(value, color, dark, androidx.glance.LocalContext.current)), "$label ${value?.toString() ?: "unavailable"}",
+            modifier = GlanceModifier.width(diameter).height(diameter))
+        Text(label.uppercase(), style = TextStyle(color = ColorProvider(widgetTokens(dark).textSecondary), fontSize = com.noop.ui.NoopType.overline.fontSize))
     }
 }

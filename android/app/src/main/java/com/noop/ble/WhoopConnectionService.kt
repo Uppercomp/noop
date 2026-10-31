@@ -55,12 +55,12 @@ import kotlin.math.roundToInt
  *
  * Android tears a process down shortly after its last Activity goes away, which is exactly why
  * people on Reddit saw the strap disconnect the moment they closed NOOP. A started foreground
- * service — with an ongoing notification — keeps the process (and therefore the
+ * service — with Android's required foreground notice — keeps the process (and therefore the
  * [com.noop.NoopApplication]-owned [WhoopBleClient] and its GATT link) resident, so heart rate
  * keeps streaming and offloads keep landing in the background.
  *
- * It does **not** own or drive the connection: it simply holds the process up and mirrors the
- * client's [LiveState] into the notification. Start/stop is gated by a Settings toggle (see
+ * It does **not** own or drive the connection: it holds the process up and publishes widget state.
+ * Its foreground notice is static and silent. Start/stop is gated by a Settings toggle (see
  * `NoopPrefs.backgroundConnection`) and only ever happens from the foreground (on connect / when
  * the user flips the toggle), so we never trip Android 12+'s background-start restriction.
  *
@@ -146,10 +146,10 @@ internal class NotifyDayStateCache(
 
 class WhoopConnectionService : Service() {
 
-    /** Main-thread scope used only to mirror [LiveState] into the notification. */
+    /** Main-thread scope for the live-state/widget projection. */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-    /** The single live-state→notification collector. Re-`start`s land here repeatedly (on every
+    /** The single live-state/widget collector. Re-`start`s land here repeatedly (on every
      *  connect, plus any OS restart), so we cancel the old one before launching a new one. */
     private var notifyJob: Job? = null
 
@@ -328,9 +328,8 @@ class WhoopConnectionService : Service() {
             }.onSuccess { bluetoothReceiverRegistered = true }
         }
 
-        // Keep the ongoing notification in step with the live connection state AND today's recovery
-        // (the 15-min IntelligenceEngine recompute), so it re-posts when either changes — a glanceable
-        // poor-man's Live Activity (#42). daysMergedFlow is the same merged store the dashboard reads.
+        // Keep widgets in step with live state and the dashboard's merged daily analytics.
+        // The mandatory foreground notice remains static; ticks must not repost a dismissed notice.
         notifyJob?.cancel()
         notifyJob = scope.launch {
             combine(
@@ -714,46 +713,16 @@ class WhoopConnectionService : Service() {
      *  a per-beat wakeup into a handful of updates a day. */
     private var lastNotificationKey: String? = null
 
-    private fun postNotification(state: LiveState, recoveryPct: Double? = null) {
-        val key = listOf(
-            state.connected,
-            state.backfilling,
-            recoveryPct?.roundToInt(),
-            state.batteryPct?.roundToInt(),
-            // The rendered TEXT depends on the locale, and a Service is never re-posted when the user
-            // switches language — nothing above changes, so the notification would keep the previous
-            // language until the connection or battery state happened to move. On a stable link with a
-            // charged strap that is hours. (#867)
-            resources.configuration.locales[0].toLanguageTag(),
-        ).joinToString("|")
-        if (key == lastNotificationKey) return
-        lastNotificationKey = key
-        // Defensive: a notify() throw (OEM quirk, revoked POST_NOTIFICATIONS on some ROMs) must not
-        // crash the collector and tear down the connection we exist to keep alive.
-        runCatching {
-            val mgr = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            mgr.notify(NOTIF_ID, buildNotification(state, recoveryPct))
-        }
+    private fun postNotification(state: LiveState, recoveryPct: Double?) {
+        // The static, silent foreground notice can be dismissed. It is not a live dashboard.
+        // Do not re-post it on every battery/sync/score transition after the user dismissed it.
     }
 
     private fun buildNotification(state: LiveState, recoveryPct: Double?): Notification {
-        // #216: deliberately NO live BPM in the title. A per-beat-changing notification forces the
-        // foreground service to re-post (and wake the device) ~once a second all day, which is a real
-        // battery cost for a number nobody reads off the lock screen. The title now reflects only the
-        // connection / sync state, which changes rarely — see postNotification's dedup.
-        val title = when {
-            !state.connected   -> getString(R.string.fgs_title_reconnecting)
-            state.backfilling  -> getString(R.string.fgs_title_syncing)
-            else               -> getString(R.string.fgs_title_connected)
-        }
-        val detail = buildList {
-            add(
-                if (state.connected) getString(R.string.fgs_detail_streaming)
-                else getString(R.string.fgs_detail_keeping_link),
-            )
-            recoveryPct?.let { add(getString(R.string.fgs_detail_recovery, it.roundToInt())) }
-            state.batteryPct?.let { add(getString(R.string.fgs_detail_battery, it.roundToInt())) }
-        }.joinToString("  ·  ")
+        // A static service notice states only what this service can attribute. It carries
+        // no stale connected/sync/score state and is not reposted after dismissal.
+        val title = getString(R.string.feature_background_connection)
+        val detail = getString(R.string.feature_background_connection_detail)
 
         val openApp = PendingIntent.getActivity(
             this,
@@ -774,7 +743,7 @@ class WhoopConnectionService : Service() {
             .setContentText(detail)
             .setContentIntent(openApp)
             .addAction(0, getString(R.string.fgs_action_disconnect), stopAction)
-            .setOngoing(true)
+            .setOngoing(false)
             .setSilent(true)
             .setShowWhen(false)
             .setCategory(Notification.CATEGORY_SERVICE)
@@ -824,7 +793,7 @@ class WhoopConnectionService : Service() {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 getString(R.string.fgs_channel_name),
-                NotificationManager.IMPORTANCE_LOW,
+                NotificationManager.IMPORTANCE_MIN,
             ).apply {
                 description = getString(R.string.fgs_channel_desc)
                 setShowBadge(false)

@@ -54,6 +54,7 @@ class NoopApplication : Application() {
         // Install before any app-owned startup work so even an early failure is preserved for the
         // recovery screen on the next launch.
         CrashCapture.install(this)
+        com.noop.notif.DailyReportSchedule.ensure(this)
         // #1008: pin the pre-change Overnight-only default for existing installs before anything
         // reads it. Idempotent; a no-op on fresh installs and on every launch after the first.
         com.noop.ui.NoopPrefs.migrateContinuousHrvOvernightDefault(this)

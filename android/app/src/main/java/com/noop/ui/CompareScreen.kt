@@ -169,6 +169,9 @@ private object CompareCatalog {
     }
 
     val all: List<CompareMetric> = listOf(
+        CompareMetric("spo2_candidate", R.string.feature_oxygen_candidate, "Heart", "%", "my-whoop", 0, note = "Not validated; not used for health alerts or scores."),
+        CompareMetric("energy_balance", R.string.feature_energy_balance, "Nutrition", "kcal", "health-connect", 0, note = "Logged intake minus estimated total burn; negative = deficit. Incomplete food logs affect this estimate."),
+        CompareMetric("total_kcal", R.string.feature_total_burn, "Nutrition", "kcal", "health-connect", 0),
         // Heart
         CompareMetric("avg_hr", R.string.explore_metric_average_heart_rate, "Heart", "bpm", "my-whoop", 0),
         CompareMetric("max_hr", R.string.explore_metric_max_heart_rate, "Heart", "bpm", "my-whoop", 0),
@@ -446,8 +449,7 @@ fun CompareScreen(vm: AppViewModel) {
             // Always (re)load derived-from-daily my-whoop series when the cache grew;
             // metricSeries-only metrics are loaded once.
             val pick = if (metric.source == "my-whoop") CompareCatalog.dailyPick(metric.key) else null
-            val needsLoad = !fullSeries.containsKey(metric.id) ||
-                (pick != null && fullSeries[metric.id].isNullOrEmpty())
+            val needsLoad = true // Refresh imported and computed sources after every data update.
             if (needsLoad) {
                 fullSeries[metric.id] = loadFullSeries(vm, metric, days)
             }
@@ -625,6 +627,10 @@ private suspend fun loadFullSeries(
     // Wide window covering all of history (the macOS days = 4000 default).
     val to = todayDay(1)
     val from = todayDay(-4000)
+    if (metric.key in setOf("energy_balance", "calories_in", "total_kcal", "spo2_candidate")) {
+        if (metric.key == "spo2_candidate" && !NoopPrefs.spo2CandidateDisplay(vm.getApplication())) return emptyList()
+        return com.noop.data.ExtendedMetrics.series(vm.repo, vm.activeStrapId, metric.key, from, to)
+    }
     return vm.repo.resolvedSeries(metric.key, metric.source, from, to, strapDeviceId = vm.activeStrapId).values
 }
 

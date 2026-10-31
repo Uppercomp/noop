@@ -479,14 +479,11 @@ fun NotificationsSettingsScreen(vm: AppViewModel) {
         AlertSection(
             icon = Icons.Filled.NotificationsActive,
             title = uiString(R.string.l10n_notifications_settings_screen_daily_reports_c1a22a74),
-            blurb = "Optional phone notifications, off by default. These arrive after your strap syncs " +
-                "and NOOP scores the data, so they land soon after, not the exact second you wake or " +
-                "finish a workout. Everything is worked out on this phone.",
+            blurb = "Local morning and evening summaries at the times below. Android may delay background work. Reports use the latest synced data; no AI or cloud is involved.",
         ) {
             FormToggleRow(
                 label = uiString(R.string.l10n_notifications_settings_screen_morning_recap_45ec05c5),
-                help = "After last night is processed, a notification with your Charge and Rest. Posts " +
-                    "once a day, after your strap has synced the night.",
+                help = "Rest and Charge after the selected morning time, once the night is available. A late sync can deliver the report later that day.",
                 checked = morningReport,
                 onChange = {
                     morningReport = it
@@ -508,6 +505,7 @@ fun NotificationsSettingsScreen(vm: AppViewModel) {
                 },
             )
             RowDivider()
+            DailyReportControls()
             // #593: NOOP's own optimal-strain-reached nudge (not WHOOP's copy).
             FormToggleRow(
                 label = uiString(R.string.l10n_notifications_settings_screen_optimal_strain_reached_2862ec2b),

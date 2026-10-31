@@ -171,6 +171,9 @@ private val builtInMetrics: List<MetricSpec> = listOf(
  *  check-in , matching the macOS MetricCatalog entries exactly (v2.2.0 parity). seriesKey/
  *  seriesSource are filled in at discovery time. */
 private val knownSeriesMetrics: Map<String, MetricSpec> = mapOf(
+    "spo2_candidate" to MetricSpec("spo2_candidate", "Oxygen estimate (not validated)", "%", "Health", Palette.metricCyan, null, seriesKey = "spo2_candidate", description = "Experimental strap candidate, not validated and not used in scores or alerts."),
+    "energy_balance" to MetricSpec("energy_balance", "Energy balance (estimated)", "kcal", "Nutrition", Palette.metricAmber, null, seriesKey = "energy_balance", description = "Logged intake minus total burn. Negative = deficit; incomplete food logs affect this estimate."),
+    "total_kcal" to MetricSpec("total_kcal", "Total calories burned", "kcal", "Nutrition", Palette.effortColor, null, seriesKey = "total_kcal"),
     // #605/#608: imported avg/max HR is written to metricSeries (Apple Health / WHOOP CSV / Xiaomi) and
     // the Compare screen exposes it, but Explore's picker didn't , iOS MetricCatalog has had both. Series-
     // backed (no DailyMetric column), "Heart" category, parity. (Strap-only per-second HR lives in the
@@ -261,10 +264,10 @@ fun TrendsExploreScreen(vm: AppViewModel) {
             .flatMap { id -> runCatching { vm.repo.metricKeys(id) }.getOrDefault(emptyList()) }
             .distinct()
             .map { it to null as String? }
-        val sourced = listOf(NutritionCsvImporter.SOURCE_ID, MoodStore.MOOD_DEVICE_ID).flatMap { src ->
+        val sourced = listOf(NutritionCsvImporter.SOURCE_ID, MoodStore.MOOD_DEVICE_ID, "health-connect").flatMap { src ->
             runCatching { vm.repo.metricKeys(src) }.getOrDefault(emptyList()).map { it to (src as String?) }
         }
-        extraKeys = strap + sourced
+        extraKeys = (strap + sourced + listOf("energy_balance" to "health-connect", "total_kcal" to "health-connect", "calories_in" to "health-connect", "spo2_candidate" to null)).distinctBy { it.first }
     }
 
     // The full picker: built-ins first, then any extra metricSeries keys not already covered.
@@ -316,7 +319,11 @@ fun TrendsExploreScreen(vm: AppViewModel) {
     var loadedSeries by remember { mutableStateOf<List<SeriesPoint>>(emptyList()) }
     LaunchedEffect(selected.key, builtInDays) {
         val pick = selected.dailyPick
-        if (pick != null) {
+        if (selected.key in setOf("energy_balance", "calories_in", "total_kcal", "spo2_candidate")) {
+            loadedSeries = if (selected.key == "spo2_candidate" && !NoopPrefs.spo2CandidateDisplay(vm.getApplication())) emptyList() else
+                com.noop.data.ExtendedMetrics.series(vm.repo, deviceId, selected.key, "0000-01-01", "9999-12-31").map { SeriesPoint(it.first, it.second) }
+            seriesKeyLoaded = selected.key
+        } else if (pick != null) {
             loadedSeries = builtInDays.mapNotNull { d ->
                 pick(d)?.takeIf { it.isFinite() }?.let { SeriesPoint(d.day, it) }
             }

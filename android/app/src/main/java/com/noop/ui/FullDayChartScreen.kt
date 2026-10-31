@@ -55,6 +55,8 @@ private enum class TimelineMetric(val title: String) {
     // The honest title says exactly what the curve is (windowed rMSSD), not a bare "HRV".
     Hrv(uiString(R.string.timeline_metric_rmssd)),
     Spo2(uiString(R.string.timeline_metric_spo2)),
+    OxygenCandidate(uiString(R.string.feature_oxygen_candidate)),
+    EnergyBalance(uiString(R.string.feature_energy_balance)),
     SkinTemp(uiString(R.string.timeline_metric_skin_temp)),
     Respiration(uiString(R.string.timeline_metric_respiration)),
     Motion(uiString(R.string.timeline_metric_motion)),
@@ -429,6 +431,20 @@ private suspend fun readTimeline(
                 .let { HrvAnalyzer.rollingRmssd(it, windowSec = hrvWindow, stepSec = maxOf(1, hrvWindow / 8)) }
                 .map { (ts, v) -> TimelinePoint(ts, v) }
         }
+        TimelineMetric.OxygenCandidate -> {
+            if (!NoopPrefs.spo2CandidateDisplay(vm.getApplication())) emptyList() else
+                repo.v18AuxSamples(deviceId, from, to, 200_000).mapNotNull { a ->
+                    a.auxByte82?.takeIf { it in 70L..100L }?.let { TimelinePoint(a.ts, it.toDouble()) }
+                }
+        }
+        TimelineMetric.EnergyBalance -> {
+            val zone = java.time.ZoneId.systemDefault()
+            val f = java.time.Instant.ofEpochSecond(from).atZone(zone).toLocalDate().toString()
+            val t = java.time.Instant.ofEpochSecond(to).atZone(zone).toLocalDate().toString()
+            com.noop.data.ExtendedMetrics.series(repo, deviceId, "energy_balance", f, t).map { (d, v) ->
+                TimelinePoint(java.time.LocalDate.parse(d).atTime(12, 0).atZone(zone).toEpochSecond(), v)
+            }
+        }
         TimelineMetric.Spo2 ->
             runCatching { repo.spo2Samples(deviceId, from, to, 200_000) }.getOrDefault(emptyList())
                 .mapNotNull { if (it.ir > 0) TimelinePoint(it.ts, it.red.toDouble() / it.ir) else null }
@@ -506,6 +522,8 @@ private fun resolutionSubtitle(points: List<TimelinePoint>, isRaw: Boolean, buck
 private fun metricColor(metric: TimelineMetric): Color = when (metric) {
     TimelineMetric.Hr -> Palette.metricRose
     TimelineMetric.SkinTemp -> Palette.strain033
+    TimelineMetric.OxygenCandidate -> Palette.metricCyan
+    TimelineMetric.EnergyBalance -> Palette.metricAmber
     TimelineMetric.Hrv, TimelineMetric.Spo2 -> Palette.sleepLight
     TimelineMetric.Respiration, TimelineMetric.Motion, TimelineMetric.Movement -> Palette.textSecondary
     // #175: the band-state track uses the deep-sleep hue so it reads as a distinct sleep track.
@@ -515,12 +533,16 @@ private fun metricColor(metric: TimelineMetric): Color = when (metric) {
 private fun unitSuffix(metric: TimelineMetric, tempUnit: TemperatureUnit): String = when (metric) {
     TimelineMetric.Hr -> uiString(R.string.l10n_full_day_chart_screen_bpm_55498d21)
     TimelineMetric.SkinTemp -> UnitFormatter.temperatureUnit(tempUnit)   // #101: °C / °F per preference
+    TimelineMetric.OxygenCandidate -> " % · Not validated"
+    TimelineMetric.EnergyBalance -> " kcal"
     TimelineMetric.Hrv -> " ms"
     TimelineMetric.Movement -> " s"   // seconds of movement per ~30 s window (ring's 0x47 activity)
     else -> ""
 }
 
 private fun formatValue(metric: TimelineMetric, v: Double): String = when (metric) {
+    TimelineMetric.OxygenCandidate -> String.format(Locale.US, "%.0f", v)
+    TimelineMetric.EnergyBalance -> String.format(Locale.US, "%+.0f", v)
     TimelineMetric.Hr, TimelineMetric.Respiration, TimelineMetric.Hrv, TimelineMetric.Movement -> v.toInt().toString()
     // `v` already arrives in the displayed unit — callers read from `displayPoints`, which converts skin
     // temp to °F upfront so the chart's axis (plotted from the same points) agrees with this readout (#101).

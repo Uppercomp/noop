@@ -1120,6 +1120,13 @@ class WhoopRepository(
     suspend fun upsertMetricSeries(rows: List<MetricSeriesRow>) = dao.upsertMetricSeries(rows)
     suspend fun deleteMetricSeriesPoint(deviceId: String, day: String, key: String) =
         dao.deleteMetricSeriesPoint(deviceId, day, key)
+
+    // Reconcile only an authoritatively read import window; other sources/keys stay intact.
+    suspend fun replaceImportedMetricWindow(deviceId: String, key: String, from: String, to: String, rows: List<MetricSeriesRow>) = transactor.run {
+        require(rows.all { it.deviceId == deviceId && it.key == key && it.day >= from && it.day <= to })
+        dao.deleteMetricSeriesKeyInRange(deviceId, from, to, key)
+        if (rows.isNotEmpty()) dao.upsertMetricSeries(rows)
+    }
     suspend fun deleteMetricSeries(deviceId: String, key: String) =
         dao.deleteMetricSeries(deviceId, key)
     suspend fun upsertJournal(rows: List<JournalEntry>) = dao.upsertJournal(rows)

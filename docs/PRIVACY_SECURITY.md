@@ -29,9 +29,9 @@ single SQLite file on your own device.
 
 There are exactly **three** opt-in network exceptions: the **AI Coach** (§1.1a), the **Oura history
 import** (§1.1b), and Android's Experimental **self-hosted push** (§1.1d). The AI Coach is off until
-you turn it on with your own API key; when you
-ask it a question it sends a short text summary of your recent metrics to the provider you
-choose. The Oura history import is **not even compiled into a default build** — the code
+you enable it and configure a provider; when you ask a question it sends selected metric summaries
+to that endpoint. This Android fork also offers separately approved Full access to health records
+for that endpoint, including raw samples and identifiers (§1.1a). The Oura history import is **not even compiled into a default build** — the code
 only exists in your binary if you build from source with your own Oura developer app's
 credentials (§1.1b); instead of sending data out, it pulls your own Oura data **in** over
 OAuth, once, and never sends any of your existing NOOP data out. Self-hosted push is off until an
@@ -88,17 +88,25 @@ The AI Coach lets you ask questions about your data in plain language. It is one
 network paths (the others are the Oura history import, §1.1b, and self-hosted push, §1.1d), and only
 on your terms:
 
-- **Off until you enable it.** You enter your own API key for the provider you choose
-  (Anthropic, OpenAI, or a local / self-hosted OpenAI-compatible LLM such as Ollama or
-  LM Studio). No key, no network calls, ever.
-- **What is sent.** When you ask a question, NOOP builds a compact **text** summary of
-  your recent metrics (Charge, Effort, Rest, HRV, resting HR over ~14 days, plus
-  30-day averages and recent workouts) and sends it, with your question, directly to
-  your chosen endpoint (e.g. `api.anthropic.com` / `api.openai.com` for the hosted
-  providers). If you point the Coach at a local / self-hosted LLM, that endpoint is on
-  your own machine and the request never leaves it.
-- **What is NOT sent.** No raw biometric streams, no Bluetooth data, no account or
-  device identifiers — only the summary text and your question.
+- **Off until you enable it.** Configure your chosen provider and enable data-sharing consent.
+  Hosted providers require your own key; a local / self-hosted compatible endpoint can work without
+  one. NOOP runs no model service or intermediary.
+- **Selected categories.** Android Coach settings select daily metrics, workouts, nutrition,
+  body measurements, journal and derived signals. Only selected summaries accompany the question.
+  Other platform implementations retain their existing summary scope.
+- **Full access in this Android fork.** A separate warning and approval allow the model to query
+  all app health database tables and the listed health-preference datasets, including precise times,
+  identifiers, location and raw sensor records when present. It can page through records using
+  read-only queries; response and query limits constrain each answer. Credential stores, API keys
+  and arbitrary files are excluded. Changing provider or endpoint revokes approval. See
+  [Android feature details](ANDROID_11_9_FEATURES.md) for limits and the dataset boundary.
+- **Where it goes.** Questions, chat history and permitted context go directly to the configured
+  endpoint. A local endpoint keeps processing on the machine hosting that endpoint; NOOP cannot
+  verify its logging, forwarding or zero-data-retention policy. Full access is intended for a
+  trusted local model or a provider whose retention policy the user has independently checked.
+- **Logging and voice.** Proposed journal/workout entries require an on-screen confirmation before
+  saving. Optional voice input uses Android's on-device recognizer; speech output uses installed
+  offline voices. No network recognizer or network voice fallback is selected.
 - **Your key, your relationship.** The request goes from your device straight to the
   provider you picked, under your own account. NOOP runs no server in between and keeps
   no copy.
@@ -642,7 +650,7 @@ dedicated source id `nutrition-csv`, alongside your other metrics and entirely o
 
 | Surface | Risk | Mitigation | Where |
 |---------|------|------------|-------|
-| Process | Data exfiltration / network egress | Three explicit paths: AI Coach (your key, chosen provider, summary only — §1.1a), Oura history import (your OAuth app, inbound-only — §1.1b), and Android self-hosted push (default-off, user-owned endpoint, one-way versioned batches — §1.1d). No NOOP server, account, or telemetry; ordinary BLE/offline use makes no application network request. | `Strand/AI/AICoach.swift`, `Strand/Oura/`, `android/.../ai/AiCoach.kt`, `docs/PUSH_PROTOCOL.md` |
+| Process | Data exfiltration / network egress | Three explicit paths: AI Coach (chosen provider, selected summaries or separately approved Android Full access — §1.1a), Oura history import (your OAuth app, inbound-only — §1.1b), and Android self-hosted push (default-off, user-owned endpoint, one-way versioned batches — §1.1d). No NOOP server, account, or telemetry; ordinary BLE/offline use makes no application network request. | `Strand/AI/AICoach.swift`, `Strand/Oura/`, `android/.../ai/AiCoach.kt`, `docs/PUSH_PROTOCOL.md` |
 | Oura history import | OAuth token / scope leakage, cross-account data mixing | Compiled out by default (`OURA_CLOUD_IMPORT`, §1.1b); tokens Keychain-only (`kSecAttrAccessibleAfterFirstUnlock`, never UserDefaults/plist); fixed OAuth scopes set at build time; raw + normalized rows partitioned under `deviceId = "oura-api"`; Oura's own scores kept reference-only (`ref_*`/`oura_*` metricSeries keys, never NOOP's Charge/Effort/Rest); `.cloudImport` is structurally priority-2 so it never seizes a WHOOP day; Forget Oura access purges tokens + every `oura-api` row incl. the raw archive | `Strand/Oura/OuraTokenStore.swift`, `Strand/Oura/OuraConnectModel.swift`, `Packages/WhoopStore/Sources/WhoopStore/OuraRawStore.swift` |
 | Filesystem | Broad disk access | Only `files.user-selected.read-write`; data stays in the sandbox container | `Strand.entitlements`, `Strand/Collect/StorePaths.swift` |
 | BLE frames | Malformed / adversarial packets | CRC8 + CRC32 (+ CRC16 for v5) gating; reject on failure | `WhoopProtocol/Framing.swift`, `Strand/BLE/FrameRouter.swift` |
