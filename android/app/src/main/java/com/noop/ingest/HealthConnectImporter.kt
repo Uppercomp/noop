@@ -122,8 +122,6 @@ object HealthConnectImporter {
             "activity",
             setOf(
                 StepsRecord::class,
-                TotalCaloriesBurnedRecord::class,
-                ActiveCaloriesBurnedRecord::class,
                 Vo2MaxRecord::class,
                 ExerciseSessionRecord::class,
                 DistanceRecord::class,
@@ -141,7 +139,7 @@ object HealthConnectImporter {
     }
 
     internal val ALL_CATEGORIES: Set<ImportCategory> = ImportCategory.entries.toSet()
-    internal val DEFAULT_CATEGORIES: Set<ImportCategory> = setOf(ImportCategory.RECOVERY)
+    internal val DEFAULT_CATEGORIES: Set<ImportCategory> = setOf(ImportCategory.NUTRITION)
 
     /** Every supported read permission. Kept as the compatibility/all-capabilities view. */
     val PERMISSIONS: Set<String> = permissionsFor(ALL_CATEGORIES)
@@ -172,7 +170,7 @@ object HealthConnectImporter {
     private const val HYDRATION_WINDOW_DAYS = 30L
 
     /**
-     * The selected categories. New installs start with the narrow recovery/wellness group; an
+     * The selected categories. New installs start with food intake only; an
      * existing install that was already prompted under the old all-at-once flow keeps all categories
      * enabled so an update never silently stops importing data it imported before (#645).
      */

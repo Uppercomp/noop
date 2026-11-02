@@ -234,7 +234,7 @@ object DataBackup {
     /**
      * Export the live database to [uri] as a compressed `.noopbak` (single-entry ZIP).
      *
-     * Runs `PRAGMA wal_checkpoint(TRUNCATE)` first so the db file is fully consistent.
+     * Stages and checks a consistent SQLite snapshot before opening the destination archive.
      * The ZIP uses deflate compression; typical reduction is 80–90% vs the raw SQLite.
      * Throws on failure so the caller can surface the message in a toast/snackbar.
      */
@@ -242,28 +242,11 @@ object DataBackup {
     fun exportTo(context: Context, uri: Uri): ExportOutcome {
         val appContext = context.applicationContext
 
-        // Fold the WAL back into the main file so the snapshot is complete.
         val db = WhoopDatabase.get(appContext)
-        db.query("PRAGMA wal_checkpoint(TRUNCATE)", null).use { cursor ->
-            cursor.moveToFirst()
-        }
 
         val dbFile = appContext.getDatabasePath(WhoopDatabase.DB_NAME)
         if (!dbFile.exists()) {
             throw IOException("No database to export yet.")
-        }
-
-        // #1014 defence-in-depth (export side): after the checkpoint the single file IS the whole
-        // store — verify it BEFORE archiving. A backup of an already-corrupt database only fails
-        // the import-side integrity gate months later, when the original data may be long gone;
-        // failing loudly NOW is the honest move. Read-only probe, sits safely beside the open Room
-        // connection (WAL allows concurrent readers). Twin of the Apple writeVerifiedBackupZip.
-        sqliteQuickCheckFailure(dbFile)?.let { complaint ->
-            throw IOException(
-                "Couldn't export: the NOOP database failed its integrity check, so a backup of it " +
-                    "would not restore. Export the WHOOP-format CSV instead to save what's still " +
-                    "readable. (SQLite: ${readableComplaint(complaint)})"
-            )
         }
 
         // #1000: the whitelisted profile/display settings ride along as a second entry so a restore
@@ -281,27 +264,17 @@ object DataBackup {
         )
 
         val resolver = appContext.contentResolver
-        val output = resolver.openOutputStream(uri)
-            ?: throw IOException("Could not open the chosen file for writing.")
-        // Assigned inside the transaction below, where the entry is actually written.
+        val snapshot = createBackupSnapshot(db.openHelper.writableDatabase, dbFile, appContext.cacheDir) { copy ->
+            db.runInTransaction { copy() }
+        }
         var entryBytes = 0L
-        output.use { out ->
-            // #1014: copy the file while HOLDING Room's write transaction. In WAL mode the main
-            // file is only rewritten by a checkpoint, and a checkpoint only runs on a commit — so
-            // with the (single) write connection parked in an empty transaction for the duration
-            // of the copy, no commit can land and the bytes we stream can't be torn mid-page by a
-            // concurrent auto-checkpoint. Writers queue behind us and proceed after; readers are
-            // unaffected. Anything committed after the checkpoint above lives in the new WAL and
-            // is simply (consistently) absent from this snapshot, same as before.
-            db.runInTransaction {
+        try {
+            val output = resolver.openOutputStream(uri)
+                ?: throw IOException("Could not open the chosen file for writing.")
+            output.use { out ->
                 ZipOutputStream(out).use { zip ->
                     zip.putNextEntry(ZipEntry(ZIP_ENTRY_NAME))
-                    // #1807: count what actually LANDS in the entry, rather than reading dbFile.length()
-                    // afterwards. The copy runs inside this transaction against a snapshot; once it
-                    // commits, Room can checkpoint again and the main file's length can move, so a later
-                    // read is a different number from the one the restore path will meet. The cap is
-                    // enforced on this entry, so this is the only measurement that answers the question.
-                    dbFile.inputStream().use { input -> entryBytes = input.copyTo(zip) }
+                    snapshot.inputStream().use { input -> entryBytes = input.copyTo(zip) }
                     zip.closeEntry()
                     if (settingsJson != null) {
                         zip.putNextEntry(ZipEntry(SETTINGS_ENTRY_NAME))
@@ -313,6 +286,8 @@ object DataBackup {
                     zip.closeEntry()
                 }
             }
+        } finally {
+            snapshot.delete()
         }
         // #1014 (write-side): the SOURCE was verified before archiving, but the PRODUCED file can still
         // be torn by a full disk, a dying card, or a provider that drops the tail, and such a .noopbak
@@ -359,6 +334,40 @@ object DataBackup {
             overRestoreCeiling = overRestoreCeiling(entryBytes),
             limitBytes = MAX_BACKUP_SQLITE_BYTES,
         )
+    }
+
+    /** Stage immutable bytes, including WAL commits, before compression or destination-provider I/O. */
+    internal fun createBackupSnapshot(
+        db: SupportSQLiteDatabase,
+        source: File,
+        cacheDir: File,
+        legacyWriteLock: (() -> Unit) -> Unit,
+    ): File {
+        val snapshot = File.createTempFile("noop-backup-snapshot-", ".sqlite", cacheDir)
+        try {
+            val version = db.query("SELECT sqlite_version()").use { c -> c.moveToFirst(); c.getString(0) }
+            val parts = version.split('.').map { it.toIntOrNull() ?: 0 }
+            val supportsInto = parts[0] > 3 || (parts[0] == 3 && parts.getOrElse(1) { 0 } >= 27)
+            if (supportsInto) {
+                // SQLite produces a transactional snapshot while other connections keep writing.
+                db.execSQL("VACUUM INTO ?", arrayOf(snapshot.absolutePath))
+            } else {
+                // Older Android SQLite lacks VACUUM INTO. Preserve its locked-copy path, but verify
+                // the actual staged bytes rather than an earlier read of the mutable source file.
+                db.query("PRAGMA wal_checkpoint(TRUNCATE)").use { c ->
+                    if (!c.moveToFirst() || c.getInt(0) != 0) throw IOException("Database is busy; try the backup again.")
+                }
+                legacyWriteLock { source.copyTo(snapshot, overwrite = true) }
+            }
+            sqliteQuickCheckFailure(snapshot)?.let { complaint ->
+                throw IOException("Couldn't export a consistent backup. The current data was not changed. " +
+                    "(SQLite: ${readableComplaint(complaint)})")
+            }
+            return snapshot
+        } catch (e: Exception) {
+            snapshot.delete()
+            throw e
+        }
     }
 
     /**

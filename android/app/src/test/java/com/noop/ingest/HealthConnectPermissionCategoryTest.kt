@@ -36,7 +36,7 @@ class HealthConnectPermissionCategoryTest {
     @Test
     fun newInstallsDefaultNarrowWhileLegacyInstallsKeepExistingImports() {
         assertEquals(
-            recovery,
+            setOf(ImportCategory.NUTRITION),
             HealthConnectImporter.categoriesFromStoredKeys(null, hadLegacyPermissionSignature = false),
         )
         assertEquals(
@@ -54,6 +54,19 @@ class HealthConnectPermissionCategoryTest {
                 hadLegacyPermissionSignature = true,
             ),
         )
+    }
+
+    @Test
+    fun foodOnlyScopeDoesNotReadBurnEvenWithOldAndroidGrants() {
+        val nutrition = androidx.health.connect.client.records.NutritionRecord::class
+        val active = androidx.health.connect.client.records.ActiveCaloriesBurnedRecord::class
+        val total = androidx.health.connect.client.records.TotalCaloriesBurnedRecord::class
+        val oldGrants = HealthConnectImporter.PERMISSIONS + setOf(
+            HealthPermission.getReadPermission(active), HealthPermission.getReadPermission(total))
+        assertEquals(setOf(nutrition), HealthConnectImporter.readableRecordTypes(
+            setOf(ImportCategory.NUTRITION), oldGrants))
+        assertFalse(active in HealthConnectImporter.readableRecordTypes(HealthConnectImporter.ALL_CATEGORIES, oldGrants))
+        assertFalse(total in HealthConnectImporter.readableRecordTypes(HealthConnectImporter.ALL_CATEGORIES, oldGrants))
     }
 
     @Test

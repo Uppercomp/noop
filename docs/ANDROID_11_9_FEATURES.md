@@ -1,5 +1,11 @@
 # Android 11.9: coaching, energy context and daily reports
 
+**11.9.1 correction:** Health Connect supplies food intake, not calorie expenditure. New installs
+default to Nutrition only. Burn permissions are excluded even if Activity or older Android grants
+are present. Older imported burn rows remain archived but no longer override NOOP/WHOOP expenditure
+in normal repository reads, dashboards or energy balance. Body and other categories remain optional.
+See [the intake and backup correction](ANDROID_11_9_1_INTAKE_BACKUP.md).
+
 This fork update preserves the existing Android theme, typography, navigation shell and WHOOP
 mapping. It extends Android integrations and presentation; it does not replace the local recovery,
 strain or sleep algorithms with model-generated scores.
@@ -67,8 +73,8 @@ total is selected to reduce double counting from relayed logs. This conservative
 separate meals logged in different apps; use one consistent food-log origin.
 
 Daily energy balance is **logged intake minus total expenditure**: negative is a deficit, positive
-is a surplus. Health Connect total expenditure takes precedence, followed by external active plus
-resting energy, then NOOP's HR-based whole-day estimate. Active-only energy is not treated as total
+is a surplus. In 11.9.1, expenditure comes from the existing NOOP/WHOOP estimate or an explicitly
+imported Apple Health export, never Health Connect. Active-only energy is not treated as total
 burn. Missing intake does not become zero. Incomplete food logs, partial-day wear and estimation
 error affect the result; the current day continues accumulating. Sources must actually write the
 requested data to Health Connect—permission alone does not create records.

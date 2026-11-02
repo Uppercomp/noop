@@ -508,11 +508,11 @@
     <string name="l10n_data_sources_screen_every_3560d90b">Every</string>
     <string name="l10n_data_sources_screen_health_connect_be6bca3e">Health Connect</string>
     <string name="health_connect_categories_title">Choose what NOOP can read</string>
-    <string name="health_connect_categories_detail">Select the Health Connect categories to import. You can change this later.</string>
+    <string name="health_connect_categories_detail">For food calories only, select Nutrition alone. Imported food energy does not replace NOOP calories burned. Other categories are optional.</string>
     <string name="health_connect_category_recovery">Recovery &amp; wellness</string>
     <string name="health_connect_category_recovery_detail">Heart rate, HRV, sleep, SpO₂, breathing, and hydration</string>
     <string name="health_connect_category_activity">Activity</string>
-    <string name="health_connect_category_activity_detail">Steps, calories, workouts, distance, and VO₂ max</string>
+    <string name="health_connect_category_activity_detail">Steps, workouts, distance, and VO₂ max. Calories burned are not imported.</string>
     <string name="health_connect_category_body_composition">Body composition</string>
     <string name="health_connect_category_body_composition_detail">Weight, body fat, and lean mass</string>
     <string name="l10n_data_sources_screen_import_apple_health_export_533fca27">Import Apple Health export…</string>

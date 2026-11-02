@@ -1,5 +1,8 @@
 # Uppercomp's NOOP fork
 
+Android 11.9.1 corrects Health Connect to food-intake calories only and stages verified database
+snapshots for backup creation. See [intake and backup notes](docs/ANDROID_11_9_1_INTAKE_BACKUP.md).
+
 The Android 11.9 update adds configurable Coach data access, confirmed logging/voice, energy balance,
 daily reports and app-themed widgets. See [feature and verification notes](docs/ANDROID_11_9_FEATURES.md).
 

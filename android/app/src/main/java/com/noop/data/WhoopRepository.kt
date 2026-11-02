@@ -1773,7 +1773,7 @@ class WhoopRepository(
     }
 
     suspend fun metricSeries(deviceId: String, key: String, from: String, to: String) =
-        dao.metricSeries(deviceId, key, from, to)
+        if (HealthConnectEnergyPolicy.isExcluded(deviceId, key)) emptyList() else dao.metricSeries(deviceId, key, from, to)
 
     /**
      * Computed ("-noop") [key] series across the active-strap UNION (the active strap's own computed
@@ -1854,7 +1854,7 @@ class WhoopRepository(
 
     /** Apple-Health daily aggregates for the inclusive day range [from, to] (YYYY-MM-DD), oldest first. */
     suspend fun appleDaily(deviceId: String, from: String, to: String): List<AppleDaily> =
-        dao.appleDaily(deviceId, from, to)
+        dao.appleDaily(deviceId, from, to).map(HealthConnectEnergyPolicy::daily)
 
     /** Scalar COUNT twin of [appleDaily] for count badges. */
     suspend fun appleDailyCount(deviceId: String, from: String, to: String): Int =
@@ -2294,6 +2294,7 @@ class WhoopRepository(
         from: String,
         to: String,
     ): List<CandidateRow> {
+        if (HealthConnectEnergyPolicy.isExcluded(candidate.source, candidate.key)) return emptyList()
         val byDay = LinkedHashMap<String, CandidateRow>()
         for (row in dao.metricSeries(candidate.source, candidate.key, from, to)) {
             byDay[row.day] = CandidateRow(row.day, row.value)

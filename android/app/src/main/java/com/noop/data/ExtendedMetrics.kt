@@ -22,7 +22,7 @@ object ExtendedMetrics {
             // Active energy alone is not whole-day expenditure.
             if (d.activeKcal != null && d.basalKcal != null) burn[d.day] = d.activeKcal + d.basalKcal
         }
-        repo.metricSeries("health-connect", BURN, from, to).forEach { burn[it.day] = it.value }
+        // Health Connect food intake must not change the expenditure source, including old imports.
         if (key == BURN) return burn.toSortedMap().toList()
         if (key == BALANCE) return intake.mapNotNull { (day, kcal) ->
             EnergyBalance.net(kcal, burn[day])?.let { day to it }
