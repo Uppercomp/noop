@@ -1944,7 +1944,7 @@
         <item quantity="one">%1$d workout</item>
         <item quantity="other">%1$d workouts</item>
     </plurals>
-    <string name="timeline_spo2_not_on_whoop5">This strap doesn\'t send SpO₂ over Bluetooth. Import a WHOOP export or Health Connect to see it.</string>
+    <string name="timeline_spo2_not_on_whoop5">No raw optical-ratio records for this strap. Choose Blood oxygen under Daily metrics for synced SpO₂ values.</string>
     <string name="timeline_resp_not_on_whoop5">This strap sends no raw respiration stream. Your estimated respiratory rate appears on the Health screen.</string>
     <string name="settings_disclosure_expanded">Expanded</string>
     <string name="settings_disclosure_collapsed">Collapsed</string>
@@ -4060,11 +4060,11 @@
     <string name="test_centre_backfill_skin_temp_caption">Re-derives the absolute °C for nights the 21-night rescore window never reaches, using the same funnel as the scoring pass. Fill-only: it never overwrites a measured value. Watch the strap log for the result.</string>
     <string name="spo2_unvalidated_detail">Not validated. This experimental strap estimate may be inaccurate. Do not use it for medical decisions.</string>
     <string name="feature_energy_body">Energy &amp; body</string>
-    <string name="feature_energy_balance">Energy balance (estimated)</string>
+    <string name="feature_energy_balance">Energy balance</string>
     <string name="feature_total_burn">Total calories burned</string>
     <string name="feature_oxygen_candidate">Oxygen estimate (not validated)</string>
     <string name="feature_nutrition">Nutrition</string>
-    <string name="feature_nutrition_detail">Read logged food energy to compare intake with total calories burned. Missing logs are not zero intake.</string>
+    <string name="feature_nutrition_detail">Read logged food calories, protein, carbs and fat when provided. Health Connect never supplies calorie burn. Missing logs are not zero intake.</string>
     <string name="feature_coachsharingcard_0">Data shared with Coach</string>
     <string name="feature_coachsharingcard_1">These controls apply only when data sharing above is enabled. Manual answers and enabled AI morning briefs use the currently selected data. Manual questions and existing chat text are always sent as part of the conversation.</string>
     <string name="feature_coachsharingcard_2">Full health-data access</string>
@@ -4079,7 +4079,7 @@
     <string name="feature_energybodyscreen_11">Previous</string>
     <string name="feature_energybodyscreen_12">Next</string>
     <string name="feature_energybodyscreen_13">Daily energy</string>
-    <string name="feature_energybodyscreen_14">Intake − total burn. Burn includes resting energy. Health Connect totals take priority over NOOP\'s HR-based estimate. Food logs can be incomplete; a missing log never counts as zero food. Today\'s balance is still accumulating.</string>
+    <string name="feature_energybodyscreen_14">Intake − total burn. Burn includes resting energy. Health Connect supplies food intake only; NOOP supplies calorie expenditure. Food logs can be incomplete; a missing log never counts as zero food. Today\'s balance is still accumulating.</string>
     <string name="feature_energybodyscreen_15">Body measurements</string>
     <string name="feature_energybodyscreen_16">Only measurements recorded for the selected date are shown. BMI uses profile height. Grant Body composition and Nutrition in Health Connect, then import. Existing profile weight sync remains optional.</string>
     <string name="feature_energybodyscreen_17">Health Connect import</string>
@@ -4088,4 +4088,34 @@
     <string name="feature_energybodyscreen_20">%+.0f kcal</string>
     <string name="feature_background_connection">NOOP background connection</string>
     <string name="feature_background_connection_detail">Keeps strap sync running. You can hide this notice in the Connection notification channel.</string>
+    <string name="metric_search">Search metrics</string>
+    <string name="metric_selected_date">Selected day</string>
+    <string name="metric_not_recorded_date">Not recorded for this day</string>
+    <string name="metric_deficit">Deficit</string>
+    <string name="metric_surplus">Surplus</string>
+    <string name="metric_balanced">Balanced</string>
+    <string name="metric_oxygen_title">Blood oxygen · SpO₂</string>
+    <string name="metric_oxygen_honesty">May include an unvalidated strap estimate. Not used for scores or alerts.</string>
+    <string name="metric_browse">Browse all metrics</string>
+    <string name="metric_raw_signals">Raw sensor signals</string>
+    <string name="metric_daily_metrics">Daily metrics</string>
+    <string name="metric_daily_summary">Daily summary; not a continuous sensor trace.</string>
+    <string name="metric_raw_optical">Optical ratio · raw, not SpO₂ %</string>
+    <string name="metric_oxygen_trace">SpO₂ estimate · not validated</string>
+    <string name="metric_active_energy_imported">Active energy (Apple Health export)</string>
+    <string name="metric_vo2_imported">VO₂ max (imported)</string>
+    <string name="metric_live_stress">Stress index</string>
+    <string name="metric_pin_today">Add to Today</string>
+    <string name="metric_balance_today">%1$s · partial day</string>
+    <string name="metric_balance_estimate">%1$s · estimate</string>
+    <string name="metric_oxygen_caption">May use unvalidated estimate</string>
+    <string name="metric_release_today">Search all daily metrics in Today → Customize Today → Key Metrics or Your cards. Existing layouts stay unchanged.</string>
+    <string name="metric_release_pin">Use Add to Today from a metric in Explore to pin it to either Today section.</string>
+    <string name="metric_release_timeline">Deep Timeline now offers daily metrics alongside clearly labelled raw sensor signals, including SpO₂ estimates.</string>
+    <string name="metric_release_nutrition">Nutrition imports can include food calories and recorded protein, carbs and fat. Health Connect never supplies calorie burn.</string>
+    <string name="metric_stress_note">Daily stress proxy from recorded RHR/HRV or imported stress. The live daytime stress view is separate.</string>
+    <string name="metric_daily_navigation">Change day above. Use Explore for longer trends.</string>
+    <string name="metric_as_of">As of %1$s</string>
+    <string name="metric_estimate_disabled">Strap oxygen estimates are disabled. Enable Blood Oxygen: strap estimate in Experimental settings to display them.</string>
+    <string name="metric_steps_note">Reported or imported steps take priority. A calibrated NOOP estimate fills days without a reported count.</string>
 </resources>

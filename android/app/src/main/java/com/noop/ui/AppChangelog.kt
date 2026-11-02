@@ -26,7 +26,7 @@ object AppChangelog {
      * Bump this when you add a release below. The "What's New" sheet shows automatically when the
      * stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
      */
-    const val CURRENT_VERSION = "11.8.0"
+    const val CURRENT_VERSION = "11.10.0"
 
     data class Release(
         val version: String,
@@ -37,6 +37,11 @@ object AppChangelog {
 
     /** Newest first. */
     val releases: List<Release> = listOf(
+        Release(
+            version = "11.10.0", title = uiString(R.string.metric_browse), date = "2026-11-02",
+            items = listOf(uiString(R.string.metric_release_today), uiString(R.string.metric_release_pin),
+                uiString(R.string.metric_release_timeline), uiString(R.string.metric_release_nutrition)),
+        ),
         Release(
             version = "11.8.0",
             title = uiString(R.string.l10n_app_changelog_a_gym_log_book_on_your_e0f00272),

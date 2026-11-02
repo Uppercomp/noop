@@ -1839,7 +1839,7 @@
         <item quantity="one">%1$d Workout</item>
         <item quantity="other">%1$d Workouts</item>
     </plurals>
-    <string name="timeline_spo2_not_on_whoop5">Dieses Band sendet kein SpO₂ über Bluetooth. Importiere einen WHOOP-Export oder Health Connect, um es zu sehen.</string>
+    <string name="timeline_spo2_not_on_whoop5">Keine rohen optischen Verhältniswerte für dieses Band. Für synchronisierte SpO₂-Werte Blutsauerstoff unter den täglichen Messwerten wählen.</string>
     <string name="timeline_resp_not_on_whoop5">Dieses Band sendet keinen Rohdaten-Atemstrom. Deine geschätzte Atemfrequenz erscheint im Health-Bildschirm.</string>
     <string name="settings_disclosure_expanded">Ausgeklappt</string>
     <string name="settings_disclosure_collapsed">Eingeklappt</string>
@@ -4043,11 +4043,11 @@
     <string name="test_centre_backfill_skin_temp_caption">Leitet den absoluten °C-Wert für Nächte neu ab, die das 21-Nächte-Fenster der Neubewertung nie erreicht – über denselben Filter wie der Scoring-Durchlauf. Nur Füllen: Ein gemessener Wert wird nie überschrieben. Das Ergebnis steht im Strap-Log.</string>
     <string name="spo2_unvalidated_detail">Nicht validiert. Diese experimentelle Band-Schätzung kann ungenau sein. Nicht für medizinische Entscheidungen verwenden.</string>
     <string name="feature_energy_body">Energie &amp; Körper</string>
-    <string name="feature_energy_balance">Energiebilanz (geschätzt)</string>
+    <string name="feature_energy_balance">Energiebilanz</string>
     <string name="feature_total_burn">Gesamter Kalorienverbrauch</string>
     <string name="feature_oxygen_candidate">Sauerstoffschätzung (nicht validiert)</string>
     <string name="feature_nutrition">Ernährung</string>
-    <string name="feature_nutrition_detail">Protokollierte Nahrungsenergie lesen, um Aufnahme und gesamten Kalorienverbrauch zu vergleichen. Fehlende Einträge bedeuten nicht null Aufnahme.</string>
+    <string name="feature_nutrition_detail">Erfasste Nahrungsenergie, Eiweiß, Kohlenhydrate und Fett lesen, sofern vorhanden. Health Connect liefert keinen Kalorienverbrauch. Fehlende Einträge bedeuten nicht null Aufnahme.</string>
     <string name="feature_coachsharingcard_0">Mit dem Coach geteilte Daten</string>
     <string name="feature_coachsharingcard_1">Diese Optionen gelten nur bei aktivierter Datenfreigabe oben. Antworten und aktivierte KI-Morgenberichte verwenden die ausgewählten Daten. Eigene Fragen und vorhandener Chattext werden immer als Teil des Gesprächs gesendet.</string>
     <string name="feature_coachsharingcard_2">Vollständiger Zugriff auf Gesundheitsdaten</string>
@@ -4062,7 +4062,7 @@
     <string name="feature_energybodyscreen_11">Zurück</string>
     <string name="feature_energybodyscreen_12">Weiter</string>
     <string name="feature_energybodyscreen_13">Tägliche Energie</string>
-    <string name="feature_energybodyscreen_14">Aufnahme − Gesamtverbrauch. Der Verbrauch enthält Ruheenergie. Health-Connect-Gesamtwerte haben Vorrang vor der pulsbasierten NOOP-Schätzung. Ernährungsprotokolle können unvollständig sein; fehlende Einträge zählen nie als null Nahrung. Die heutige Bilanz verändert sich noch.</string>
+    <string name="feature_energybodyscreen_14">Aufnahme − Gesamtverbrauch. Der Verbrauch enthält Ruheenergie. Health Connect liefert nur die Nahrungsaufnahme; NOOP liefert den Kalorienverbrauch. Ernährungsprotokolle können unvollständig sein; fehlende Einträge zählen nie als null Nahrung. Die heutige Bilanz verändert sich noch.</string>
     <string name="feature_energybodyscreen_15">Körpermesswerte</string>
     <string name="feature_energybodyscreen_16">Nur Messwerte des gewählten Datums werden angezeigt. Der BMI verwendet die Profilgröße. Körperzusammensetzung und Ernährung in Health Connect freigeben und dann importieren. Der vorhandene Gewichtsabgleich mit dem Profil bleibt optional.</string>
     <string name="feature_energybodyscreen_17">Health-Connect-Import</string>
@@ -4071,4 +4071,34 @@
     <string name="feature_energybodyscreen_20">%+.0f kcal</string>
     <string name="feature_background_connection">NOOP-Hintergrundverbindung</string>
     <string name="feature_background_connection_detail">Hält die Armbandsynchronisierung aktiv. Diese Meldung kann im Benachrichtigungskanal für die Verbindung ausgeblendet werden.</string>
+    <string name="metric_search">Messwerte suchen</string>
+    <string name="metric_selected_date">Ausgewählter Tag</string>
+    <string name="metric_not_recorded_date">Für diesen Tag nicht erfasst</string>
+    <string name="metric_deficit">Defizit</string>
+    <string name="metric_surplus">Überschuss</string>
+    <string name="metric_balanced">Ausgeglichen</string>
+    <string name="metric_oxygen_title">Blutsauerstoff · SpO₂</string>
+    <string name="metric_oxygen_honesty">Kann eine nicht validierte Bandschätzung enthalten. Nicht für Bewertungen oder Warnungen verwendet.</string>
+    <string name="metric_browse">Alle Messwerte durchsuchen</string>
+    <string name="metric_raw_signals">Rohe Sensorsignale</string>
+    <string name="metric_daily_metrics">Tägliche Messwerte</string>
+    <string name="metric_daily_summary">Tageszusammenfassung; keine kontinuierliche Sensorkurve.</string>
+    <string name="metric_raw_optical">Optisches Verhältnis · roh, kein SpO₂ %</string>
+    <string name="metric_oxygen_trace">SpO₂-Schätzung · nicht validiert</string>
+    <string name="metric_active_energy_imported">Aktivitätsenergie (Apple-Health-Export)</string>
+    <string name="metric_vo2_imported">VO₂max (importiert)</string>
+    <string name="metric_live_stress">Stressindex</string>
+    <string name="metric_pin_today">Zu Heute hinzufügen</string>
+    <string name="metric_balance_today">%1$s · laufender Tag</string>
+    <string name="metric_balance_estimate">%1$s · Schätzung</string>
+    <string name="metric_oxygen_caption">Ggf. nicht validierte Schätzung</string>
+    <string name="metric_release_today">Alle Tageswerte unter Heute → Heute anpassen → Kennzahlen oder Deine Karten suchen. Bestehende Layouts bleiben erhalten.</string>
+    <string name="metric_release_pin">Mit Zu Heute hinzufügen in Entdecken einen Messwert an einen der beiden Heute-Bereiche anheften.</string>
+    <string name="metric_release_timeline">Die Detail-Zeitachse bietet Tageswerte neben klar beschrifteten rohen Sensorsignalen, einschließlich SpO₂-Schätzungen.</string>
+    <string name="metric_release_nutrition">Ernährungsimporte können Nahrungsenergie und erfasstes Eiweiß, Kohlenhydrate und Fett enthalten. Health Connect liefert keinen Kalorienverbrauch.</string>
+    <string name="metric_stress_note">Täglicher Stressindikator aus erfasstem Ruhepuls/HRV oder importiertem Stress. Die Live-Tagesstressansicht ist separat.</string>
+    <string name="metric_daily_navigation">Tag oben wechseln. Für längere Trends Entdecken verwenden.</string>
+    <string name="metric_as_of">Stand: %1$s</string>
+    <string name="metric_estimate_disabled">Sauerstoffschätzungen des Bands sind deaktiviert. Zum Anzeigen Blutsauerstoff: Bandschätzung in den experimentellen Einstellungen aktivieren.</string>
+    <string name="metric_steps_note">Gemeldete oder importierte Schritte haben Vorrang. Eine kalibrierte NOOP-Schätzung ergänzt Tage ohne gemeldeten Wert.</string>
 </resources>

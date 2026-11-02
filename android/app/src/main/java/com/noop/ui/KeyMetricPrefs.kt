@@ -20,7 +20,7 @@ import com.noop.R
  * One of the Today screen's Key-Metric tiles. The [raw] is the stable persisted identifier — keep it
  * byte-identical to the macOS `KeyMetric` enum so a backup/restore reads the same layout on either OS.
  */
-enum class KeyMetric(val raw: String, @StringRes val titleRes: Int) {
+enum class KeyMetric(val raw: String, @StringRes private val baseTitleRes: Int, val libraryKey: String? = null) {
     CHARGE("charge", R.string.today_metric_charge),
     EFFORT("effort", R.string.today_metric_effort),
     REST("rest", R.string.today_metric_rest),
@@ -30,13 +30,41 @@ enum class KeyMetric(val raw: String, @StringRes val titleRes: Int) {
     RESPIRATORY("respiratory", R.string.today_metric_respiratory),
     STEPS("steps", R.string.today_metric_steps),
     WEIGHT("weight", R.string.today_metric_weight),
-    CALORIES("calories", R.string.today_metric_calories),
+    CALORIES("calories", R.string.feature_total_burn),
     // Added 2026-08-24 (queue 11c follow-up): Skin Temp was already a "Your Cards" (DashboardCard)
     // option, but was never offered as a Key Metrics tile — not a bug, just never added. Reuses
     // DashboardCard.SKIN_TEMP's own title resource rather than adding a new one. New case, NOT added
     // to defaultOrder below, so an existing user's saved layout (and a fresh install's default) is
     // byte-identical to before; only opts in via the layout editor.
-    SKIN_TEMP("skinTemp", R.string.today_card_skin_temp);
+    SKIN_TEMP("skinTemp", R.string.today_card_skin_temp),
+    LIB_ENERGY_BALANCE("metric:energy_balance", R.string.feature_energy_balance, "energy_balance"),
+    LIB_AVG_HR("metric:avg_hr", R.string.explore_metric_average_heart_rate, "avg_hr"),
+    LIB_MAX_HR("metric:max_hr", R.string.explore_metric_max_heart_rate, "max_hr"),
+    LIB_VO2MAX("metric:vo2max", R.string.l10n_health_screen_vo2max_21214fb6, "vo2max"),
+    LIB_FITNESS_AGE("metric:fitness_age", R.string.l10n_health_screen_fitness_age_12383b4a, "fitness_age"),
+    LIB_VO2MAX_EST("metric:vo2max_est", R.string.l10n_compare_screen_vo_max_estimated_01930b53, "vo2max_est"),
+    LIB_VITALITY("metric:vitality", R.string.l10n_health_screen_vitality_be320b06, "vitality"),
+    LIB_BODY_AGE("metric:body_age", R.string.l10n_health_screen_body_age_8a2512e6, "body_age"),
+    LIB_SLEEP_TOTAL_MIN("metric:sleep_total_min", R.string.l10n_compare_screen_asleep_time_ccde95a8, "sleep_total_min"),
+    LIB_SLEEP_EFFICIENCY("metric:sleep_efficiency", R.string.l10n_trends_explore_screen_sleep_efficiency_b4b5c293, "sleep_efficiency"),
+    LIB_SLEEP_DEEP_MIN("metric:sleep_deep_min", R.string.l10n_compare_screen_deep_sws_sleep_4ec27b34, "sleep_deep_min"),
+    LIB_SLEEP_REM_MIN("metric:sleep_rem_min", R.string.l10n_compare_screen_rem_sleep_77605e30, "sleep_rem_min"),
+    LIB_SLEEP_LIGHT_MIN("metric:sleep_light_min", R.string.l10n_compare_screen_light_sleep_d4bbaf3a, "sleep_light_min"),
+    LIB_ACTIVE_KCAL("metric:active_kcal", R.string.l10n_health_screen_active_energy_2d3288f9, "active_kcal"),
+    LIB_BODY_FAT("metric:body_fat", R.string.l10n_apple_health_screen_body_fat_13aeec7b, "body_fat"),
+    LIB_LEAN_MASS("metric:lean_mass", R.string.l10n_compare_screen_lean_body_mass_bf9a784a, "lean_mass"),
+    LIB_BMI("metric:bmi", R.string.l10n_apple_health_screen_bmi_aa26664f, "bmi"),
+    LIB_CALORIES_IN("metric:calories_in", R.string.explore_metric_calories_in, "calories_in"),
+    LIB_PROTEIN_G("metric:protein_g", R.string.explore_metric_protein, "protein_g"),
+    LIB_CARBS_G("metric:carbs_g", R.string.explore_metric_carbs, "carbs_g"),
+    LIB_FAT_G("metric:fat_g", R.string.explore_metric_fat, "fat_g"),
+    STRESS("stressIndex", R.string.metric_live_stress, "stress"),
+    LIB_STEPS_AVERAGE_30("metric:steps_average_30", R.string.steps_average_30, "steps_average_30"),
+    LIB_HYDRATION("metric:hydration", R.string.today_card_hydration, "hydration"),
+    LIB_MOOD("metric:mood", R.string.explore_metric_mood, "mood");
+
+    @get:StringRes
+    val titleRes: Int get() = libraryKey?.let { MetricLibrary.find(it)?.titleRes } ?: baseTitleRes
 
     companion object {
         fun fromRaw(raw: String?): KeyMetric? = entries.firstOrNull { it.raw == raw }

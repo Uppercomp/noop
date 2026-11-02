@@ -1,6 +1,7 @@
 package com.noop.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Text
@@ -51,11 +53,12 @@ import kotlin.math.roundToInt
 
 private enum class TimelineMetric(val title: String) {
     Hr(uiString(R.string.timeline_metric_heart_rate)),
+    Library(uiString(R.string.metric_daily_metrics)),
     // #803: this trace is a rolling rMSSD over the RR series, NOT the raw RR interval it used to plot.
     // The honest title says exactly what the curve is (windowed rMSSD), not a bare "HRV".
     Hrv(uiString(R.string.timeline_metric_rmssd)),
-    Spo2(uiString(R.string.timeline_metric_spo2)),
-    OxygenCandidate(uiString(R.string.feature_oxygen_candidate)),
+    Spo2(uiString(R.string.metric_raw_optical)),
+    OxygenCandidate(uiString(R.string.metric_oxygen_trace)),
     EnergyBalance(uiString(R.string.feature_energy_balance)),
     SkinTemp(uiString(R.string.timeline_metric_skin_temp)),
     Respiration(uiString(R.string.timeline_metric_respiration)),
@@ -80,7 +83,11 @@ fun FullDayChartScreen(vm: AppViewModel, onBack: () -> Unit) {
     // re-added strap's live curve AND the canonical import history both surface. Single-WHOOP install
     // resolves to "my-whoop" ⇒ byte-identical reads.
     val deviceId = vm.activeStrapId
+    var libraryKey by remember { mutableStateOf("spo2") }
+    var showMetricPicker by remember { mutableStateOf(false) }
+    var metricQuery by remember { mutableStateOf("") }
     val recentDays by vm.recentDays.collectAsStateWithLifecycle()
+    val metricRevision by vm.repo.metricChanges.collectAsStateWithLifecycle(0L)
 
     // Today's local calendar midnight — the clamp the day stepper can never pass.
     val todayStart = remember {
@@ -173,12 +180,14 @@ fun FullDayChartScreen(vm: AppViewModel, onBack: () -> Unit) {
     // relabelled suffix. Mirrors CompareScreen (read once per composition, like the app's other unit reads).
     val context = LocalContext.current
     val tempUnit = UnitPrefs.temperature(context)
+    val unitSystem = UnitPrefs.system(context)
+    val effortScale = UnitPrefs.effortScale(context)
 
     // `points` in the DISPLAYED unit (#101). For every metric but skin temp this is just the raw points;
     // skin temp is the ABSOLUTE per-timestamp °C (skinTempCelsius), so when °F is selected convert with the
     // absolute ×9/5+32 (not a deviation rescale) so the chart line, y-axis AND stats read in °F — the
     // suffix relabel alone would leave the plotted numbers in Celsius. Mirrors the Swift FullDayChartView.
-    val displayPoints = if (metric == TimelineMetric.SkinTemp && tempUnit == TemperatureUnit.FAHRENHEIT) {
+    val displayPoints = if (metric == TimelineMetric.Library) points.map { TimelinePoint(it.ts, MetricLibrary.displayValue(libraryKey, it.value, unitSystem, tempUnit, effortScale)) } else if (metric == TimelineMetric.SkinTemp && tempUnit == TemperatureUnit.FAHRENHEIT) {
         points.map { TimelinePoint(it.ts, UnitFormatter.celsiusToFahrenheit(it.value)) }
     } else {
         points
@@ -192,7 +201,7 @@ fun FullDayChartScreen(vm: AppViewModel, onBack: () -> Unit) {
     }
 
     // Re-read on metric / source / settled-window / fresh-data change. The DB read picks raw vs buckets.
-    LaunchedEffect(metric, ownedOnly, visible.first, visible.last, recentDays) {
+    LaunchedEffect(metric, libraryKey, ownedOnly, visible.first, visible.last, recentDays, metricRevision) {
         // PERF (#scroll-jank): a pinch/pan reports a NEW window on every gesture frame, each of which
         // re-keys this effect and previously fired a fresh Room query mid-gesture (heavy, on every
         // frame). Debounce by sleeping first: while the window is still moving, the next frame re-keys
@@ -208,27 +217,48 @@ fun FullDayChartScreen(vm: AppViewModel, onBack: () -> Unit) {
         val to = visible.last
         val bucket = timelineBucketSeconds(to - from, targetPoints = 600)
         bucketSeconds = bucket
-        isRaw = bucket <= 1L
-        points = readTimeline(vm, deviceId, metric, from, to, bucket)
+        isRaw = metric != TimelineMetric.Library && bucket <= 1L
+        points = readTimeline(vm, deviceId, metric, from, to, bucket, libraryKey)
         loading = false
     }
 
     ScreenScaffold(
         title = stringResource(R.string.deep_timeline_title),
-        subtitle = stringResource(R.string.timeline_subtitle),
+        subtitle = if (metric == TimelineMetric.Library) stringResource(R.string.metric_daily_summary) else stringResource(R.string.timeline_subtitle),
     ) {
-        // METRIC PILLS — horizontally scrollable so all six fit on a phone.
-        Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-            SegmentedPillControl(
-                items = TimelineMetric.entries.toList(),
-                selection = metric,
-                label = { it.title },
-                onSelect = { metric = it; window = null },
-            )
+        androidx.compose.material3.TextButton(onClick = { metricQuery = ""; showMetricPicker = true }) {
+            Text((if (metric == TimelineMetric.Library) MetricLibrary.find(libraryKey)?.let { uiString(it.titleRes) } ?: metric.title else metric.title)
+                + " · " + stringResource(R.string.metric_browse), color = Palette.accent, style = NoopType.headline)
+        }
+        if (showMetricPicker) {
+            androidx.compose.material3.AlertDialog(onDismissRequest = { showMetricPicker = false },
+                containerColor = Palette.surfaceOverlay,
+                title = { Text(stringResource(R.string.metric_browse), style = NoopType.title2) },
+                text = {
+                    Column {
+                        androidx.compose.material3.OutlinedTextField(value = metricQuery, onValueChange = { metricQuery = it },
+                            label = { Text(stringResource(R.string.metric_search)) }, singleLine = true,
+                            textStyle = NoopType.body, modifier = Modifier.fillMaxWidth())
+                        Column(Modifier.heightIn(max = Metrics.editorListMaxHeight).verticalScroll(rememberScrollState())) {
+                            Text(stringResource(R.string.metric_daily_metrics), style = NoopType.overline, color = Palette.textSecondary)
+                            MetricLibrary.all.filter { MetricLibrary.matches(uiString(it.titleRes), metricQuery) }.forEach { m ->
+                                androidx.compose.material3.TextButton(onClick = { libraryKey = m.key; metric = TimelineMetric.Library; window = null; showMetricPicker = false }) {
+                                    Text(uiString(m.titleRes), color = Palette.textPrimary, style = NoopType.body)
+                                }
+                            }
+                            Text(stringResource(R.string.metric_raw_signals), style = NoopType.overline, color = Palette.textSecondary)
+                            TimelineMetric.entries.filter { it !in setOf(TimelineMetric.Library, TimelineMetric.EnergyBalance) && MetricLibrary.matches(it.title, metricQuery) }.forEach { m ->
+                                androidx.compose.material3.TextButton(onClick = { metric = m; window = null; showMetricPicker = false }) {
+                                    Text(m.title, color = Palette.textPrimary, style = NoopType.body)
+                                }
+                            }
+                        }
+                    }
+                }, confirmButton = { androidx.compose.material3.TextButton(onClick = { showMetricPicker = false }) { Text(stringResource(android.R.string.cancel)) } })
         }
 
         // SOURCE PILL — the owned (active) device, with the #574 owned/all scope toggle.
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        if (metric != TimelineMetric.Library) Row(verticalAlignment = Alignment.CenterVertically) {
             Text(sourceName ?: stringResource(R.string.timeline_my_whoop), style = NoopType.footnote, color = Palette.textSecondary)
             Spacer(Modifier.weight(1f))
             val ownedLabel = stringResource(R.string.timeline_owned)
@@ -264,16 +294,17 @@ fun FullDayChartScreen(vm: AppViewModel, onBack: () -> Unit) {
             )
         }
 
-        NoopCard(tint = Palette.metricRose) {
+        if (metric == TimelineMetric.Library) MetricLibrary.find(libraryKey)?.noteText()?.let { Text(it, style = NoopType.footnote, color = Palette.textSecondary) }
+        NoopCard(tint = if (metric == TimelineMetric.Library) MetricLibrary.accent(libraryKey) else Palette.metricRose) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.Top) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Overline(metric.title)
-                        Text(resolutionSubtitle(points, isRaw, bucketSeconds),
+                        Overline(if (metric == TimelineMetric.Library) MetricLibrary.find(libraryKey)?.let { uiString(it.titleRes) } ?: metric.title else metric.title)
+                        Text(if (metric == TimelineMetric.Library) stringResource(R.string.metric_daily_summary) else resolutionSubtitle(points, isRaw, bucketSeconds),
                             style = NoopType.footnote, color = Palette.textTertiary)
                     }
-                    displayPoints.lastOrNull()?.let {
-                        Text(formatValue(metric, it.value) + unitSuffix(metric, tempUnit),
+                    (if (metric == TimelineMetric.Library) points.lastOrNull() else displayPoints.lastOrNull())?.let {
+                        Text(if (metric == TimelineMetric.Library) MetricLibrary.find(libraryKey)?.format(it.value, unitSystem, tempUnit, effortScale) ?: formatValue(metric, it.value) else formatValue(metric, it.value) + unitSuffix(metric, tempUnit),
                             style = NoopType.bodyNumber, color = Palette.textPrimary)
                     }
                 }
@@ -301,16 +332,16 @@ fun FullDayChartScreen(vm: AppViewModel, onBack: () -> Unit) {
                                 windowStart = visible.first,
                                 windowEnd = visible.last,
                                 bounds = panBounds,   // #986: pan clamp is the rolling 3-day window, not one day
-                                color = metricColor(metric),
+                                color = if (metric == TimelineMetric.Library) MetricLibrary.accent(libraryKey) else metricColor(metric),
                                 modifier = Modifier.fillMaxWidth().height(280.dp),
-                                onWindowChange = { window = it },
-                                timeTicks = timeTicks,
+                                onWindowChange = { if (metric != TimelineMetric.Library) window = it },
+                                timeTicks = if (metric == TimelineMetric.Library) emptyList() else timeTicks,
                             )
                         }
                     }
                     // X-axis: HH:mm labels aligned to their gridlines via the same wall-clock mapping.
                     // Hidden when the chart is empty (loading / unsupported) so no labels float alone.
-                    if (displayPoints.isNotEmpty()) {
+                    if (displayPoints.isNotEmpty() && metric != TimelineMetric.Library) {
                         TimelineTimeAxisLabels(
                             ticks = timeTicks,
                             windowStart = visible.first,
@@ -320,11 +351,12 @@ fun FullDayChartScreen(vm: AppViewModel, onBack: () -> Unit) {
                 }
 
                 if (displayPoints.isNotEmpty()) {
-                    val vals = displayPoints.map { it.value }
+                    val vals = (if (metric == TimelineMetric.Library) points else displayPoints).map { it.value }
+                    fun statValue(v: Double) = if (metric == TimelineMetric.Library) MetricLibrary.find(libraryKey)?.format(v, unitSystem, tempUnit, effortScale) ?: formatValue(metric, v) else formatValue(metric, v)
                     Row(modifier = Modifier.fillMaxWidth()) {
-                        TimelineStat(stringResource(R.string.timeline_min), formatValue(metric, vals.minOrNull() ?: 0.0), Modifier.weight(1f))
-                        TimelineStat(stringResource(R.string.timeline_avg), formatValue(metric, vals.average()), Modifier.weight(1f))
-                        TimelineStat(stringResource(R.string.timeline_max), formatValue(metric, vals.maxOrNull() ?: 0.0), Modifier.weight(1f))
+                        TimelineStat(stringResource(R.string.timeline_min), statValue(vals.minOrNull() ?: 0.0), Modifier.weight(1f))
+                        TimelineStat(stringResource(R.string.timeline_avg), statValue(vals.average()), Modifier.weight(1f))
+                        TimelineStat(stringResource(R.string.timeline_max), statValue(vals.maxOrNull() ?: 0.0), Modifier.weight(1f))
                     }
                 }
             }
@@ -333,7 +365,7 @@ fun FullDayChartScreen(vm: AppViewModel, onBack: () -> Unit) {
         // ZOOM HINT + reset.
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                if (window == null) stringResource(R.string.timeline_pinch_to_zoom) else stringResource(R.string.timeline_zoomed_in),
+                if (metric == TimelineMetric.Library) stringResource(R.string.metric_daily_navigation) else if (window == null) stringResource(R.string.timeline_pinch_to_zoom) else stringResource(R.string.timeline_zoomed_in),
                 style = NoopType.footnote, color = Palette.textTertiary,
             )
             Spacer(Modifier.weight(1f))
@@ -363,7 +395,7 @@ private fun EmptyTimelineState(metric: TimelineMetric, ownedOnly: Boolean, metri
         // offloaded" that reads as broken, and point respiration at the Health screen where the R-R/RSA
         // estimate surfaces. [metricUnsupported] already folds in the family + never-produced + ownedOnly
         // gate, so a 4.0-v24 with data on other days keeps the generic message.
-        val reason = when {
+        val reason = if (metric == TimelineMetric.OxygenCandidate && !NoopPrefs.spo2CandidateDisplay(androidx.compose.ui.platform.LocalContext.current)) stringResource(R.string.metric_estimate_disabled) else if (metric == TimelineMetric.Library) stringResource(R.string.metric_not_recorded_date) else when {
             metricUnsupported && metric == TimelineMetric.Spo2 ->
                 stringResource(R.string.timeline_spo2_not_on_whoop5)
             metricUnsupported && metric == TimelineMetric.Respiration ->
@@ -394,6 +426,7 @@ private suspend fun readTimeline(
     from: Long,
     to: Long,
     bucket: Long,
+    libraryKey: String = "spo2",
 ): List<TimelinePoint> = withContext(Dispatchers.Default) {
     // PERF parity with macOS Repository.timelineSeries: the Room reads already hop to Room's executor,
     // but this function is called from a LaunchedEffect (Main), so the post-read mapping + downsample
@@ -401,6 +434,15 @@ private suspend fun readTimeline(
     // UI. Run the whole assembly on Default; the suspend Room queries still execute off-main and only the
     // CPU work moves off the UI thread. Output is unchanged.
     val repo = vm.repo
+    if (metric == TimelineMetric.Library) {
+        val zone = java.time.ZoneId.systemDefault()
+        val f = java.time.Instant.ofEpochSecond(from).atZone(zone).toLocalDate().toString()
+        val t = java.time.Instant.ofEpochSecond(to).atZone(zone).toLocalDate().toString()
+        return@withContext MetricLibrary.series(repo, deviceId, libraryKey, f, t,
+            NoopPrefs.spo2CandidateDisplay(vm.getApplication())).map { (d, v) ->
+                TimelinePoint(java.time.LocalDate.parse(d).atTime(12, 0).atZone(zone).toEpochSecond(), v)
+            }.filter { it.ts in from..to }
+    }
     if (metric == TimelineMetric.Hr) {
         // #908: HR rides the active strap ∪ canonical "my-whoop" union so a re-added strap's live curve and
         // the canonical import history both render (matches Swift Repository.timelineSeries). [deviceId] is
@@ -414,7 +456,7 @@ private suspend fun readTimeline(
         }
     }
     val raw: List<TimelinePoint> = when (metric) {
-        TimelineMetric.Hr -> emptyList()
+        TimelineMetric.Hr, TimelineMetric.Library -> emptyList()
         TimelineMetric.Hrv -> {
             // #803: plot a rolling rMSSD (ms) over the RR series, NOT the raw RR interval. Raw RR is the
             // beat-to-beat heart PERIOD, not variability, so labelling it "HRV" was dishonest. HrvAnalyzer
@@ -522,7 +564,7 @@ private fun resolutionSubtitle(points: List<TimelinePoint>, isRaw: Boolean, buck
 private fun metricColor(metric: TimelineMetric): Color = when (metric) {
     TimelineMetric.Hr -> Palette.metricRose
     TimelineMetric.SkinTemp -> Palette.strain033
-    TimelineMetric.OxygenCandidate -> Palette.metricCyan
+    TimelineMetric.Library, TimelineMetric.OxygenCandidate -> Palette.metricCyan
     TimelineMetric.EnergyBalance -> Palette.metricAmber
     TimelineMetric.Hrv, TimelineMetric.Spo2 -> Palette.sleepLight
     TimelineMetric.Respiration, TimelineMetric.Motion, TimelineMetric.Movement -> Palette.textSecondary
@@ -541,6 +583,7 @@ private fun unitSuffix(metric: TimelineMetric, tempUnit: TemperatureUnit): Strin
 }
 
 private fun formatValue(metric: TimelineMetric, v: Double): String = when (metric) {
+    TimelineMetric.Library -> String.format(Locale.US, "%.1f", v)
     TimelineMetric.OxygenCandidate -> String.format(Locale.US, "%.0f", v)
     TimelineMetric.EnergyBalance -> String.format(Locale.US, "%+.0f", v)
     TimelineMetric.Hr, TimelineMetric.Respiration, TimelineMetric.Hrv, TimelineMetric.Movement -> v.toInt().toString()

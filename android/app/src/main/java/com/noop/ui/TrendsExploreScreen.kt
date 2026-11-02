@@ -102,15 +102,18 @@ private data class MetricSpec(
     /** Effort display scale (#268) , only meaningful for the "strain" column, where it converts the
      *  stored 0–100 value + unit onto WHOOP's 0–21 axis. Default 0–100 leaves every other column alone. */
     val effortScale: EffortScale = EffortScale.HUNDRED,
+    val unitSystem: UnitSystem = UnitSystem.METRIC,
+    val temperature: TemperatureUnit = TemperatureUnit.CELSIUS,
 ) {
     /** True for the Effort column when the user picked WHOOP's 0–21 scale (the only value-converting case). */
     private val whoopEffort: Boolean get() = key == "strain" && effortScale == EffortScale.WHOOP
 
     /** The unit label, swapped to "/21" for the Effort column on the WHOOP scale. */
-    val displayUnit: String get() = if (whoopEffort) "/21" else unit
+    val displayUnit: String get() = MetricLibrary.find(key)?.displayUnit(unitSystem, temperature, effortScale) ?: unit
 
     fun format(v: Double): String {
-        if (!v.isFinite()) return ","
+        if (!v.isFinite()) return "—"
+        MetricLibrary.find(key)?.let { return it.format(v, unitSystem, temperature, effortScale) }
         // Effort (#268): the stored value is 0–100; convert to 0–21 for display when that scale is picked.
         val shown = if (whoopEffort) UnitFormatter.effortValue(v, EffortScale.WHOOP) else v
         val n = if (decimals == 0) "${shown.roundToInt()}" else String.format(Locale.US, "%.${decimals}f", shown)
@@ -225,7 +228,7 @@ private fun statOf(values: List<Double>): Stat {
 // MARK: - Screen
 
 @Composable
-fun TrendsExploreScreen(vm: AppViewModel) {
+fun TrendsExploreScreen(vm: AppViewModel, initialMetricKey: String? = null) {
     // The Deep Timeline (#575) is presented INLINE from Explore , no NavHost route needed, so this stays
     // self-contained in the Explore entry-point file. System back / the in-screen reset returns here.
     var showDeepTimeline by remember { mutableStateOf(false) }
@@ -239,6 +242,7 @@ fun TrendsExploreScreen(vm: AppViewModel) {
     // surface. A single-WHOOP install resolves this to "my-whoop", so the reads are byte-identical there.
     val deviceId = vm.activeStrapId
     val recentDays by vm.recentDays.collectAsStateWithLifecycle()
+    val metricRevision by vm.repo.metricChanges.collectAsStateWithLifecycle(0L)
 
     // #797 follow-up (Explore 'All' truncation): `recentDays` is the BOUNDED dashboard flow (capped at
     // WhoopRepository.RECENT_DAYS_CAP), so a 3000+ day import would silently show only the most-recent ~800
@@ -256,11 +260,11 @@ fun TrendsExploreScreen(vm: AppViewModel) {
     // strap source AND the dedicated import/check-in sources, which write under their OWN deviceIds
     // (nutrition-csv, noop-mood) and were invisible to a strap-only key scan (v2.2.0 parity).
     var extraKeys by remember { mutableStateOf<List<Pair<String, String?>>>(emptyList()) }
-    LaunchedEffect(deviceId) {
+    LaunchedEffect(deviceId, recentDays, metricRevision) {
         // Scan the strap's series keys across the active-id ∪ canonical "my-whoop" union (SPINE / #814), so a
         // re-added strap still discovers the keys the canonical import/engine wrote. `seriesSource = null`
         // keeps these resolving against the strap path below; a single-WHOOP install scans just "my-whoop".
-        val strap = WhoopRepository.importedSourceIdsFor(deviceId)
+        val strap = (WhoopRepository.importedSourceIdsFor(deviceId) + vm.repo.computedSourceIds(deviceId))
             .flatMap { id -> runCatching { vm.repo.metricKeys(id) }.getOrDefault(emptyList()) }
             .distinct()
             .map { it to null as String? }
@@ -274,9 +278,15 @@ fun TrendsExploreScreen(vm: AppViewModel) {
     // Known import/check-in keys get their proper titles/units/categories (matching the macOS
     // MetricCatalog); anything else falls back to a prettified key under "Other".
     val metrics = remember(extraKeys) {
-        val builtInKeys = builtInMetrics.map { it.key }.toSet()
+        val shared = MetricLibrary.all.map { m ->
+            val old = builtInMetrics.firstOrNull { it.key == m.key } ?: knownSeriesMetrics[m.key]
+            (old ?: MetricSpec(m.key, uiString(m.titleRes), m.unit, m.category, MetricLibrary.accent(m.key), null))
+                .copy(title = uiString(m.titleRes), category = uiString(CompareCatalog.categoryDisplayRes(m.category)),
+                    unit = m.unit, decimals = m.decimals, seriesKey = m.key, seriesSource = m.source, description = m.noteText().orEmpty())
+        }
+        val builtInKeys = shared.map { it.key }.toSet()
         val extras = extraKeys
-            .filter { (k, _) -> k !in builtInKeys }
+            .filter { (k, _) -> MetricLibrary.canonical(k) !in builtInKeys && k !in setOf("hrv_rr_overcount", "rhr_primary_session", "rhr_primary_session_valid_samples", "rhr_primary_session_duration_s") }
             .distinctBy { (k, src) -> "$src:$k" }
             .map { (k, src) ->
                 val known = knownSeriesMetrics[k]
@@ -292,20 +302,20 @@ fun TrendsExploreScreen(vm: AppViewModel) {
                     seriesSource = src,
                 )
             }
-        builtInMetrics + extras
+        shared + extras
     }
 
     // Effort display scale (#268) , carried on the selected spec so the Effort column's value + unit
     // follow the toggle through every read-out (hero, footer stats, Y-axis). Display-only.
     val effortScale = UnitPrefs.effortScale(LocalContext.current)
 
-    var selectedKey by remember { mutableStateOf(builtInMetrics.first().key) }
+    var selectedKey by remember { mutableStateOf(initialMetricKey?.let(MetricLibrary::canonical) ?: builtInMetrics.first().key) }
     var range by remember { mutableStateOf(ExploreRange.Month) }
     // Pill labels are resolved in the composition and indexed by ordinal, because the control's label
     // lambda is not @Composable.
     val rangeLabels = ExploreRange.entries.map { stringResource(it.labelRes) }
     val selected = (metrics.firstOrNull { it.key == selectedKey } ?: metrics.first())
-        .copy(effortScale = effortScale)
+        .copy(effortScale = effortScale, unitSystem = UnitPrefs.system(LocalContext.current), temperature = UnitPrefs.temperature(LocalContext.current))
 
     // Build the full ascending series for the selected metric. Built-ins come off the daily history;
     // metricSeries-backed metrics are loaded on demand.
@@ -317,11 +327,11 @@ fun TrendsExploreScreen(vm: AppViewModel) {
     val builtInDays = if (range.reachesDeep) (fullHistory ?: recentDays) else recentDays
     var seriesKeyLoaded by remember { mutableStateOf<String?>(null) }
     var loadedSeries by remember { mutableStateOf<List<SeriesPoint>>(emptyList()) }
-    LaunchedEffect(selected.key, builtInDays) {
+    LaunchedEffect(selected.key, builtInDays, metricRevision) {
         val pick = selected.dailyPick
-        if (selected.key in setOf("energy_balance", "calories_in", "total_kcal", "spo2_candidate")) {
-            loadedSeries = if (selected.key == "spo2_candidate" && !NoopPrefs.spo2CandidateDisplay(vm.getApplication())) emptyList() else
-                com.noop.data.ExtendedMetrics.series(vm.repo, deviceId, selected.key, "0000-01-01", "9999-12-31").map { SeriesPoint(it.first, it.second) }
+        if (MetricLibrary.find(selected.key) != null) {
+            loadedSeries = MetricLibrary.series(vm.repo, deviceId, selected.key, "0000-01-01", "9999-12-31",
+                NoopPrefs.spo2CandidateDisplay(vm.getApplication())).map { SeriesPoint(it.first, it.second) }
             seriesKeyLoaded = selected.key
         } else if (pick != null) {
             loadedSeries = builtInDays.mapNotNull { d ->
@@ -397,6 +407,7 @@ fun TrendsExploreScreen(vm: AppViewModel) {
             onSelect = { selectedKey = it },
         )
         }
+        item { PinMetricToToday(selected.key) }
 
         // RANGE BAR — the iOS twin's `rangeBar`: overline + title, then the ONE segmented window control
         // sharing the full width, then the caption that flags a sparse auto-widen. iOS stacks these
@@ -405,8 +416,6 @@ fun TrendsExploreScreen(vm: AppViewModel) {
         item {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Overline(selected.category)
-                Text(selected.title, style = NoopType.title2, color = Palette.textPrimary)
                 // The plain-English one-liner for the three headline scores (Charge/Effort/Rest); null for
                 // every other metric. Android-only: the iOS catalog carries these blurbs but its Explore
                 // screen never renders them, so this is kept rather than dropped.
@@ -506,7 +515,8 @@ private fun MetricDropdown(
     onSelect: (String) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val grouped = remember(metrics) { metrics.groupBy { it.category } }
+    var query by remember { mutableStateOf("") }
+    val grouped = remember(metrics, query) { metrics.filter { MetricLibrary.matches(it.title, query) }.groupBy { it.category } }
     val shape = RoundedCornerShape(Metrics.cornerSm)
 
     ExposedDropdownMenuBox(
@@ -543,6 +553,9 @@ private fun MetricDropdown(
                 .background(Palette.surfaceRaised)
                 .border(Metrics.divider, Palette.hairline, shape),
         ) {
+            androidx.compose.material3.OutlinedTextField(value = query, onValueChange = { query = it },
+                label = { Text(stringResource(R.string.metric_search)) }, singleLine = true, textStyle = NoopType.body,
+                modifier = Modifier.fillMaxWidth().padding(Metrics.space8))
             grouped.entries.forEachIndexed { groupIdx, (category, items) ->
                 if (groupIdx > 0) {
                     HorizontalDivider(

@@ -114,6 +114,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun DataSourcesScreen(vm: AppViewModel) {
     val context = LocalContext.current
+    val metricRevision by vm.repo.metricChanges.collectAsStateWithLifecycle(0L)
     val scope = rememberCoroutineScope()
     val live by vm.live.collectAsStateWithLifecycle()
     val puffinExperiment = remember { PuffinExperiment.from(context) }
@@ -184,7 +185,7 @@ fun DataSourcesScreen(vm: AppViewModel) {
         whoopSleeps = vm.repo.sleepSessionsCount(vm.activeStrapId, 0L, nowS)
         appleDays = vm.repo.appleDailyCount("apple-health", "0000-01-01", "9999-12-31")
         appleWorkouts = vm.repo.workoutsCount("apple-health", 0L, nowS)
-        hcDays = vm.repo.appleDailyCount("health-connect", "0000-01-01", "9999-12-31")
+        hcDays = vm.repo.healthConnectImportedDaysCount()
         hcWorkouts = vm.repo.workoutsCount("health-connect", 0L, nowS)
         nutritionDays = vm.repo.metricSeriesKeyCount(NutritionCsvImporter.SOURCE_ID, "calories_in")
         nutritionWeighIns = vm.repo.metricSeriesKeyCount(NutritionCsvImporter.SOURCE_ID, "weight")
@@ -197,7 +198,7 @@ fun DataSourcesScreen(vm: AppViewModel) {
         }
     }
 
-    LaunchedEffect(Unit) { refreshCounts() }
+    LaunchedEffect(metricRevision) { refreshCounts() }
 
     // Busy flag shared by every importer's Export/Import buttons, plus WHICH job owns it so the card
     // that started it can show its own spinner. iOS tracks per-source state (`model.isImporting(.apple

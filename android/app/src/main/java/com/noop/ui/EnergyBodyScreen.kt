@@ -18,12 +18,13 @@ import java.util.Locale
 @Composable
 internal fun EnergyBodyScreen(vm: AppViewModel, onImport: () -> Unit, onCompare: () -> Unit) {
     val days by vm.recentDays.collectAsStateWithLifecycle()
+    val metricRevision by vm.repo.metricChanges.collectAsStateWithLifecycle(0L)
     val units = UnitPrefs.system(LocalContext.current)
     var selected by remember { mutableStateOf(LocalDate.now()) }
     var series by remember { mutableStateOf<Map<String, Map<String, Double>>>(emptyMap()) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(days, selected) {
+    LaunchedEffect(days, selected, metricRevision) {
         loading = true
         error = null
         try {

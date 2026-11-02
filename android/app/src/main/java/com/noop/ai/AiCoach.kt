@@ -202,13 +202,7 @@ class AiCoach(
         }
     }
 
-    /**
-     * Today's derived stress line for the consent-gated coach context. Reads R-R for the local day
-     * via [WhoopRepository.rrIntervalsUnion] (the SAME path StressScreen uses) and summarises it with the
-     * pure [stressIndexLine]. Returns null when there aren't enough clean beats. Summary number only;
-     * the raw R-R never leaves the device.
-     */
-
+    /** Builds only the health context selected in the sharing controls. */
     private suspend fun selectedContext(ctx: Context, includeSignals: Boolean): String = buildString {
         append("Selected health context only. Missing values are unknown. Calorie burn is an estimate; logged intake may be incomplete. Oxygen candidates are unvalidated, not clinical measurements. Correlation cannot establish why a day changed.\n")
         val strap = activeStrapId()
@@ -220,8 +214,10 @@ class AiCoach(
         val to = java.time.LocalDate.now().toString()
         val from = java.time.LocalDate.now().minusDays(30).toString()
         if (CoachSharing.enabled(ctx, CoachSharing.Category.NUTRITION)) {
-            for (key in listOf("calories_in", "total_kcal", "energy_balance")) {
-                append("\n$key kcal (positive balance=surplus; negative=deficit): ")
+            for (key in listOf("calories_in", "total_kcal", "energy_balance", "protein_g", "carbs_g", "fat_g")) {
+                val unit = if (key.endsWith("_g")) "g" else "kcal"
+                val meaning = if (key == "energy_balance") " (positive=surplus; negative=deficit)" else ""
+                append("\n$key $unit$meaning: ")
                 append(com.noop.data.ExtendedMetrics.series(repo, strap, key, from, to))
             }
         }
@@ -263,7 +259,10 @@ For large blobs use hex(substr(column,offset,length)); all bytes are accessible 
 authentication settings, writes, BLE control or arbitrary filesystem access. Explain missing data and
 truncation. Oxygen candidates are unvalidated; calories are estimates and food logs may be incomplete.
 Explain patterns as possible contributors rather than proven causes. Use kcal intake minus TOTAL burn
-for balance, not active-only energy. dailyMetric.activeKcalEst is NOOP estimated TOTAL burn, despite its legacy name; appleDaily.activeKcal is active-only and requires basalKcal for total. Refer to source coverage, sleep, HR/RR, activity and profile when
+for balance, not active-only energy.
+Health Connect provides food intake/macros in this fork. Historical health-connect burn rows are
+archival and excluded from app expenditure; do not substitute them for NOOP total burn.
+dailyMetric.activeKcalEst is NOOP estimated TOTAL burn, despite its legacy name; appleDaily.activeKcal is active-only and requires basalKcal for total. Refer to source coverage, sleep, HR/RR, activity and profile when
 answering why calorie estimates changed. Finish with a normal helpful answer after retrieving evidence.
 Health logs outside SQLite may be requested with JSON {"noop_preferences":true}, which lists audited
 health datasets and keys. To read a value send {"noop_preferences":true,"dataset":"healthLogs","key":"noop.caffeineIntakes","offset":0}.
@@ -304,6 +303,12 @@ SCHEMA:
         }
     }
 
+    /**
+     * Today's derived stress line for the consent-gated coach context. Reads R-R for the local day
+     * via [WhoopRepository.rrIntervalsUnion] (the SAME path StressScreen uses) and summarises it with the
+     * pure [stressIndexLine]. Returns null when there aren't enough clean beats. Summary number only;
+     * the raw R-R never leaves the device.
+     */
     private suspend fun stressLineToday(): String? {
         val nowSeconds = System.currentTimeMillis() / 1000L
         val tzOffset = java.util.TimeZone.getDefault().getOffset(nowSeconds * 1_000L) / 1_000L

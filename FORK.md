@@ -1,5 +1,8 @@
 # Uppercomp's NOOP fork
 
+Android 11.10 makes 36 metrics consistently searchable and optional in Today, Explore, Compare
+and Deep Timeline. See [metric availability and verification](docs/ANDROID_11_10_METRIC_AUDIT.md).
+
 Android 11.9.1 corrects Health Connect to food-intake calories only and stages verified database
 snapshots for backup creation. See [intake and backup notes](docs/ANDROID_11_9_1_INTAKE_BACKUP.md).
 

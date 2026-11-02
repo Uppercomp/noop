@@ -70,6 +70,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -342,6 +343,7 @@ fun TodayScreen(
     val today by viewModel.today.collectAsStateWithLifecycle()
     val alert by viewModel.healthAlert.collectAsStateWithLifecycle()
     val days by viewModel.recentDays.collectAsStateWithLifecycle()
+    val metricRevision by viewModel.repo.metricChanges.collectAsStateWithLifecycle(0L)
     val activeDayCycle by viewModel.activeDayCycle.collectAsStateWithLifecycle()
     val spo2CandidateByDay by viewModel.spo2CandidateByDay.collectAsStateWithLifecycle()
     // #2208: `connected` alone never said WHOSE charge liveSnap.batteryPct is. It goes true the moment any
@@ -426,6 +428,10 @@ fun TodayScreen(
     // #849: seed from the ViewModel cache so a re-mount (tab-return / post-import) restores the last footer
     // immediately instead of flashing empty while the heavy reload is (now) skipped for unchanged data.
     var footer by remember { mutableStateOf(viewModel.todayFooterCache ?: TodayFooterState()) }
+    LaunchedEffect(metricRevision) {
+        val count = viewModel.repo.healthConnectImportedDaysCount()
+        footer = footer.copy(hcDays = count)
+    }
     // rememberSaveable (not plain remember): the bottom-tab NavHost (AppRoot) navigates with
     // saveState/restoreState, which only restores rememberSaveable-backed state. With plain remember a
     // tab-away wiped the chosen day back to 0, so on return the dashboard "shifted" off the day the user was
@@ -568,6 +574,16 @@ fun TodayScreen(
     // SharedPreferences isn't reactive, so it's mirrored into local state and re-read when the editor saves.
     var showDashboardEditor by remember { mutableStateOf(false) }
     var enabledDashboardCards by remember { mutableStateOf(DashboardCardPrefs.enabled(context)) }
+    var librarySeries by remember { mutableStateOf<Map<String, List<Pair<String, Double>>>>(emptyMap()) }
+    LaunchedEffect(days, selectedDayKey, enabledKeyMetrics, enabledDashboardCards, metricRevision) {
+        val keys = (enabledKeyMetrics.mapNotNull { it.libraryKey } + enabledDashboardCards.mapNotNull { it.libraryKey } + listOf("weight") +
+            if (KeyMetric.BLOOD_OXYGEN in enabledKeyMetrics || DashboardCard.BLOOD_OXYGEN in enabledDashboardCards) listOf("spo2") else emptyList()).distinct()
+        librarySeries = withContext(Dispatchers.IO) {
+            keys.associateWith { key -> MetricLibrary.series(viewModel.repo, viewModel.activeStrapId, key,
+                if (MetricLibrary.isSnapshot(key)) "0000-01-01" else selectedDay.minusDays(30).toString(), selectedDayKey, NoopPrefs.spo2CandidateDisplay(context)) }
+        }
+    }
+
     // #today-hosted-cards: the Trends/Sleep cards hosted in Today (empty/opt-in). Mirrored into local
     // state like the dashboard selection and re-read when the hosted-cards editor saves.
     var showHostedEditor by remember { mutableStateOf(false) }
@@ -692,17 +708,10 @@ fun TodayScreen(
     // Keyed by day; `caloriesByDay` feeds the SELECTED-day value the dashboard card + Key-Metrics tile both
     // read — day-scoped like every other card, and like steps.
     var caloriesByDay by remember { mutableStateOf<Map<String, Double>>(emptyMap()) }
-    LaunchedEffect(days) {
+    LaunchedEffect(days, metricRevision) {
         caloriesByDay = runCatching {
-            val onDevice = viewModel.repo.resolvedSeries("active_kcal", "my-whoop", "0000-00-00", "9999-99-99",
-                strapDeviceId = viewModel.activeStrapId).points.associate { it.day to it.value }
-            val imported = LinkedHashMap<String, Double>()
-            for (r in viewModel.repo.appleDaily("apple-health", "0000-01-01", "9999-12-31") +
-                viewModel.repo.appleDaily("health-connect", "0000-01-01", "9999-12-31")) {
-                r.activeKcal?.takeIf { it > 0 }?.let { imported.putIfAbsent(r.day, it) }
-            }
-            (onDevice.keys + imported.keys)
-                .mapNotNull { day -> (imported[day] ?: onDevice[day])?.let { day to it } }.toMap()
+            MetricLibrary.series(viewModel.repo, viewModel.activeStrapId, "total_kcal", "0000-01-01", "9999-12-31",
+                NoopPrefs.spo2CandidateDisplay(context)).toMap()
         }.getOrDefault(emptyMap())
     }
 
@@ -876,7 +885,7 @@ fun TodayScreen(
     // With "Use weight from Health Connect" ON it reads Health Connect only, the source the profile holds.
     var weightKg by remember { mutableStateOf<Double?>(null) }
     val weightFromHealthConnect = ProfileStore.from(context).useHealthConnectWeight
-    LaunchedEffect(days, weightFromHealthConnect) {
+    LaunchedEffect(days, weightFromHealthConnect, metricRevision) {
         weightKg = latestWeightKg(
             viewModel.repo.appleDaily("apple-health", "0000-01-01", "9999-12-31"),
             viewModel.repo.appleDaily("health-connect", "0000-01-01", "9999-12-31"),
@@ -893,7 +902,7 @@ fun TodayScreen(
     var stepsAverage30 by remember { mutableStateOf<Pair<Double?, Int>>(null to 0) }
     LaunchedEffect(days, selectedDayKey, enabledDashboardCards, importedStepsForDay) {
         stepsAverage30 = if (DashboardCard.STEPS_AVERAGE_30 in enabledDashboardCards) {
-            val readings = buildSeriesVitalDetail(viewModel, "steps_est")?.readings.orEmpty()
+            val readings = MetricLibrary.stepReadings(viewModel.repo, viewModel.activeStrapId, selectedDay.minusDays(29).toString(), selectedDayKey)
             rollingStepsAverage(readings, java.time.LocalDate.parse(selectedDayKey))
         } else null to 0
     }
@@ -1281,7 +1290,7 @@ fun TodayScreen(
         val appleWorkouts = viewModel.repo.workouts("apple-health", 0L, now)
         val hcWorkouts = viewModel.repo.workouts("health-connect", 0L, now)
         val appleDaysCount = viewModel.repo.appleDaily("apple-health", "0000-01-01", "9999-12-31").size
-        val hcDaysCount = viewModel.repo.appleDaily("health-connect", "0000-01-01", "9999-12-31").size
+        val hcDaysCount = viewModel.repo.healthConnectImportedDaysCount()
         footer = TodayFooterState(
             // fillWorkoutHrFromStrap: imported sessions carry no HR, derive it from strap samples (#77).
             // #510: strap-native rows now read HR under their OWN recording strap (inside the fill), so a 2nd
@@ -1837,6 +1846,8 @@ fun TodayScreen(
                                     restScore = restScoreForDay,
                                     restSpark = restCompositeSpark,
                                     enabledMetrics = enabledKeyMetrics,
+                                    librarySeries = librarySeries,
+                                    selectedDayKey = selectedDayKey,
                                     isToday = selectedDayOffset == 0,
                                     // #1164: today's Rest is provisional while the strap has banked records
                                     // not yet offloaded — the Rest tile shows "Pending sync" instead of a number.
@@ -1883,6 +1894,8 @@ fun TodayScreen(
                         // section emits no item; visibleDashboardCards is the loop-level filtered list.
                         TodaySection.YOUR_CARDS -> YourCardsSection(
                             cards = visibleDashboardCards,
+                            librarySeries = librarySeries,
+                            selectedDayKey = selectedDayKey,
                             stepsAverage30 = stepsAverage30,
                             day = stepResolvedDisplayMetric,
                             carriedDay = lastScoredRecoveryDay,
@@ -2073,6 +2086,7 @@ fun TodayScreen(
                 KeyMetricPrefs.setEnabled(context, metrics)
                 KeyMetricPrefs.setDetailed(context, detailed)
                 KeyMetricPrefs.setDetailWindowDays(context, windowDays)
+                metricsExpanded = true
                 enabledKeyMetrics = metrics
                 keyMetricsDetailed = detailed
                 keyMetricsWindowDays = windowDays
@@ -4217,6 +4231,8 @@ private fun HostedCardsSection(
 @Composable
 private fun YourCardsSection(
     cards: List<DashboardCard>,
+    librarySeries: Map<String, List<Pair<String, Double>>>,
+    selectedDayKey: String,
     stepsAverage30: Pair<Double?, Int>,
     day: DailyMetric?,
     carriedDay: DailyMetric?,
@@ -4275,7 +4291,16 @@ private fun YourCardsSection(
                 )
             }
             cards.forEach { card ->
-                DashboardCardRow(
+                if (card.libraryKey != null || card == DashboardCard.BLOOD_OXYGEN) {
+                    val metric = MetricLibrary.find(card.libraryKey ?: "spo2") ?: return@forEach
+                    val reading = MetricLibrary.readingForDay(metric.key, librarySeries[metric.key].orEmpty(), selectedDayKey)
+                    val value = reading?.second
+                    DashboardCardRow(card = card,
+                        value = value?.let { metric.format(it, UnitPrefs.system(LocalContext.current), UnitPrefs.temperature(LocalContext.current), UnitPrefs.effortScale(LocalContext.current)) } ?: NO_DATA,
+                        fraction = null, tint = MetricLibrary.accent(metric.key),
+                        subtitleOverride = MetricLibrary.caption(metric, value, selectedDayKey, reading?.first),
+                        onClick = if (card == DashboardCard.STRESS) onOpenStress else ({ onOpenMetric("library:${metric.key}") }))
+                } else DashboardCardRow(
                     card = card,
                     value = dashboardCardValue(
                         card = card,
@@ -4378,12 +4403,14 @@ internal fun dashboardCardMetricKey(card: DashboardCard): String? = when (card) 
     DashboardCard.FITNESS_AGE -> "fitness_age"
     DashboardCard.VO2MAX -> "vo2max_est"
     DashboardCard.VITALITY -> "vitality"
-    DashboardCard.STEPS, DashboardCard.STEPS_AVERAGE_30 -> "steps_est"
-    DashboardCard.CALORIES -> "active_kcal"
+    DashboardCard.STEPS -> "steps_est"
+    DashboardCard.STEPS_AVERAGE_30 -> "library:steps_average_30"
+    DashboardCard.CALORIES -> "library:total_kcal"
     // These carry their own full screen, not a per-metric trend.
     DashboardCard.STRESS, DashboardCard.SLEEP, DashboardCard.HYDRATION, DashboardCard.COUPLED,
     // #1862: a launcher row, not a metric — no explorer key.
     DashboardCard.COACH -> null
+    else -> null
 }
 
 /** The destination callback a dashboard card opens when tapped. Mirrors the iOS dashboardCardRow switch:
@@ -4439,6 +4466,7 @@ private fun dashboardCardTint(card: DashboardCard): Color = when (card) {
     DashboardCard.HYDRATION -> Palette.metricCyan
     DashboardCard.COUPLED -> Palette.chargeColor
     DashboardCard.COACH -> Palette.accent
+    else -> MetricLibrary.accent(card.libraryKey.orEmpty())
 }
 
 /**
@@ -4491,7 +4519,8 @@ private fun dashboardCardFraction(
         // Not wired to a real read yet — an EMPTY ring (not half-full) so it doesn't imply a reading.
         DashboardCard.BLOOD_OXYGEN, DashboardCard.SKIN_TEMP, DashboardCard.CALORIES,
         DashboardCard.HYDRATION -> null
-    }
+        else -> null
+}
 }
 
 /**
@@ -4621,7 +4650,8 @@ private fun dashboardCardValue(
             // #1862: likewise a launcher row. Empty rather than NO_DATA for the same reason — there is no
             // missing measurement here, there is no measurement at all.
             ""
-    }
+        else -> NO_DATA
+}
 }
 
 /**
@@ -4856,6 +4886,7 @@ internal fun <T> EditableVisibilityRows(
     // a user browses by origin. null (Today sections, Key Metrics, Your Cards) keeps the flat list. The
     // Shown list stays flat — it is the user's own cross-origin order. Twin of the Swift EditableLayoutList.
     hiddenGroup: ((T) -> String)? = null,
+    searchQuery: String = "",
 ) {
     val minShown = if (allowEmpty) 0 else 1
     Column(
@@ -4866,6 +4897,7 @@ internal fun <T> EditableVisibilityRows(
         Text(stringResource(R.string.today_customize_shown), style = NoopType.overline, color = Palette.textTertiary)
         shown.forEachIndexed { index, item ->
             val title = itemTitle(item)
+            if (!MetricLibrary.matches(title, searchQuery)) return@forEachIndexed
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = Metrics.space6),
                 verticalAlignment = Alignment.CenterVertically,
@@ -4932,7 +4964,7 @@ internal fun <T> EditableVisibilityRows(
             // Grouped Available list: one sub-header per origin ("Sleep", "Trends"). Remove by identity
             // (items are unique) so the move is index-free across the regrouped display.
             val buckets = LinkedHashMap<String, MutableList<T>>()
-            hidden.forEach { item -> buckets.getOrPut(hiddenGroup(item)) { ArrayList() }.add(item) }
+            hidden.filter { MetricLibrary.matches(itemTitle(it), searchQuery) }.forEach { item -> buckets.getOrPut(hiddenGroup(item)) { ArrayList() }.add(item) }
             buckets.keys.toList().forEachIndexed { gi, groupName ->
                 Text(
                     groupName,
@@ -4968,6 +5000,7 @@ internal fun <T> EditableVisibilityRows(
         } else {
             hidden.forEachIndexed { index, item ->
                 val title = itemTitle(item)
+                if (!MetricLibrary.matches(title, searchQuery)) return@forEachIndexed
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = Metrics.space6),
                     verticalAlignment = Alignment.CenterVertically,
@@ -5006,6 +5039,7 @@ private fun DashboardCardsEditorDialog(
     onSave: (List<DashboardCard>) -> Unit,
 ) {
     val titles = DashboardCard.entries.associateWith { uiString(it.titleRes) }
+    var query by remember { mutableStateOf("") }
     val shown = remember { mutableStateListOf<DashboardCard>().apply { addAll(initial) } }
     val hidden = remember {
         mutableStateListOf<DashboardCard>().apply {
@@ -5031,10 +5065,15 @@ private fun DashboardCardsEditorDialog(
                     )
                 }
 
+                OutlinedTextField(value = query, onValueChange = { query = it },
+                    label = { Text(uiString(R.string.metric_search)) }, singleLine = true,
+                    modifier = Modifier.fillMaxWidth(), textStyle = NoopType.body)
                 EditableVisibilityRows(
                     shown = shown,
                     hidden = hidden,
                     itemTitle = { titles.getValue(it) },
+                    searchQuery = query,
+                    hiddenGroup = { MetricLibrary.group(it.libraryKey ?: dashboardCardMetricKey(it).orEmpty()) },
                 )
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -6057,6 +6096,8 @@ private fun MetricGrid(
     // read their series off `w` (the DailyMetric windows).
     restSpark: List<Double> = emptyList(),
     enabledMetrics: List<KeyMetric> = KeyMetric.defaultOrder,
+    librarySeries: Map<String, List<Pair<String, Double>>> = emptyMap(),
+    selectedDayKey: String = "",
     isToday: Boolean = false,
     // #1164: today's Rest is provisional while the strap has banked records not yet offloaded — the Rest
     // tile shows "Pending sync" instead of a number that will change. Past days are final.
@@ -6091,7 +6132,17 @@ private fun MetricGrid(
     // old 2-column large sparkline cards. One descriptor per KeyMetric, carrying the SAME value/tint reads
     // the old builders used PLUS the tile's LiquidTube fraction (mirroring the iOS ktile frac). The #251
     // editor + enabled-order + collapse expander are all preserved; only the tile look changes.
-    val descriptors: Map<KeyMetric, KeyTileData> = mapOf(
+    val extraDescriptors = KeyMetric.entries.mapNotNull { option ->
+        val metric = option.libraryKey?.let(MetricLibrary::find) ?: return@mapNotNull null
+        val series = librarySeries[metric.key].orEmpty()
+        val reading = MetricLibrary.readingForDay(metric.key, series, selectedDayKey)
+        val value = reading?.second
+        val unit = metric.displayUnit(unitSystem, UnitPrefs.temperature(LocalContext.current), effortScale)
+        val text = value?.let { metric.format(it, unitSystem, UnitPrefs.temperature(LocalContext.current), effortScale).removeSuffix(unit).trim() } ?: NO_DATA
+        option to KeyTileData(uiString(option.titleRes), text, if (value == null) "" else unit,
+            MetricLibrary.accent(metric.key), null, caption = MetricLibrary.caption(metric, value, selectedDayKey, reading?.first), spark = series.filter { it.first >= selectedDayKey.let(java.time.LocalDate::parse).minusDays(windowDays - 1L).toString() }.map { it.second })
+    }.toMap()
+    val descriptors: Map<KeyMetric, KeyTileData> = extraDescriptors + mapOf(
         KeyMetric.CHARGE to run {
             val v = d?.recovery ?: lastScoredCharge?.value
             KeyTileData(
@@ -6161,27 +6212,11 @@ private fun MetricGrid(
             )
         },
         KeyMetric.BLOOD_OXYGEN to run {
-            // Candidate LAST, after the carries — the exact precedence the dashboard Blood Oxygen card
-            // uses two sections down this same screen, and the one the Apple tile uses. The candidate is
-            // a fallback for having nothing, never an override for having something stale.
-            //
-            // For the strap-only install this issue is about there are no calibrated readings at all, so
-            // both carries are null and every surface resolves to the candidate regardless.
-            val calibrated = d?.spo2Pct ?: carriedDay?.spo2Pct ?: spo2CarryDay?.spo2Pct
-            val candidateToday = d?.day?.let { spo2CandidateByDay[it] }
-            val onCandidate = spo2UsingCandidate(calibrated, candidateToday)
-            val v = calibrated ?: candidateToday
-            KeyTileData(
-                label = uiString(R.string.l10n_today_screen_blood_oxygen_a8ad9ff5),
-                value = v?.let { String.format(Locale.getDefault(), "%.0f", it) } ?: NO_DATA,
-                unit = if (v != null) "%" else "",
-                tint = Palette.metricCyan,
-                frac = v?.let { (it / 100.0).coerceIn(0.0, 1.0) },
-                // Say WHOSE number this is. The Apple tile has carried this caption all along; Android
-                // showed an unlabelled figure, which is the harder of the two to argue with.
-                caption = if (onCandidate) uiString(R.string.spo2_strap_estimate_caption) else null,
-                spark = spo2SparkSeries(w.spo2, w.spo2Candidate),
-            )
+            val points = librarySeries["spo2"].orEmpty()
+            val value = points.firstOrNull { it.first == selectedDayKey }?.second
+            KeyTileData(uiString(R.string.metric_oxygen_title), value?.let { String.format(Locale.US, "%.0f", it) } ?: NO_DATA,
+                if (value == null) "" else "%", Palette.metricCyan, null,
+                caption = if (value == null) uiString(R.string.metric_not_recorded_date) else uiString(R.string.metric_oxygen_caption), spark = points.map { it.second })
         },
         KeyMetric.RESPIRATORY to run {
             val v = d?.respRateBpm ?: carriedDay?.respRateBpm ?: respCarryDay?.respRateBpm
@@ -6214,21 +6249,22 @@ private fun MetricGrid(
             )
         },
         KeyMetric.WEIGHT to run {
-            val weight = weightTile(latestWeightKg, profileWeightKg, unitSystem)
-            KeyTileData(
-                label = uiString(R.string.l10n_today_screen_weight_69c0b815),
-                value = weight.value,
-                unit = "",
-                tint = Palette.accent,
-                frac = null,
-            )
+            val reading = MetricLibrary.readingForDay("weight", librarySeries["weight"].orEmpty(), selectedDayKey)
+            val kg = reading?.second ?: profileWeightKg.takeIf { isToday }
+            KeyTileData(uiString(R.string.today_metric_weight), kg?.let { UnitFormatter.massFromKilograms(it, unitSystem) } ?: NO_DATA,
+                "", Palette.metricCyan, null, caption = when {
+                    reading != null && reading.first != selectedDayKey -> uiString(R.string.metric_as_of, reading.first)
+                    reading == null && kg != null -> uiString(R.string.today_weight_from_profile)
+                    kg == null -> uiString(R.string.metric_not_recorded_date)
+                    else -> null
+                })
         },
         KeyMetric.CALORIES to run {
             // #616: the per-day resolved calorie value (caloriesForDay = imported Apple/Health-Connect
             // first, else NOOP's on-device estimate) — one number across tile, card and detail.
             val kcal = caloriesForDay
             KeyTileData(
-                label = uiString(R.string.l10n_today_screen_calories_3e62ecfe),
+                label = uiString(R.string.feature_total_burn),
                 value = kcal?.let { intString(it) } ?: NO_DATA,
                 unit = if (kcal != null) "kcal" else "",
                 tint = Palette.metricAmber,
@@ -6268,21 +6304,22 @@ private fun MetricGrid(
     // Steps/Calories open the same vital_detail trends the Health cards use. Today's Charge DRIVERS stay
     // on the hero ring's breakdown sheet (its existing home) — the tile is the history view.
     // Weight has no windowed detail yet -> not tappable (null keeps the tile inert rather than lying).
-    fun tapFor(metric: KeyMetric): (() -> Unit)? = when (metric) {
+    fun tapFor(metric: KeyMetric): (() -> Unit)? = metric.libraryKey?.let { key -> ({ onOpenMetric("library:$key") }) } ?: when (metric) {
         KeyMetric.CHARGE -> ({ onOpenMetric("recovery") })
         KeyMetric.EFFORT -> ({ onOpenMetric("strain") })
         KeyMetric.REST -> ({ onOpenMetric("rest") })
         KeyMetric.HRV -> ({ onOpenMetric("hrv") })
         KeyMetric.RESTING_HR -> ({ onOpenMetric("rhr") })
-        KeyMetric.BLOOD_OXYGEN -> ({ onOpenMetric("spo2") })
+        KeyMetric.BLOOD_OXYGEN -> ({ onOpenMetric("library:spo2") })
         KeyMetric.RESPIRATORY -> ({ onOpenMetric("resp") })
         KeyMetric.STEPS -> if (stepsOpenCalibration) onOpenStepsCalibration else ({ onOpenMetric("steps_est") })
-        KeyMetric.CALORIES -> ({ onOpenMetric("active_kcal") })
-        KeyMetric.WEIGHT -> null
+        KeyMetric.CALORIES -> ({ onOpenMetric("library:total_kcal") })
+        KeyMetric.WEIGHT -> ({ onOpenMetric("library:weight") })
         // Same "skin" vital_detail key `dashboardCardMetricKey(DashboardCard.SKIN_TEMP)` already routes
         // to — confirmed a working destination there, so this tile opens the SAME screen "Your Cards"
         // already does, not a new/unverified route.
         KeyMetric.SKIN_TEMP -> ({ onOpenMetric("skin") })
+        else -> null
     }
     // S5: slice from the FRONT of the saved order so a pinned/selected tile is never dropped or reordered
     // (#251); only the tail folds behind the expander. Mirrors the iOS visibleKeyMetrics prefix(cap).
@@ -6393,6 +6430,7 @@ private fun keyMetricIcon(metric: KeyMetric): ImageVector = when (metric) {
     KeyMetric.CALORIES -> Icons.Filled.LocalFireDepartment
     // Same glyph the sibling "Your Cards" tile (DashboardCard.SKIN_TEMP) already uses.
     KeyMetric.SKIN_TEMP -> Icons.Filled.Thermostat
+    else -> Icons.Filled.Timeline
 }
 
 /**
@@ -8206,10 +8244,11 @@ private fun KeyMetricsEditorDialog(
     // Keep the existing detailed preference so saved layouts retain their behavior.
     var detailed by remember { mutableStateOf(initialDetailed) }
     var windowDays by remember { mutableStateOf(initialWindowDays) }
+    var query by remember { mutableStateOf("") }
     val shown = remember { mutableStateListOf<KeyMetric>().apply { addAll(initial) } }
     val hidden = remember {
         mutableStateListOf<KeyMetric>().apply {
-            addAll(KeyMetric.defaultOrder.filter { it !in initial })
+            addAll(KeyMetric.entries.filter { it !in initial })
         }
     }
 
@@ -8257,10 +8296,15 @@ private fun KeyMetricsEditorDialog(
                 }
                 HorizontalDivider(color = Palette.hairline, thickness = 1.dp)
 
+                OutlinedTextField(value = query, onValueChange = { query = it },
+                    label = { Text(uiString(R.string.metric_search)) }, singleLine = true,
+                    modifier = Modifier.fillMaxWidth(), textStyle = NoopType.body)
                 EditableVisibilityRows(
                     shown = shown,
                     hidden = hidden,
                     itemTitle = { titles.getValue(it) },
+                    searchQuery = query,
+                    hiddenGroup = { MetricLibrary.group(it.libraryKey ?: when (it) { KeyMetric.CALORIES -> "total_kcal"; KeyMetric.REST -> "sleep_performance"; else -> it.raw }) },
                 )
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -8269,6 +8313,7 @@ private fun KeyMetricsEditorDialog(
                             shown.clear()
                             shown.addAll(KeyMetric.defaultOrder)
                             hidden.clear()
+                            hidden.addAll(KeyMetric.entries.filter { it !in shown })
                             detailed = false
                             windowDays = 14
                         },

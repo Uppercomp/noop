@@ -140,6 +140,14 @@ object HealthConnectImporter {
 
     internal val ALL_CATEGORIES: Set<ImportCategory> = ImportCategory.entries.toSet()
     internal val DEFAULT_CATEGORIES: Set<ImportCategory> = setOf(ImportCategory.NUTRITION)
+    internal val NUTRITION_KEYS = setOf("calories_in", "protein_g", "carbs_g", "fat_g")
+
+    internal fun nutritionValues(record: NutritionRecord): Map<String, Double> = mapOf(
+        "calories_in" to record.energy?.inKilocalories,
+        "protein_g" to record.protein?.inGrams,
+        "carbs_g" to record.totalCarbohydrate?.inGrams,
+        "fat_g" to record.totalFat?.inGrams,
+    ).mapNotNull { (key, value) -> value?.takeIf { it.isFinite() && it >= 0 }?.let { key to it } }.toMap()
 
     /** Every supported read permission. Kept as the compatibility/all-capabilities view. */
     val PERMISSIONS: Set<String> = permissionsFor(ALL_CATEGORIES)
@@ -426,6 +434,10 @@ object HealthConnectImporter {
                 val src = r.metadata.dataOrigin.packageName
                 r.energy?.inKilocalories?.takeIf { it.isFinite() && it >= 0 }?.let {
                     b.foodKcalBySource[src] = (b.foodKcalBySource[src] ?: 0.0) + it
+                }
+                nutritionValues(r).filterKeys { it != "calories_in" }.forEach { (key, value) ->
+                    val sources = b.foodMacrosBySource.getOrPut(key) { mutableMapOf() }
+                    sources[src] = (sources[src] ?: 0.0) + value
                 }
             }
             // --- Total calories burned (basal + active) ---
@@ -781,6 +793,9 @@ object HealthConnectImporter {
             if (nutritionComplete && a.foodKcalBySource.isNotEmpty()) {
                 metricSeriesRows += MetricSeriesRow(HC_DEVICE, day, "calories_in", round1(maxSourceDouble(a.foodKcalBySource)))
             }
+            if (nutritionComplete) a.foodMacrosBySource.forEach { (key, sources) ->
+                if (sources.isNotEmpty()) metricSeriesRows += MetricSeriesRow(HC_DEVICE, day, key, maxSourceDouble(sources))
+            }
             if (maxSourceDouble(a.totalKcalBySource) > 0.0) {
                 metricSeriesRows += MetricSeriesRow(HC_DEVICE, day, "total_kcal", round1(maxSourceDouble(a.totalKcalBySource)))
             }
@@ -857,13 +872,15 @@ object HealthConnectImporter {
 
         // Persist. Register the devices we write under so name() lookups resolve.
         try {
-            if (appleRows.isNotEmpty()) {
+            if (appleRows.isNotEmpty() || metricSeriesRows.isNotEmpty()) {
                 repo.upsertDevice(HC_DEVICE, name = "Health Connect")
-                repo.upsertAppleDaily(appleRows)
+                if (appleRows.isNotEmpty()) repo.upsertAppleDaily(appleRows)
             }
-            val foodRows = metricSeriesRows.filter { it.key == "calories_in" && it.day >= nutritionFrom.toString() && it.day <= LocalDate.now().toString() }
-            if (nutritionComplete) repo.replaceImportedMetricWindow(HC_DEVICE, "calories_in", nutritionFrom.toString(), LocalDate.now().toString(), foodRows)
-            val otherRows = metricSeriesRows.filter { it.key != "calories_in" }
+            if (nutritionComplete) NUTRITION_KEYS.forEach { key ->
+                val rows = metricSeriesRows.filter { it.key == key && it.day >= nutritionFrom.toString() && it.day <= LocalDate.now().toString() }
+                repo.replaceImportedMetricWindow(HC_DEVICE, key, nutritionFrom.toString(), LocalDate.now().toString(), rows)
+            }
+            val otherRows = metricSeriesRows.filter { it.key !in NUTRITION_KEYS }
             if (otherRows.isNotEmpty()) repo.upsertMetricSeries(otherRows)
             if (dailyRows.isNotEmpty()) {
                 repo.upsertDevice(WHOOP, name = "WHOOP")
@@ -1514,6 +1531,7 @@ object HealthConnectImporter {
         // Mirrors the iOS/macOS + Android-XML de-overlap (sum within a source, max across sources).
         val stepsBySource = HashMap<String, Long>()
         val foodKcalBySource = mutableMapOf<String, Double>()
+        val foodMacrosBySource = mutableMapOf<String, MutableMap<String, Double>>()
         val totalKcalBySource = HashMap<String, Double>()
         val activeKcalBySource = HashMap<String, Double>()
 

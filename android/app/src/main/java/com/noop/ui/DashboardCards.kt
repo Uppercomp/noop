@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Hexagon
 import androidx.compose.material.icons.filled.LocalDrink
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MonitorHeart
+import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -42,24 +43,25 @@ import com.noop.R
  */
 enum class DashboardCard(
     val raw: String,
-    @StringRes val titleRes: Int,
+    @StringRes private val baseTitleRes: Int,
     @StringRes val subtitleRes: Int,
     val unit: String,
     val icon: ImageVector,
+    val libraryKey: String? = null,
 ) {
     HRV("hrv", R.string.today_card_hrv, R.string.today_card_hrv_subtitle, "ms", Icons.Filled.MonitorHeart),
     RESTING_HR("restingHr", R.string.today_card_resting_hr, R.string.today_card_resting_hr_subtitle, "bpm", Icons.Filled.Favorite),
     RESPIRATORY("respiratory", R.string.today_card_respiratory, R.string.today_card_respiratory_subtitle, "rpm", Icons.Filled.Air),
     STEPS("steps", R.string.today_card_steps, R.string.today_card_steps_subtitle, "", Icons.AutoMirrored.Filled.DirectionsWalk),
     STEPS_AVERAGE_30("stepsAverage30", R.string.steps_average_30, R.string.steps_average_subtitle, "", Icons.AutoMirrored.Filled.DirectionsWalk),
-    STRESS("stress", R.string.today_card_stress, R.string.today_card_stress_subtitle, "", Icons.Filled.Bolt),
-    FITNESS_AGE("fitnessAge", R.string.today_card_fitness_age, R.string.today_card_fitness_age_subtitle, "yrs", Icons.AutoMirrored.Filled.DirectionsRun),
-    VO2MAX("vo2max", R.string.today_card_vo2max, R.string.today_card_vo2max_subtitle, "", Icons.Filled.Air),
-    VITALITY("vitality", R.string.today_card_vitality, R.string.today_card_vitality_subtitle, "", Icons.Filled.AutoAwesome),
+    STRESS("stress", R.string.metric_live_stress, R.string.today_card_stress_subtitle, "", Icons.Filled.Bolt, "stress"),
+    FITNESS_AGE("fitnessAge", R.string.today_card_fitness_age, R.string.today_card_fitness_age_subtitle, "yrs", Icons.AutoMirrored.Filled.DirectionsRun, "fitness_age"),
+    VO2MAX("vo2max", R.string.today_card_vo2max, R.string.today_card_vo2max_subtitle, "mL/kg/min", Icons.Filled.Air, "vo2max_est"),
+    VITALITY("vitality", R.string.today_card_vitality, R.string.today_card_vitality_subtitle, "", Icons.Filled.AutoAwesome, "vitality"),
     BLOOD_OXYGEN("bloodOxygen", R.string.today_card_blood_oxygen, R.string.today_card_blood_oxygen_subtitle, "", Icons.Filled.WaterDrop),
     SKIN_TEMP("skinTemp", R.string.today_card_skin_temp, R.string.today_card_skin_temp_subtitle, "", Icons.Filled.Thermostat),
     SLEEP("sleep", R.string.today_card_sleep, R.string.today_card_sleep_subtitle, "", Icons.Filled.Bedtime),
-    CALORIES("calories", R.string.today_card_calories, R.string.today_card_calories_subtitle, "kcal", Icons.Filled.LocalFireDepartment),
+    CALORIES("calories", R.string.feature_total_burn, R.string.today_card_calories_subtitle, "kcal", Icons.Filled.LocalFireDepartment),
     HYDRATION("hydration", R.string.today_card_hydration, R.string.today_card_hydration_subtitle, "", Icons.Filled.LocalDrink),
 
     // Optional, default-OFF (task #43): a tap-through to the Coupled view (the WHOOP-style day read). Unlike
@@ -74,7 +76,32 @@ enum class DashboardCard(
     // provider never gains a fixed dashboard row for one. Opening the sheet makes NO provider request.
     // Reuses the existing nav + Coach-screen strings, so the card adds nothing to translate.
     // Mirrors iOS DashboardCard.coach (raw "coach", byte-identical across OS).
-    COACH("coach", R.string.nav_coach, R.string.l10n_coach_screen_ask_anything_about_your_recent_recovery_e6c287ca, "", Icons.AutoMirrored.Filled.Chat);
+    COACH("coach", R.string.nav_coach, R.string.l10n_coach_screen_ask_anything_about_your_recent_recovery_e6c287ca, "", Icons.AutoMirrored.Filled.Chat),
+    LIB_ENERGY_BALANCE("metric:energy_balance", R.string.feature_energy_balance, R.string.metric_selected_date, "", Icons.Filled.Timeline, "energy_balance"),
+    LIB_AVG_HR("metric:avg_hr", R.string.explore_metric_average_heart_rate, R.string.metric_selected_date, "", Icons.Filled.Timeline, "avg_hr"),
+    LIB_MAX_HR("metric:max_hr", R.string.explore_metric_max_heart_rate, R.string.metric_selected_date, "", Icons.Filled.Timeline, "max_hr"),
+    LIB_VO2MAX("metric:vo2max", R.string.l10n_health_screen_vo2max_21214fb6, R.string.metric_selected_date, "", Icons.Filled.Timeline, "vo2max"),
+    LIB_BODY_AGE("metric:body_age", R.string.l10n_health_screen_body_age_8a2512e6, R.string.metric_selected_date, "", Icons.Filled.Timeline, "body_age"),
+    LIB_RECOVERY("metric:recovery", R.string.trends_charge, R.string.metric_selected_date, "", Icons.Filled.Timeline, "recovery"),
+    LIB_SLEEP_PERFORMANCE("metric:sleep_performance", R.string.trends_rest, R.string.metric_selected_date, "", Icons.Filled.Timeline, "sleep_performance"),
+    LIB_SLEEP_EFFICIENCY("metric:sleep_efficiency", R.string.l10n_trends_explore_screen_sleep_efficiency_b4b5c293, R.string.metric_selected_date, "", Icons.Filled.Timeline, "sleep_efficiency"),
+    LIB_SLEEP_DEEP_MIN("metric:sleep_deep_min", R.string.l10n_compare_screen_deep_sws_sleep_4ec27b34, R.string.metric_selected_date, "", Icons.Filled.Timeline, "sleep_deep_min"),
+    LIB_SLEEP_REM_MIN("metric:sleep_rem_min", R.string.l10n_compare_screen_rem_sleep_77605e30, R.string.metric_selected_date, "", Icons.Filled.Timeline, "sleep_rem_min"),
+    LIB_SLEEP_LIGHT_MIN("metric:sleep_light_min", R.string.l10n_compare_screen_light_sleep_d4bbaf3a, R.string.metric_selected_date, "", Icons.Filled.Timeline, "sleep_light_min"),
+    LIB_STRAIN("metric:strain", R.string.trends_effort, R.string.metric_selected_date, "", Icons.Filled.Timeline, "strain"),
+    LIB_ACTIVE_KCAL("metric:active_kcal", R.string.l10n_health_screen_active_energy_2d3288f9, R.string.metric_selected_date, "", Icons.Filled.Timeline, "active_kcal"),
+    LIB_WEIGHT("metric:weight", R.string.l10n_onboarding_screen_weight_69c0b815, R.string.metric_selected_date, "", Icons.Filled.Timeline, "weight"),
+    LIB_BODY_FAT("metric:body_fat", R.string.l10n_apple_health_screen_body_fat_13aeec7b, R.string.metric_selected_date, "", Icons.Filled.Timeline, "body_fat"),
+    LIB_LEAN_MASS("metric:lean_mass", R.string.l10n_compare_screen_lean_body_mass_bf9a784a, R.string.metric_selected_date, "", Icons.Filled.Timeline, "lean_mass"),
+    LIB_BMI("metric:bmi", R.string.l10n_apple_health_screen_bmi_aa26664f, R.string.metric_selected_date, "", Icons.Filled.Timeline, "bmi"),
+    LIB_CALORIES_IN("metric:calories_in", R.string.explore_metric_calories_in, R.string.metric_selected_date, "", Icons.Filled.Timeline, "calories_in"),
+    LIB_PROTEIN_G("metric:protein_g", R.string.explore_metric_protein, R.string.metric_selected_date, "", Icons.Filled.Timeline, "protein_g"),
+    LIB_CARBS_G("metric:carbs_g", R.string.explore_metric_carbs, R.string.metric_selected_date, "", Icons.Filled.Timeline, "carbs_g"),
+    LIB_FAT_G("metric:fat_g", R.string.explore_metric_fat, R.string.metric_selected_date, "", Icons.Filled.Timeline, "fat_g"),
+    LIB_MOOD("metric:mood", R.string.explore_metric_mood, R.string.metric_selected_date, "", Icons.Filled.Timeline, "mood");
+
+    @get:StringRes
+    val titleRes: Int get() = libraryKey?.let { MetricLibrary.find(it)?.titleRes } ?: baseTitleRes
 
     companion object {
         fun fromRaw(raw: String?): DashboardCard? = entries.firstOrNull { it.raw == raw }

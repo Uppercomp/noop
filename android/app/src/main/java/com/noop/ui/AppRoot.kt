@@ -146,6 +146,7 @@ internal enum class Destination(
 ) {
     // Group: Today
     EnergyBody("energy_body", R.string.feature_energy_body, Icons.Filled.FitnessCenter),
+    MetricLibraryDetail("metric_library/{key}", R.string.nav_explore, Icons.Filled.Timeline),
     Today("today", R.string.nav_today, Icons.Filled.Home),
     Intelligence("intelligence", R.string.nav_intelligence, Icons.Filled.Psychology),
     // Optional, default-OFF (task #43): the Coupled view (WHOOP-style day read). Reached ONLY via the
@@ -883,7 +884,7 @@ fun AppRoot(viewModel: AppViewModel = viewModel()) {
                         onOpenHealth = { nav.navigate(Destination.Health.route) },
                         // Every metric/vital card opens its OWN focused detail trend (vital_detail/<key>),
                         // not the shared Health hub (2026-07-03). Mirrors the iOS liquidCard metricDetail.
-                        onOpenMetric = { key -> nav.navigate("vital_detail/$key") },
+                        onOpenMetric = { key -> if (key.startsWith("library:")) nav.navigate("metric_library/${android.net.Uri.encode(key.removePrefix("library:"))}") else nav.navigate("vital_detail/$key") },
                         // A blank, uncalibrated WHOOP 4.0 Steps tile opens the same calibration screen as
                         // Settings. A normal push returns Back to Today (#1515).
                         onOpenStepsCalibration = { nav.navigate(Destination.StepsCalibration.route) },
@@ -963,6 +964,9 @@ fun AppRoot(viewModel: AppViewModel = viewModel()) {
                 composable(Destination.Trends.route) { TrendsScreen(viewModel) }
                 composable(Destination.Insights.route) { InsightsScreen(viewModel, onOpenInsightsHub = { nav.navigateTopLevel(Destination.InsightsHub.route) }) }
                 composable(Destination.Compare.route) { CompareScreen(viewModel) }
+                composable(Destination.MetricLibraryDetail.route) { entry ->
+                    TrendsExploreScreen(viewModel, initialMetricKey = entry.arguments?.getString("key"))
+                }
                 composable(Destination.EnergyBody.route) {
                     EnergyBodyScreen(viewModel, onImport = { nav.navigate(Destination.DataSources.route) }, onCompare = { nav.navigate(Destination.Compare.route) })
                 }

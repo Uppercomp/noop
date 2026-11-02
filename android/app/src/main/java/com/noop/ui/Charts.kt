@@ -1347,6 +1347,13 @@ fun TimelineChart(
             val bottomPad = strokePx + 4f
             if (vis.size < 2 || size.width <= 0f || size.height <= 0f) {
                 drawBaseline()
+                if (vis.size == 1 && size.width > 0f && size.height > 0f) {
+                    val span = (windowEnd - windowStart).coerceAtLeast(1L).toDouble()
+                    val x = ((vis.single().ts - windowStart) / span * size.width).toFloat().coerceIn(0f, size.width)
+                    val center = Offset(x, size.height / 2f)
+                    drawCircle(color.copy(alpha = StrandAlpha.chartFillSoft), Metrics.space8.toPx(), center)
+                    drawCircle(color, Metrics.space4.toPx(), center)
+                }
                 return@Canvas
             }
             val minV = vis.minOf { it.value }

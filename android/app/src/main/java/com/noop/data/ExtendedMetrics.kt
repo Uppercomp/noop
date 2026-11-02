@@ -10,6 +10,11 @@ object ExtendedMetrics {
     const val OXYGEN = "spo2_candidate"
 
     suspend fun series(repo: WhoopRepository, strap: String, key: String, from: String, to: String): List<Pair<String, Double>> {
+        if (key in setOf("protein_g", "carbs_g", "fat_g")) {
+            val csv = repo.metricSeries("nutrition-csv", key, from, to).associate { it.day to it.value }
+            val hc = repo.metricSeries("health-connect", key, from, to).associate { it.day to it.value }
+            return (csv + hc).toSortedMap().toList()
+        }
         if (key == OXYGEN) return repo.metricSeriesComputedUnion(strap, key, from, to).map { it.day to it.value }
         val hc = repo.metricSeries("health-connect", INTAKE, from, to).associate { it.day to it.value }
         val csv = repo.metricSeries("nutrition-csv", INTAKE, from, to).associate { it.day to it.value }

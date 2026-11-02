@@ -99,7 +99,9 @@ data class CompareMetric(
     // when it comes from Health Connect, since Health Connect carries no measured BMI record). The
     // parity-locked [title] stays identical to the iOS MetricCatalog; the caveat lives here instead.
     val note: String? = null,
+    @StringRes val noteRes: Int? = null,
 ) {
+    fun noteText(): String? = noteRes?.let { uiString(it) } ?: note
     val id: String get() = "$source:$key"
 
     fun format(v: Double): String {
@@ -108,12 +110,14 @@ data class CompareMetric(
         } else {
             java.lang.String.format(Locale.US, "%.${decimals}f", v)
         }
-        return if (unit.isEmpty()) n else "$n $unit"
+        val signed = if (key == "energy_balance" && v > 0) "+$n" else n
+        return if (unit.isEmpty()) signed else "$signed $unit"
     }
 
     /** Unit-aware format (D#103): weight/lean_mass (kg) and skin_temp (°C / Δ°C) convert + relabel via
      *  [UnitFormatter] / [SkinTempDisplay]; everything else falls through. */
-    fun format(v: Double, system: UnitSystem, temperature: TemperatureUnit): String = when (unit) {
+    fun format(v: Double, system: UnitSystem, temperature: TemperatureUnit, effortScale: EffortScale = EffortScale.HUNDRED): String =
+        if (key == "strain" && effortScale == EffortScale.WHOOP) copy(unit = "/21").format(UnitFormatter.effortValue(v, effortScale)) else when (unit) {
         "kg" -> UnitFormatter.massFromKilograms(v, system)
         "°C" -> if (key == "skin_temp") {
             // #622: absolute vs baseline-deviation share the same key — label Δ°C when deviation.
@@ -136,7 +140,8 @@ data class CompareMetric(
     }
 
     /** Displayed unit LABEL mapped to the active system (kg→lb, °C→°F); others unchanged. */
-    fun displayUnit(system: UnitSystem, temperature: TemperatureUnit): String = when (unit) {
+    fun displayUnit(system: UnitSystem, temperature: TemperatureUnit, effortScale: EffortScale = EffortScale.HUNDRED): String =
+        if (key == "strain" && effortScale == EffortScale.WHOOP) "/21" else when (unit) {
         "kg" -> UnitFormatter.massUnit(system)
         "°C" -> UnitFormatter.temperatureUnit(temperature)
         else -> unit
@@ -148,7 +153,7 @@ data class CompareMetric(
  * write into metricSeries; [dailyPick], when non-null, is the matching column on
  * [DailyMetric] so a my-whoop metric can be derived from the daily cache as a fallback.
  */
-private object CompareCatalog {
+internal object CompareCatalog {
     val categories = listOf("Heart", "Charge", "Rest", "Effort", "Health", "Nutrition", "Mind")
 
     /**
@@ -169,16 +174,14 @@ private object CompareCatalog {
     }
 
     val all: List<CompareMetric> = listOf(
-        CompareMetric("spo2_candidate", R.string.feature_oxygen_candidate, "Heart", "%", "my-whoop", 0, note = "Not validated; not used for health alerts or scores."),
         CompareMetric("energy_balance", R.string.feature_energy_balance, "Nutrition", "kcal", "health-connect", 0, note = "Logged intake minus estimated total burn; negative = deficit. Incomplete food logs affect this estimate."),
-        CompareMetric("total_kcal", R.string.feature_total_burn, "Nutrition", "kcal", "health-connect", 0),
+        CompareMetric("total_kcal", R.string.feature_total_burn, "Nutrition", "kcal", "my-whoop", 0),
         // Heart
         CompareMetric("avg_hr", R.string.explore_metric_average_heart_rate, "Heart", "bpm", "my-whoop", 0),
         CompareMetric("max_hr", R.string.explore_metric_max_heart_rate, "Heart", "bpm", "my-whoop", 0),
-        CompareMetric("energy_kcal", R.string.l10n_today_screen_calories_3e62ecfe, "Heart", "kcal", "my-whoop", 0),
-        CompareMetric("vo2max", R.string.l10n_health_screen_vo2max_21214fb6, "Heart", "", "apple-health", 1),
+        CompareMetric("vo2max", R.string.metric_vo2_imported, "Heart", "mL/kg/min", "apple-health", 1),
         CompareMetric("fitness_age", R.string.l10n_health_screen_fitness_age_12383b4a, "Heart", "yrs", "my-whoop", 0),
-        CompareMetric("vo2max_est", R.string.l10n_compare_screen_vo_max_estimated_01930b53, "Heart", "", "my-whoop", 1),
+        CompareMetric("vo2max_est", R.string.l10n_compare_screen_vo_max_estimated_01930b53, "Heart", "mL/kg/min", "my-whoop", 1),
         CompareMetric("vitality", R.string.l10n_health_screen_vitality_be320b06, "Heart", "", "my-whoop", 0),
         CompareMetric("body_age", R.string.l10n_health_screen_body_age_8a2512e6, "Heart", "yrs", "my-whoop", 0),
         // Charge (was Recovery)
@@ -186,7 +189,7 @@ private object CompareCatalog {
         CompareMetric("hrv", R.string.l10n_health_screen_heart_rate_variability_20f0069e, "Charge", "ms", "my-whoop", 0),
         CompareMetric("rhr", R.string.l10n_health_screen_resting_heart_rate_9700f4d8, "Charge", "bpm", "my-whoop", 0),
         CompareMetric("resp_rate", R.string.l10n_health_screen_respiratory_rate_3fbb532f, "Charge", "rpm", "my-whoop", 1),
-        CompareMetric("spo2", R.string.l10n_health_screen_blood_oxygen_a8ad9ff5, "Charge", "%", "my-whoop", 0),
+        CompareMetric("spo2", R.string.metric_oxygen_title, "Charge", "%", "my-whoop", 0, noteRes = R.string.metric_oxygen_honesty),
         CompareMetric("skin_temp", R.string.l10n_health_screen_skin_temperature_f59127f6, "Charge", "°C", "my-whoop", 1),
         // Rest (was Sleep)
         CompareMetric("sleep_performance", R.string.trends_rest, "Rest", "%", "my-whoop", 0),
@@ -195,14 +198,11 @@ private object CompareCatalog {
         CompareMetric("sleep_deep_min", R.string.l10n_compare_screen_deep_sws_sleep_4ec27b34, "Rest", "min", "my-whoop", 0),
         CompareMetric("sleep_rem_min", R.string.l10n_compare_screen_rem_sleep_77605e30, "Rest", "min", "my-whoop", 0),
         CompareMetric("sleep_light_min", R.string.l10n_compare_screen_light_sleep_d4bbaf3a, "Rest", "min", "my-whoop", 0),
+        CompareMetric("steps_average_30", R.string.steps_average_30, "Effort", "steps", "my-whoop", 0, noteRes = R.string.steps_average_subtitle),
         // Effort (was Strain)
         CompareMetric("strain", R.string.trends_effort, "Effort", "/100", "my-whoop", 1),
-        CompareMetric("steps", R.string.l10n_health_screen_steps_cdde4f20, "Effort", "", "apple-health", 0),
-        // On-device steps ESTIMATE for a WHOOP 4.0 (no real step count over BLE): the strap's daily
-        // motion volume scaled by a personal calibration, stored under the computed "-noop" source.
-        // Distinct from the real "steps" above — labelled "(estimated)" so it never reads as measured.
-        CompareMetric("steps_est", R.string.l10n_compare_screen_steps_estimated_7e9cc534, "Effort", "steps", "my-whoop", 0),
-        CompareMetric("active_kcal", R.string.l10n_health_screen_active_energy_2d3288f9, "Effort", "kcal", "apple-health", 0),
+        CompareMetric("steps", R.string.l10n_health_screen_steps_cdde4f20, "Effort", "", "my-whoop", 0, noteRes = R.string.metric_steps_note),
+        CompareMetric("active_kcal", R.string.metric_active_energy_imported, "Effort", "kcal", "apple-health", 0),
         // Health / Body
         CompareMetric("weight", R.string.l10n_onboarding_screen_weight_69c0b815, "Health", "kg", "apple-health", 1),
         CompareMetric("body_fat", R.string.l10n_apple_health_screen_body_fat_13aeec7b, "Health", "%", "apple-health", 1),
@@ -216,15 +216,19 @@ private object CompareCatalog {
         CompareMetric("protein_g", R.string.explore_metric_protein, "Nutrition", "g", NutritionCsvImporter.SOURCE_ID, 0),
         CompareMetric("carbs_g", R.string.explore_metric_carbs, "Nutrition", "g", NutritionCsvImporter.SOURCE_ID, 0),
         CompareMetric("fat_g", R.string.explore_metric_fat, "Nutrition", "g", NutritionCsvImporter.SOURCE_ID, 0),
+        CompareMetric("hydration", R.string.today_card_hydration, "Health", "ml", "hydration", 0),
+        CompareMetric("stress", R.string.metric_live_stress, "Health", "/3", "my-whoop", 1, noteRes = R.string.metric_stress_note),
         // Mind (daily mood check-in, 1–5; non-clinical self-tracking).
         CompareMetric("mood", R.string.explore_metric_mood, "Mind", "/5", MoodStore.MOOD_DEVICE_ID, 0),
     )
 
     fun inCategory(c: String): List<CompareMetric> = all.filter { it.category == c }
 
-    fun byKey(key: String): CompareMetric? = all.firstOrNull { it.key == key }
+    fun byKey(key: String): CompareMetric? = all.firstOrNull { it.key == MetricLibrary.canonical(key) }
 
-    fun byId(id: String): CompareMetric? = all.firstOrNull { it.id == id }
+    fun byId(id: String): CompareMetric? = all.firstOrNull { it.id == id } ?: id.substringBeforeLast(':')
+        .takeIf { source -> all.any { it.source == source } }
+        ?.let { byKey(id.substringAfterLast(':')) }
 
     /** Map a my-whoop metric key to the matching DailyMetric column accessor, if any. */
     fun dailyPick(key: String): ((DailyMetric) -> Double?)? = when (key) {
@@ -277,7 +281,7 @@ internal fun parseCompareSelection(raw: String?, minSelection: Int, maxSelection
         .distinctBy { it.id }
         .take(maxSelection)
 
-    return if (parsed.size == tokens.distinct().size || parsed.size >= minSelection) {
+    return if (tokens.all { CompareCatalog.byId(it) != null } || parsed.size >= minSelection) {
         parsed
     } else {
         null
@@ -417,6 +421,7 @@ private object CorrelationEngine {
 @Composable
 fun CompareScreen(vm: AppViewModel) {
     val days by vm.recentDays.collectAsStateWithLifecycle()
+    val metricRevision by vm.repo.metricChanges.collectAsStateWithLifecycle(0L)
 
     // Liquid finish (pilot pattern): the time-of-day sky settles behind the top of the screen, gated on the
     // same day-cycle-background preference the liquid Today honours. Off = the flat dark canvas path.
@@ -444,7 +449,7 @@ fun CompareScreen(vm: AppViewModel) {
     // Load the full history for any selected metric not yet fetched, whenever the
     // selection set or the daily cache changes. Mirrors macOS `.task(id: selectionKey)`.
     val selectionKey = selected.joinToString("|") { it.id }
-    LaunchedEffect(selectionKey, days) {
+    LaunchedEffect(selectionKey, days, metricRevision) {
         for (metric in selected) {
             // Always (re)load derived-from-daily my-whoop series when the cache grew;
             // metricSeries-only metrics are loaded once.
@@ -627,11 +632,8 @@ private suspend fun loadFullSeries(
     // Wide window covering all of history (the macOS days = 4000 default).
     val to = todayDay(1)
     val from = todayDay(-4000)
-    if (metric.key in setOf("energy_balance", "calories_in", "total_kcal", "spo2_candidate")) {
-        if (metric.key == "spo2_candidate" && !NoopPrefs.spo2CandidateDisplay(vm.getApplication())) return emptyList()
-        return com.noop.data.ExtendedMetrics.series(vm.repo, vm.activeStrapId, metric.key, from, to)
-    }
-    return vm.repo.resolvedSeries(metric.key, metric.source, from, to, strapDeviceId = vm.activeStrapId).values
+    return MetricLibrary.series(vm.repo, vm.activeStrapId, metric.key, from, to,
+        NoopPrefs.spo2CandidateDisplay(vm.getApplication()))
 }
 
 /** "yyyy-MM-dd" for today offset by [deltaDays], fixed UTC. */
@@ -657,6 +659,7 @@ private fun AddMetricMenu(
     onToggle: (CompareMetric) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
     val atMax = selectedCount >= maxSelection
     val tint = if (atMax) Palette.textTertiary else Palette.accent
 
@@ -664,7 +667,7 @@ private fun AddMetricMenu(
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(50))
-                .clickableNoRippleLocal(enabled = !atMax) { expanded = true }
+                .clickableNoRippleLocal(enabled = true) { expanded = true }
                 .padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -688,8 +691,11 @@ private fun AddMetricMenu(
             onDismissRequest = { expanded = false },
             modifier = Modifier.background(Palette.surfaceOverlay),
         ) {
+            androidx.compose.material3.OutlinedTextField(value = query, onValueChange = { query = it },
+                label = { Text(uiString(R.string.metric_search)) }, singleLine = true, textStyle = NoopType.body,
+                modifier = Modifier.fillMaxWidth().padding(Metrics.space8))
             CompareCatalog.categories.forEach { category ->
-                val metrics = CompareCatalog.inCategory(category)
+                val metrics = CompareCatalog.inCategory(category).filter { MetricLibrary.matches(uiString(it.titleRes), query) }
                 if (metrics.isNotEmpty()) {
                     Text(
                         // The token groups the catalog; its DISPLAY name is localised — the same split the
@@ -725,7 +731,7 @@ private fun AddMetricMenu(
                                         style = NoopType.body,
                                         color = if (enabled) Palette.textPrimary else Palette.textTertiary,
                                     )
-                                    metric.note?.let {
+                                    metric.noteText()?.let {
                                         Text(
                                             it,
                                             style = NoopType.footnote,
@@ -1148,6 +1154,7 @@ private fun CompareChartTooltip(
     val context = LocalContext.current
     val unitSystem = UnitPrefs.system(context)
     val tempUnit = UnitPrefs.temperature(context)
+    val effortScale = UnitPrefs.effortScale(context)
     val shape = RoundedCornerShape(10.dp)
     Column(
         modifier = modifier
@@ -1186,7 +1193,7 @@ private fun CompareChartTooltip(
                 )
                 Text(
                     preparedSeries.pointsByDay[day]?.value?.let {
-                        source.metric.format(it, unitSystem, tempUnit)
+                        source.metric.format(it, unitSystem, tempUnit, effortScale)
                     } ?: "\u2014",
                     style = NoopType.captionNumber,
                     color = Palette.textPrimary,
@@ -1212,6 +1219,7 @@ private fun Legend(series: List<CompareSeries>) {
     val context = LocalContext.current
     val unitSystem = UnitPrefs.system(context)
     val tempUnit = UnitPrefs.temperature(context)
+    val effortScale = UnitPrefs.effortScale(context)
     Column {
         series.forEachIndexed { idx, s ->
             Row(
@@ -1237,7 +1245,7 @@ private fun Legend(series: List<CompareSeries>) {
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    uiString(R.string.l10n_compare_screen_s_metric_format_s_realmin_unitsystem_0da2a1f2, s.metric.format(s.realMin, unitSystem, tempUnit), s.metric.format(s.realMax, unitSystem, tempUnit)),
+                    uiString(R.string.l10n_compare_screen_s_metric_format_s_realmin_unitsystem_0da2a1f2, s.metric.format(s.realMin, unitSystem, tempUnit, effortScale), s.metric.format(s.realMax, unitSystem, tempUnit, effortScale)),
                     style = NoopType.captionNumber,
                     color = Palette.textSecondary,
                 )

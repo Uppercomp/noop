@@ -9,6 +9,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.channels.awaitClose
 import kotlin.math.roundToInt
 
 /**
@@ -446,6 +450,7 @@ class WhoopRepository(
     private val transactor: Transactor = object : Transactor {
         override suspend fun <R> run(block: suspend () -> R): R = block()
     },
+    val metricChanges: Flow<Long> = flowOf(0L),
 ) {
 
     /** Transaction boundary injected so repository writes remain testable without a Room runtime. */
@@ -477,6 +482,15 @@ class WhoopRepository(
         transactor = object : Transactor {
             override suspend fun <R> run(block: suspend () -> R): R = db.withTransaction { block() }
         },
+        metricChanges = callbackFlow {
+            val revision = java.util.concurrent.atomic.AtomicLong(0)
+            val observer = object : androidx.room.InvalidationTracker.Observer("metricSeries", "appleDaily") {
+                override fun onInvalidated(tables: Set<String>) { trySend(revision.incrementAndGet()) }
+            }
+            db.invalidationTracker.addObserver(observer)
+            trySend(0L)
+            awaitClose { db.invalidationTracker.removeObserver(observer) }
+        }.conflate(),
     )
 
     // MARK: - Device
@@ -1855,6 +1869,15 @@ class WhoopRepository(
     /** Apple-Health daily aggregates for the inclusive day range [from, to] (YYYY-MM-DD), oldest first. */
     suspend fun appleDaily(deviceId: String, from: String, to: String): List<AppleDaily> =
         dao.appleDaily(deviceId, from, to).map(HealthConnectEnergyPolicy::daily)
+
+    /** Health Connect food-only imports also count as imported days; do not hide them behind AppleDaily. */
+    suspend fun healthConnectImportedDaysCount(): Int {
+        val days = appleDaily(HEALTH_CONNECT_SOURCE, "0000-01-01", "9999-12-31").mapTo(mutableSetOf()) { it.day }
+        for (key in listOf("calories_in", "protein_g", "carbs_g", "fat_g")) {
+            days.addAll(metricSeries(HEALTH_CONNECT_SOURCE, key, "0000-01-01", "9999-12-31").map { it.day })
+        }
+        return days.size
+    }
 
     /** Scalar COUNT twin of [appleDaily] for count badges. */
     suspend fun appleDailyCount(deviceId: String, from: String, to: String): Int =
